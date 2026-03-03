@@ -7,4 +7,6 @@ namespace: security
 components:
   - ../../components/common
 resources:
-  - ./external-secrets
+  - ./grafana
+  - ./kube-prometheus-stack
+
