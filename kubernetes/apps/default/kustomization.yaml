@@ -5,8 +5,9 @@ namespace: default
 
 components:
   - ../../components/sops
+  - ../../components/common
   - ../../components/repos/app-template
 
 resources:
-  - ./namespace.yaml
+  # TODO: remove - ./namespace.yaml
   - ./echo/ks.yaml
