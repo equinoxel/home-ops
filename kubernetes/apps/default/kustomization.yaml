@@ -5,7 +5,7 @@ namespace: default
 
 components:
   - ../../components/sops
-  # - ../../components/repos/app-template
+  - ../../components/repos/app-template
 
 resources:
   - ./namespace.yaml
