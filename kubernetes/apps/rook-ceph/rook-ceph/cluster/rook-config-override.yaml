@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rook-config-override
+  namespace: rook-ceph
+data:
+  config: |
+    [mgr]
+    mgr/dashboard/ssl = false
+    mgr/dashboard/server_port = 7000
