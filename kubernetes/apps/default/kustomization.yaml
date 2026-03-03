@@ -9,5 +9,4 @@ components:
   - ../../components/repos/app-template
 
 resources:
-  # TODO: remove - ./namespace.yaml
   - ./echo/ks.yaml
