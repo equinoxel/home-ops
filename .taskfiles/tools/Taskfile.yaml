@@ -1,0 +1,33 @@
+---
+version: "3"
+
+tasks:
+  routes:
+    desc: List known routes in envoy gateway
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - kubectl get httproute -A
+    preconditions:
+      - test -f {{.KUBECONFIG}}
+      - test -f {{.ROOT_DIR}}/.sops.yaml
+      - test -f {{.SCRIPTS_DIR}}/bootstrap-apps.sh
+      - test -f {{.SOPS_AGE_KEY_FILE}}
+  ping:
+    desc: Ping the available routes
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - |
+        for route in $(kubectl get httproute -A -o jsonpath='{.items[*].spec.hostnames[*]}'); do
+          ip=$(nslookup $route 2>/dev/null | grep -A 1 "Name:" | grep "Address:" | head -n 1 | awk '{print $2}') || true
+          if [ -n "$ip" ]; then
+            echo "✔ $route ($ip)"
+          else
+            echo "✗ $route"
+          fi
+        done
+        true
+    preconditions:
+      - test -f {{.KUBECONFIG}}
+      - test -f {{.ROOT_DIR}}/.sops.yaml
+      - test -f {{.SCRIPTS_DIR}}/bootstrap-apps.sh
+      - test -f {{.SOPS_AGE_KEY_FILE}}
