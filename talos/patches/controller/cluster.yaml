@@ -6,6 +6,44 @@ cluster:
     extraArgs:
       # https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
       enable-aggregator-routing: true
+      # Enable MutatingAdmissionPolicy feature gate (beta in K8s 1.35)
+      feature-gates: MutatingAdmissionPolicy=true
+      runtime-config: admissionregistration.k8s.io/v1beta1=true
+    auditPolicy:
+      apiVersion: audit.k8s.io/v1
+      kind: Policy
+      rules:
+        # Don't log lease heartbeats — these are high-frequency controller/node
+        # keepalives that generate the bulk of audit volume with no security value.
+        - level: None
+          resources:
+            - group: "coordination.k8s.io"
+              resources: ["leases"]
+        # Don't log health/readiness/liveness probes or OpenAPI discovery.
+        # These are polled every few seconds by kubelets and Flux controllers.
+        - level: None
+          nonResourceURLs:
+            - "/healthz*"
+            - "/readyz*"
+            - "/livez*"
+            - "/openapi*"
+            - "/version"
+        # Don't log node kubelet system account operations (node heartbeats,
+        # status updates). Still block-listed for auth so no security gap.
+        - level: None
+          userGroups: ["system:nodes"]
+        # Don't log get/list/watch on endpoints & endpointslices — these are
+        # polled constantly by kube-proxy replacement (Cilium) and coredns.
+        - level: None
+          verbs: ["get", "list", "watch"]
+          resources:
+            - group: ""
+              resources: ["endpoints"]
+            - group: "discovery.k8s.io"
+              resources: ["endpointslices"]
+        # Don't log anything else by default to reduce CPU load.
+        # This covers all auth, RBAC, resource mutations, etc.
+        - level: None
   controllerManager:
     extraArgs:
       bind-address: 0.0.0.0
