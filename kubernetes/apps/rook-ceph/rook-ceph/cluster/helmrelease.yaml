@@ -11,9 +11,14 @@ spec:
   interval: 1h
   values:
     cephImage:
-      tag: v19.2.0
+      tag: v20.2.0
     cephClusterSpec:
       cleanupPolicy:
+        confirmation: "yes-really-destroy-data"
+        sanitizeDisks:
+          method: quick
+          dataSource: zero
+          iteration: 1
         wipeDevicesFromOtherClusters: true
       crashCollector:
         disable: false
@@ -88,9 +93,6 @@ spec:
         devicePathFilter: /dev/disk/by-path/pci-0000:00:10.0-scsi-0:0:6:0
         useAllDevices: false
         useAllNodes: true
-      # Fix for Ceph OSD crash - disable problematic env vars
-      skipUpgradeChecks: true
-      continueUpgradeAfterChecksEvenIfNotHealthy: true
     monitoring:
       enabled: true
       createPrometheusRules: true
