@@ -154,6 +154,10 @@ spec:
               memory: 64Mi
     image:
       repository: ghcr.io/rook/ceph
+    logLevel: INFO
+    csi:
+      logLevel: 0
+      sidecarLogLevel: 0
     monitoring:
       enabled: true
     resources:
