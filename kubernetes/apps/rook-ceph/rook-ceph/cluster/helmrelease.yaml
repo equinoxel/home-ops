@@ -86,6 +86,9 @@ spec:
         devicePathFilter: /dev/disk/by-path/pci-0000:00:10.0-scsi-0:0:6:0
         useAllDevices: false
         useAllNodes: true
+      # Fix for Ceph OSD crash - disable problematic env vars
+      skipUpgradeChecks: false
+      continueUpgradeAfterChecksEvenIfNotHealthy: false
     monitoring:
       enabled: true
       createPrometheusRules: true

@@ -2,6 +2,37 @@
 version: "3"
 
 tasks:
+  pause:
+    desc: Pause and resume a Flux Kustomization
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - |
+        NS=$(flux get ks {{.NAME}} -A --no-header 2>/dev/null | awk '{print $1}' | head -n1)
+        if [ -z "$NS" ]; then
+          echo "Kustomization {{.NAME}} not found"
+          exit 1
+        fi
+        flux suspend ks {{.NAME}} -n $NS
+        sleep 5
+        flux resume ks {{.NAME}} -n $NS
+    requires:
+      vars: [NAME]
+    preconditions:
+      - test -f {{.KUBECONFIG}}
+
+  list:
+    desc: List Flux Kustomizations with status
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - |
+        if [ -n "{{.NAMESPACE}}" ]; then
+          flux get ks -n {{.NAMESPACE}} | (head -n1; sort -k5 -r)
+        else
+          flux get ks -A | (head -n1; sort -k5 -r)
+        fi
+    preconditions:
+      - test -f {{.KUBECONFIG}}
+
   routes:
     desc: List known routes in envoy gateway
     dir: "{{.ROOT_DIR}}"
