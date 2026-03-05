@@ -14,11 +14,6 @@ spec:
       tag: v20.2.0
     cephClusterSpec:
       cleanupPolicy:
-        confirmation: "yes-really-destroy-data"
-        sanitizeDisks:
-          method: quick
-          dataSource: zero
-          iteration: 1
         wipeDevicesFromOtherClusters: true
       crashCollector:
         disable: false
