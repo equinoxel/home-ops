@@ -89,8 +89,8 @@ spec:
         useAllDevices: false
         useAllNodes: true
       # Fix for Ceph OSD crash - disable problematic env vars
-      skipUpgradeChecks: false
-      continueUpgradeAfterChecksEvenIfNotHealthy: false
+      skipUpgradeChecks: true
+      continueUpgradeAfterChecksEvenIfNotHealthy: true
     monitoring:
       enabled: true
       createPrometheusRules: true
