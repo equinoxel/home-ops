@@ -54,13 +54,6 @@ spec:
           limits:
             cpu: 1000m
             memory: 512Mi
-        osd:
-          requests:
-            cpu: 200m
-            memory: 256Mi
-          limits:
-            cpu: 1000m
-            memory: 1Gi
         prepareosd:
           requests:
             cpu: 100m
