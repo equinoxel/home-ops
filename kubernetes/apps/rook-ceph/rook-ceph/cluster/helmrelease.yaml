@@ -11,7 +11,7 @@ spec:
   interval: 1h
   values:
     cephImage:
-      tag: v19.2.2
+      tag: v19.2.0
     cephClusterSpec:
       cleanupPolicy:
         wipeDevicesFromOtherClusters: true
