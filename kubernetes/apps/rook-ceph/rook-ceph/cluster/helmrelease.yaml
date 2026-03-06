@@ -95,6 +95,7 @@ spec:
         parentRefs:
           - name: envoy-internal
             namespace: network
+        port: 7000
     cephBlockPools:
       - name: ceph-blockpool
         spec:

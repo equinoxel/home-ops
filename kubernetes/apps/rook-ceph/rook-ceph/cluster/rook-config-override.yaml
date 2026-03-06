@@ -5,6 +5,9 @@ metadata:
   namespace: rook-ceph
 data:
   config: |
+    [mgr]
+    mgr/dashboard/ssl = false
+    mgr/dashboard/server_port = 7000
     [osd]
     osd_max_object_name_len = 256
     osd_max_object_namespace_len = 64
