@@ -5,14 +5,6 @@ metadata:
   namespace: rook-ceph
 data:
   config: |
-    [global]
-    # Disable problematic config options that cause OSD crashes
-    mon_warn_on_insecure_global_id_reclaim = false
-    mon_warn_on_insecure_global_id_reclaim_allowed = false
-    [mgr]
-    mgr/dashboard/ssl = false
-    mgr/dashboard/server_port = 7000
     [osd]
-    # Prevent env var parsing issues
     osd_max_object_name_len = 256
     osd_max_object_namespace_len = 64
