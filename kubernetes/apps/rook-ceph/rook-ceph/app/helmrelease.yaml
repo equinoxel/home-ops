@@ -12,7 +12,7 @@ spec:
     name: rook-ceph
   dependsOn:
     - name: snapshot-controller
-      namespace: system-controllers
+      namespace: storage-system
   values:
     csi:
       cephFSKernelMountOptions: ms_mode=prefer-crc
