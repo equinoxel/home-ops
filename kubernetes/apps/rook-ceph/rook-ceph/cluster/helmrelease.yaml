@@ -86,16 +86,6 @@ spec:
       createPrometheusRules: true
     toolbox:
       enabled: true
-    route:
-      dashboard:
-        host:
-          name: rook.laurivan.com
-          path: /
-          pathType: PathPrefix
-        parentRefs:
-          - name: envoy-internal
-            namespace: network
-        port: 7000
     cephBlockPools:
       - name: ceph-blockpool
         spec:
