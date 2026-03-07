@@ -80,7 +80,7 @@ spec:
           enabled: true
       dashboard:
         enabled: true
-        port: 8080
+        # port: 8080
         urlPrefix: /
         ssl: false
         prometheusEndpoint: http://prometheus-operated.observability.svc.cluster.local:9090
