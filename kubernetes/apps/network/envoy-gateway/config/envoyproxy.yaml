@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/gateway.envoyproxy.io/envoyproxy_v1alpha1.json
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: config
+spec:
+  ipFamily: IPv4
+  telemetry:
+    metrics:
+      prometheus:
+        compression:
+          type: Zstd
+  shutdown:
+    drainTimeout: 180s
+  logging:
+    level:
+      default: info
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          imageRepository: mirror.gcr.io/envoyproxy/envoy
+          resources:
+            requests:
+              cpu: 150m
+              memory: 640Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+      envoyHpa:
+        minReplicas: 1
+        maxReplicas: 3 # 5 is too much, we don't have that much traffic
+        metrics:
+          - resource:
+              name: cpu
+              target:
+                averageUtilization: 60
+                type: Utilization
+            type: Resource
+        behavior:
+          scaleUp:
+            stabilizationWindowSeconds: 300
+          scaleDown:
+            stabilizationWindowSeconds: 300
+      envoyService:
+        externalTrafficPolicy: Cluster
+        # TODO: Update to:
+        # externalTrafficPolicy: Local # Cilium's L2 announce doesn't support Local, since it announces on a different node than the pod is running on https://github.com/cilium/cilium/issues/27800

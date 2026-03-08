@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/gateway.envoyproxy.io/clienttrafficpolicy_v1alpha1.json
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client
+spec:
+  clientIPDetection:
+    xForwardedFor:
+      trustedCIDRs:
+        - "10.42.0.0/16"
+        # TODO: Add IPv6 CIDR
+        # - "fc69::/108"
+  path:
+    disableMergeSlashes: true
+    escapedSlashesAction: KeepUnchanged
+  connection:
+    bufferLimit: 8Mi
+    maxAcceptPerSocketEvent: 0
+  http2:
+    onInvalidMessage: TerminateStream
+  http3: {}
+  targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+  tcpKeepalive: {}
+  tls:
+    minVersion: "1.2"
+    alpnProtocols:
+      - h2
+      - http/1.1

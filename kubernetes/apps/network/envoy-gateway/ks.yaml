@@ -17,3 +17,7 @@ spec:
     namespace: flux-system
   targetNamespace: network
   wait: false
+
+# TODO: Add config directory
+# TODO: Add error pages directory
+# TODO: use tholinka.dev as reference for sources.
