@@ -52,8 +52,8 @@ spec:
               value: Object.spec.template.spec.volumes{
                 name: "repository",
                 nfs: Object.spec.template.spec.volumes.nfs{
-                  server: "nas.servers.internal",
-                  path: "/backups/VolsyncKopia"
+                  server: "10.0.0.14",
+                  path: "/mnt/Main/backup/VolsyncKopia"
                 }
               }
             },
