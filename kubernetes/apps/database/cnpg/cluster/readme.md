@@ -7,7 +7,7 @@
     - name: cnpg-crds
       namespace: *namespace
     - name: openebs
-      namespace: openebs-system
+      namespace: storage-system
   postBuild:
     substitute:
       APP: *app # required

@@ -23,4 +23,4 @@ spec:
     - name: postgres-cluster
       namespace: database
     - name: openebs
-      namespace: openebs-system
+      namespace: storage-system
