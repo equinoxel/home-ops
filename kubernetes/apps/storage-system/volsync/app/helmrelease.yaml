@@ -12,7 +12,7 @@ spec:
     name: volsync
   dependsOn:
     - name: snapshot-controller
-      namespace: system-controllers
+      namespace: storage-system
   values:
     fullnameOverride: volsync # Required for volsync-perfectra1n fork
     image: &image
