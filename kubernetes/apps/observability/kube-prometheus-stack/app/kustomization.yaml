@@ -5,7 +5,6 @@ kind: Kustomization
 resources:
   - ./alertmanagerconfig.yaml
   - ./secrets.sops.yaml
-  - ./grafanadashboard.yaml
   - ./helmrelease.yaml
   - ./ocirepository.yaml
   # Grafana dashboard
