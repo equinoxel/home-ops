@@ -5,9 +5,9 @@ namespace: network
 
 components:
   - ../../components/sops
-
+  - ../../components/common
+  - ../../components/repos/app-template
 resources:
-  - ./namespace.yaml
   - ./cloudflare-dns/ks.yaml
   - ./cloudflare-tunnel/ks.yaml
   - ./envoy-gateway
