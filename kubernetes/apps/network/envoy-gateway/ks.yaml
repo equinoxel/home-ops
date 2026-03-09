@@ -16,7 +16,8 @@ spec:
     name: flux-system
     namespace: flux-system
   targetNamespace: network
-  wait: false
+  wait: true
+  timeout: 5m
 
 # TODO: Add config directory
 # TODO: Add error pages directory
