@@ -5,7 +5,7 @@ kind: Cluster
 metadata:
   name: &name postgres-${APP}
   annotations:
-    cnpg.io/skipEmptyWalArchiveCheck: 'enabled'
+    cnpg.io/skipEmptyWalArchiveCheck: "enabled"
 spec:
   instances: ${CNPG_REPLICAS:=1}
   imageName: ${CNPG_IMAGE}
@@ -30,7 +30,7 @@ spec:
     podAntiAffinityType: required
   postgresql:
     parameters:
-      max_connections: '600'
+      max_connections: "600"
       shared_buffers: 512MB
     pg_hba:
       - hostnossl all all 10.69.0.0/16      scram-sha-256
@@ -74,7 +74,7 @@ spec:
 
   managed:
     services:
-      disabledDefaultServices: ['ro', 'r']
+      disabledDefaultServices: ["ro", "r"]
     roles:
       - name: atuin
         ensure: present
