@@ -91,7 +91,7 @@ spec:
     route:
       app:
         hostnames:
-          - pg.tholinka.dev
+          - pg.laurivan.com
         parentRefs:
           - name: envoy-internal
             namespace: network
