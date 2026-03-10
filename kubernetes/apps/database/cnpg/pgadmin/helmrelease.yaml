@@ -64,6 +64,16 @@ spec:
                   secretKeyRef:
                     name: *app
                     key: PGADMIN_DEFAULT_PASSWORD
+              PGADMIN_SETUP_EMAIL:
+                valueFrom:
+                  secretKeyRef:
+                    name: *app
+                    key: PGADMIN_DEFAULT_EMAIL
+              PGADMIN_SETUP_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: *app
+                    key: PGADMIN_DEFAULT_PASSWORD
             probes:
               liveness: &probes
                 enabled: true
