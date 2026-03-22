@@ -1,0 +1,10 @@
+overlay:
+  image: siderolabs/sbc-raspberrypi
+  name: rpi_5
+  options:
+    configTxtAppend: |
+      gpu_mem=32
+      dtoverlay=noaudio
+      dtoverlay=dwc2,dr_mode=host
+      enable_uart=1
+      bootdelay=-2

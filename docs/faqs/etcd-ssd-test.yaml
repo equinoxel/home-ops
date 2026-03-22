@@ -1,0 +1,60 @@
+---
+# Runs fio on each control plane node's etcd data dir to measure fsync latency.
+# Deploy with: kubectl apply -f docs/faqs/etcd-ssd-test.yaml
+# Watch with:  kubectl -n kube-system logs -l app=etcd-fsync-test -f --prefix
+# Cleanup:     kubectl delete -f docs/faqs/etcd-ssd-test.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: etcd-fsync-test
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: etcd-fsync-test
+  template:
+    metadata:
+      labels:
+        app: etcd-fsync-test
+    spec:
+      tolerations:
+        - operator: Exists
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      hostPID: true
+      containers:
+        - name: fio
+          image: nixery.dev/shell/fio
+          command:
+            - sh
+            - -c
+            - |
+              echo "=== Node: $NODE_NAME ==="
+              fio \
+                --name=etcd-fsync \
+                --filename=/var/lib/etcd/test-fio \
+                --ioengine=sync \
+                --rw=write \
+                --bs=2300 \
+                --size=22m \
+                --fdatasync=1 \
+                --runtime=60 \
+                --time_based \
+                --output-format=normal
+              rm -f /var/lib/etcd/test-fio
+              echo "=== Done: $NODE_NAME ==="
+              sleep infinity
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: etcd-data
+              mountPath: /var/lib/etcd
+          securityContext:
+            privileged: true
+      volumes:
+        - name: etcd-data
+          hostPath:
+            path: /var/lib/etcd

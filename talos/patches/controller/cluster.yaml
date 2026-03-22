@@ -1,5 +1,5 @@
 cluster:
-  allowSchedulingOnControlPlanes: true
+  allowSchedulingOnControlPlanes: false
   apiServer:
     admissionControl:
       $$patch: delete
@@ -54,6 +54,9 @@ cluster:
       listen-metrics-urls: http://0.0.0.0:2381
       heartbeat-interval: "500"
       election-timeout: "5000"
+      quota-backend-bytes: "8589934592" # 8GB etcd quota
+      auto-compaction-retention: "1" # Compact every 1 hour to keep DB small
+      auto-compaction-mode: periodic
     advertisedSubnets:
       - 10.0.0.0/24
   proxy:

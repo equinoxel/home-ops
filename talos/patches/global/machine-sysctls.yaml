@@ -10,3 +10,7 @@ machine:
     net.ipv4.tcp_slow_start_after_idle: "0" # Preserve congestion window after idle
     user.max_user_namespaces: "11255" # User Namespaces
     vm.nr_hugepages: "1024" # Hugepages for CNPG
+    vm.dirty_ratio: "15" # Reduce dirty page buildup on rotational disks
+    vm.dirty_background_ratio: "5" # Start writeback earlier
+    vm.dirty_expire_centisecs: "1000" # Flush dirty pages after 10s max
+    vm.dirty_writeback_centisecs: "500" # Writeback thread wakeup interval

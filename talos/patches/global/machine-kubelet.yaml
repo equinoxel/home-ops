@@ -2,6 +2,14 @@ machine:
   kubelet:
     extraConfig:
       serializeImagePulls: false
+      kubeReserved:
+        cpu: 500m
+        memory: 500Mi
+      systemReserved:
+        cpu: 500m
+        memory: 500Mi
+      evictionHard:
+        memory.available: 500Mi
     nodeIP:
       validSubnets:
         - 10.0.0.0/24

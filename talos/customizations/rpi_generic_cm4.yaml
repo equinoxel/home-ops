@@ -1,0 +1,11 @@
+overlay:
+  name: rpi_generic
+  image: siderolabs/sbc-raspberrypi
+  options:
+    configTxtAppend: |
+      gpu_mem=8
+      dtoverlay=disable-bt
+      dtoverlay=disable-wifi
+      dtoverlay=noaudio
+      dtoverlay=dwc2,dr_mode=host
+      avoid_warnings=2
