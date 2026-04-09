@@ -76,7 +76,7 @@ nodes:
         vip:
           ip: "10.0.0.155"
   - hostname: "blade-01"
-    ipAddress: "10.0.0.142"
+    ipAddress: "10.0.50.10"
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false

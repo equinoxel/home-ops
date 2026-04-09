@@ -9,7 +9,7 @@ spec:
     name: cilium
   interval: 1h
   values:
-    autoDirectNodeRoutes: true
+    autoDirectNodeRoutes: false
     bpf:
       masquerade: true
       # Ref: https://github.com/siderolabs/talos/issues/10002
@@ -35,7 +35,6 @@ spec:
       enabled: false
     ipam:
       mode: kubernetes
-    ipv4NativeRoutingCIDR: "10.42.0.0/16"
     k8sServiceHost: 127.0.0.1
     k8sServicePort: 7445
     kubeProxyReplacement: true
@@ -62,7 +61,8 @@ spec:
         enabled: true
         trustCRDsExist: true
     rollOutCiliumPods: true
-    routingMode: native
+    routingMode: tunnel
+    tunnelProtocol: vxlan
     securityContext:
       capabilities:
         ciliumAgent:
