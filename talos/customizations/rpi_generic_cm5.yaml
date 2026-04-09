@@ -6,5 +6,5 @@ overlay:
       gpu_mem=32
       dtoverlay=noaudio
       dtoverlay=dwc2,dr_mode=host
-      enable_uart=1
+      enable_uart=0
       bootdelay=-2

@@ -75,25 +75,8 @@ nodes:
         mtu: 1500
         vip:
           ip: "10.0.0.155"
-  - hostname: "blade-02"
-    ipAddress: "10.0.50.10"
-    installDisk: "/dev/sda"
-    machineSpec:
-      secureboot: false
-    talosImageURL: factory.talos.dev/installer/de1619e16531ddff67ccb4ce636a5e3ba5197eb4fc0e8421f095ec50ce9d26a6
-    controlPlane: false
-    networkInterfaces:
-      - deviceSelector:
-          hardwareAddr: "d8:3a:dd:bb:0e:cc"
-        dhcp: false
-        addresses:
-          - "10.0.50.10/24"
-        routes:
-          - gateway: "10.0.50.1"
-            network: 0.0.0.0/0
-        mtu: 1500
   - hostname: "blade-01"
-    ipAddress: "10.0.50.6"
+    ipAddress: "10.0.0.142"
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
@@ -101,13 +84,8 @@ nodes:
     controlPlane: false
     networkInterfaces:
       - deviceSelector:
-          hardwareAddr: "e4:5f:01:e5:ee:0e"
-        dhcp: false
-        addresses:
-          - "10.0.50.6/24"
-        routes:
-          - gateway: "10.0.50.1"
-            network: 0.0.0.0/0
+          hardwareAddr: "2c:cf:67:fc:f1:28"
+        dhcp: true
         mtu: 1500
 # Global patches
 patches:
