@@ -5,7 +5,7 @@ namespace: storage-system
 components:
   - ../../components/common
   - ../../components/repos/app-template
-resources: []
-  #- ./openebs
-  #- ./snapshot-controller
-  #- ./volsync
+resources:
+  - ./openebs
+  - ./snapshot-controller
+  - ./volsync
