@@ -113,5 +113,5 @@ spec:
       resources:
         requests:
           storage: 10Gi
-      storageClassName: ceph-block
+      storageClassName: openebs-hostpath # TODO: ceph-block
   disableDefaultSecurityContext: All
