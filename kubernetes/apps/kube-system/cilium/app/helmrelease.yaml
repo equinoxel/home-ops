@@ -41,6 +41,9 @@ spec:
     kubeProxyReplacementHealthzBindAddr: 0.0.0.0:10256
     l2announcements:
       enabled: true
+      leaseDuration: 15s
+      leaseRenewDeadline: 10s
+      leaseRetryPeriod: 3s
     loadBalancer:
       algorithm: maglev
       mode: "snat"
