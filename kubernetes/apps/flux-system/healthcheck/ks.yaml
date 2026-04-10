@@ -54,10 +54,11 @@ spec:
     name: flux-system
     namespace: flux-system
   healthChecks:
-    - apiVersion: &cephApiVersion ceph.rook.io/v1
-      kind: &cephKind CephCluster
-      name: rook-ceph
-      namespace: rook-ceph
+    # TODO: Re-enable ceph checks
+    # - apiVersion: &cephApiVersion ceph.rook.io/v1
+    #   kind: &cephKind CephCluster
+    #   name: rook-ceph
+    #   namespace: rook-ceph
     - apiVersion: apps/v1
       kind: Deployment
       name: volsync
@@ -70,8 +71,8 @@ spec:
       name: replicationdestinations.volsync.backube
     - <<: *crd
       name: externalsecrets.external-secrets.io
-  healthCheckExprs:
-    - apiVersion: *cephApiVersion
-      kind: *cephKind
-      failed: status.ceph.health == 'HEALTH_ERR'
-      current: status.ceph.health in ['HEALTH_OK', 'HEALTH_WARN']
+  healthCheckExprs: []
+    # - apiVersion: *cephApiVersion
+    #   kind: *cephKind
+    #   failed: status.ceph.health == 'HEALTH_ERR'
+    #   current: status.ceph.health in ['HEALTH_OK', 'HEALTH_WARN']
