@@ -8,6 +8,6 @@ resources:
   - ./httproute.yaml
   - ./receiver.yaml
   # Observability
-  - ./grafanadashboard.yaml
+  # - ./grafanadashboard.yaml
   - ./prometheusrule.yaml
   - ./podmonitor.yaml
