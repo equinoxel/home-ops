@@ -19,3 +19,15 @@ spec:
       create: true
       passwordHash: $2a$10$Zniz720/riX77oAjg.jU2OJ7hHm5tQjyMo15CgS9ne.nGgk7eoSqu
       username: admin
+  httpRoute:
+    metadata:
+    spec:
+      hostnames:
+        - gitops.laurivan.com
+      parentRefs:
+        - name: envoy-internal
+          namespace: network
+      rules:
+        - backendRefs:
+            - name: grafana-service
+              port: 3000
