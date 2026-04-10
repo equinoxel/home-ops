@@ -6,7 +6,8 @@ namespace: observability
 
 components:
   - ../../components/common
-resources: []
+resources:
   # - ./grafana
   # - ./kube-prometheus-stack
   # - ./keda
+  - ./gitops
