@@ -7,12 +7,10 @@ metadata:
   namespace: &namespace observability
 spec:
   interval: 1h
-  path: ./kubernetes/apps/observability/keda/app
+  path: ./kubernetes/apps/observability/gitops/app
+  prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
   targetNamespace: *namespace
-  interval: 10m
-  prune: true
-  wait: true
