@@ -6,7 +6,6 @@ metadata:
   name: keda
   namespace: &namespace observability
 spec:
-  interval: 1h
   path: ./kubernetes/apps/observability/keda/app
   sourceRef:
     kind: GitRepository
