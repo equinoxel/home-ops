@@ -5,3 +5,4 @@ kind: Kustomization
 resources:
   - ./cilium.yaml
   - ./kube-prometheus-stack.yaml
+  - ./flux-instance.yaml
