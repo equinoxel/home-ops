@@ -102,14 +102,22 @@ spec:
         provider: host
         connections:
           requireMsgr2: true
+      placement:
+        all:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: In
+                      values:
+                        - blade-01
       storage:
         useAllNodes: false
         nodes:
-          - name: esxi-2cu-8g-01
-          - name: esxi-2cu-8g-02
-          - name: esxi-2cu-8g-03
-        useAllDevices: false
-        devicePathFilter: /dev/disk/by-path/pci-0000:00:10.0-scsi-0:0:6:0
+          - name: blade-01
+            directories:
+              - path: /var/ceph
         config:
           osdsPerDevice: "1"
       resources:
@@ -134,9 +142,9 @@ spec:
     cephBlockPools:
       - name: ceph-blockpool
         spec:
-          failureDomain: host
+          failureDomain: osd
           replicated:
-            size: 3
+            size: 1
           enableRBDStats: true
         storageClass:
           enabled: true
