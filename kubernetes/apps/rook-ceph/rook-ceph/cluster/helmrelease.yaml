@@ -114,12 +114,34 @@ spec:
                         - blade-01
       storage:
         useAllNodes: false
-        nodes:
-          - name: blade-01
-            directories:
-              - path: /var/ceph
-        config:
-          osdsPerDevice: "1"
+        useAllDevices: false
+        storageClassDeviceSets:
+          - name: ceph-block
+            count: 1
+            portable: false
+            tuneDeviceClass: true
+            tuneFastDeviceClass: true
+            encrypted: false
+            placement:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                    - matchExpressions:
+                        - key: kubernetes.io/hostname
+                          operator: In
+                          values:
+                            - blade-01
+            volumeClaimTemplates:
+              - metadata:
+                  name: data
+                spec:
+                  resources:
+                    requests:
+                      storage: 100Gi
+                  storageClassName: openebs-hostpath
+                  volumeMode: Filesystem
+                  accessModes:
+                    - ReadWriteOnce
       resources:
         mgr:
           limits:
