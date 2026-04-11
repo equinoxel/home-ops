@@ -43,7 +43,7 @@ spec:
         CephNodeNetworkPacketDrops:
           disabled: true
     toolbox:
-      enabled: true
+      enabled: false
     route:
       dashboard:
         annotations:
