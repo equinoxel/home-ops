@@ -10,4 +10,4 @@ namespace: rook-ceph
 
 resources:
   - ./namespace.yaml
-  - ./rook-ceph
+  # - ./rook-ceph  # Disabled: single-node setup without dedicated block device, using openebs-hostpath instead
