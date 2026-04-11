@@ -92,6 +92,16 @@ spec:
           runAsUser: 64535
           runAsGroup: 64535
           fsGroup: 64535
+        initContainers:
+          - name: fix-permissions
+            image: busybox:1.36
+            command: ["sh", "-c", "chown -R 64535:64535 /prometheus"]
+            volumeMounts:
+              - name: prometheus-kube-prometheus-stack-db
+                mountPath: /prometheus
+            securityContext:
+              runAsNonRoot: false
+              runAsUser: 0
         podMonitorSelectorNilUsesHelmValues: false
         probeSelectorNilUsesHelmValues: false
         ruleSelectorNilUsesHelmValues: false
