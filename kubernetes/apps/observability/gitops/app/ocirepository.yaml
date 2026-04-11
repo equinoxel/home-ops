@@ -1,22 +1,13 @@
 ---
-# yaml-language-server: $schema=https://schemas.tholinka.dev/source.toolkit.fluxcd.io/ocirepository_v1.json
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: ww-gitops
-  annotations:
-    metadata.weave.works/description: This is the source location for the Weave GitOps
-      Dashboard's helm chart.
-  labels:
-    app.kubernetes.io/component: ui
-    app.kubernetes.io/created-by: weave-gitops-cli
-    app.kubernetes.io/name: weave-gitops-dashboard
-    app.kubernetes.io/part-of: weave-gitops
+  name: headlamp
 spec:
   interval: 1h
   layerSelector:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: v0.39.1-rc.1
-  url: oci://ghcr.io/weaveworks/charts
+    tag: 0.30.0
+  url: oci://ghcr.io/kubernetes-sigs/headlamp/headlamp-helm

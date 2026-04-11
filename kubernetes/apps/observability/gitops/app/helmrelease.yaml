@@ -2,17 +2,21 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  annotations:
-    metadata.weave.works/description: This is the Weave GitOps Dashboard. It provides
-      a simple way to get insights into your GitOps workloads.
-  name: ww-gitops
+  name: headlamp
 spec:
   chartRef:
     kind: OCIRepository
-    name: ww-gitops
+    name: headlamp
   interval: 1h
   values:
-    adminUser:
-      create: true
-      passwordHash: $2a$10$Zniz720/riX77oAjg.jU2OJ7hHm5tQjyMo15CgS9ne.nGgk7eoSqu
-      username: admin
+    config:
+      watchPlugins: true
+    pluginsManager:
+      enabled: true
+      configContent: |
+        plugins:
+          - name: flux
+            source: https://artifacthub.io/packages/headlamp/headlamp-flux/flux
+            version: 0.1.1
+        installOptions:
+          parallel: true
