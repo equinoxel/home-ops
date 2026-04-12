@@ -4,9 +4,13 @@ kind: HelmRelease
 metadata:
   name: headlamp
 spec:
-  chartRef:
-    kind: OCIRepository
-    name: headlamp
+  chart:
+    spec:
+      chart: headlamp
+      version: "0.30.0"
+      sourceRef:
+        kind: HelmRepository
+        name: headlamp
   interval: 1h
   values:
     config:
