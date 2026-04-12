@@ -113,7 +113,7 @@ spec:
         sessionAffinity: ClientIP # vernemq docs note that hopping between pods causes a significate data replication/sync cost
         externalTrafficPolicy: Local
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: mqtt.${SECRET_DOMAIN}.
+          external-dns.alpha.kubernetes.io/hostname: mqtt.laurivan.com.
           lbipam.cilium.io/ips: "10.0.0.154"
         ports: &ports
           mqtt:
@@ -132,7 +132,7 @@ spec:
     route:
       app:
         hostnames:
-          - '{{ .Release.Name }}.${SECRET_DOMAIN}'
+          - '{{ .Release.Name }}.laurivan.com'
         parentRefs:
           - name: envoy-internal
             namespace: network
