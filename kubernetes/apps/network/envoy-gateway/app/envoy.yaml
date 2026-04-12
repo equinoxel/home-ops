@@ -12,6 +12,19 @@ spec:
     kubernetes:
       envoyDeployment:
         replicas: 2
+        pod:
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
         container:
           imageRepository: mirror.gcr.io/envoyproxy/envoy
           resources:
@@ -52,7 +65,7 @@ spec:
   infrastructure:
     annotations:
       external-dns.alpha.kubernetes.io/hostname: external.${SECRET_DOMAIN}
-      lbipam.cilium.io/ips: "10.0.50.158"
+      lbipam.cilium.io/ips: "10.0.0.158"
   listeners:
     - name: http
       protocol: HTTP
@@ -82,7 +95,7 @@ spec:
   infrastructure:
     annotations:
       external-dns.alpha.kubernetes.io/hostname: internal.${SECRET_DOMAIN}
-      lbipam.cilium.io/ips: "10.0.50.157"
+      lbipam.cilium.io/ips: "10.0.0.157"
   listeners:
     - name: http
       protocol: HTTP

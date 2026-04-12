@@ -8,7 +8,6 @@ spec:
   allowFirstLastIPs: "No"
   blocks:
     - cidr: "10.0.0.0/24"
-    - cidr: "10.0.50.0/24"
     # - cidr: "fdf7:f7a4:7c24:21::/64" # random ULA (except the :21::), thanks https://unique-local-ipv6.com/
 ---
 apiVersion: cilium.io/v2alpha1
