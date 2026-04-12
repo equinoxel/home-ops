@@ -14,7 +14,7 @@ spec:
     capacity: '${VOLSYNC_CAPACITY:=5Gi}'
     cleanupCachePVC: true
     cleanupTempPVC: true
-    copyMethod: Snapshot
+    copyMethod: '${VOLSYNC_COPYMETHOD:=Direct}'
     enableFileDeletion: true
     moverSecurityContext:
       runAsUser: ${VOLSYNC_PUID:=1000}
@@ -24,7 +24,6 @@ spec:
     sourceIdentity:
       sourceName: ${APP}
     storageClassName: '${VOLSYNC_STORAGECLASS:=openebs-hostpath}'
-    volumeSnapshotClassName: '${VOLSYNC_SNAPSHOTCLASS:=}'
     # additionalArgs:
     #   - --parallel=100
     #   - --write-sparse-files
