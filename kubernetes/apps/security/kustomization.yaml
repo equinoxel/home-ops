@@ -8,4 +8,4 @@ components:
   - ../../components/common
 resources:
   - ./external-secrets
-  # - ./authentik
+  - ./authentik
