@@ -108,13 +108,13 @@ spec:
       app:
         primary: true
         type: LoadBalancer
-        ipFamilies: [IPv4, IPv6]
-        ipFamilyPolicy: PreferDualStack
+        ipFamilies: [IPv4]
+        ipFamilyPolicy: SingleStack
         sessionAffinity: ClientIP # vernemq docs note that hopping between pods causes a significate data replication/sync cost
         externalTrafficPolicy: Local
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: mqtt.tholinka.dev.
-          lbipam.cilium.io/ips: 192.168.21.8, fd83:43a4:6dab:21::8
+          external-dns.alpha.kubernetes.io/hostname: mqtt.${SECRET_DOMAIN}.
+          lbipam.cilium.io/ips: "10.0.0.154"
         ports: &ports
           mqtt:
             port: 1883
@@ -132,7 +132,7 @@ spec:
     route:
       app:
         hostnames:
-          - '{{ .Release.Name }}.tholinka.dev'
+          - '{{ .Release.Name }}.${SECRET_DOMAIN}'
         parentRefs:
           - name: envoy-internal
             namespace: network
