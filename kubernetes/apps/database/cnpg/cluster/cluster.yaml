@@ -22,7 +22,6 @@ spec:
       cpu: ${CNPG_REQUESTS_CPU:=500m}
       memory: ${CNPG_REQUESTS_MEMORY:=${CNPG_LIMITS_MEMORY:=1Gi}}
     limits:
-      hugepages-2Mi: ${CNPG_LIMITS_MEMORY_HUGEPAGES:=1Gi} # Requires sysctl set on the host
       memory: ${CNPG_LIMITS_MEMORY:=1Gi}
   affinity:
     enablePodAntiAffinity: true
@@ -31,7 +30,7 @@ spec:
   postgresql:
     parameters:
       max_connections: "600"
-      shared_buffers: 512MB
+      shared_buffers: 128MB
     pg_hba:
       - hostnossl all all 10.69.0.0/16      scram-sha-256
       - hostnossl all all fc69::/16         scram-sha-256
@@ -55,10 +54,12 @@ spec:
         barmanObjectName: *name
         serverName: *name
   bootstrap:
-    # recoveryTarget:
-    #   targetTime: "2025-05-23 19:00:00.000000-05:00"
-    recovery:
-      source: source
+    # To restore from backup, switch to recovery mode:
+    # recovery:
+    #   source: source
+    initdb:
+      database: app
+      owner: app
   externalClusters:
     - name: source
       plugin:

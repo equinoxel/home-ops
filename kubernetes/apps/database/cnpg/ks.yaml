@@ -81,8 +81,15 @@ spec:
     substitute:
       APP: cluster
       CNPG_IMAGE: ghcr.io/cloudnative-pg/postgresql:18.3-standard-trixie@sha256:e4f9958296aac318d23c12e5f97369b47a925ee6f26eef4e2064affceb2ddf36
-      CNPG_REPLICAS: "2"
+      # Changed from 2 to 1: single worker node, resource constrained
+      CNPG_REPLICAS: "1"
       CNPG_SIZE: 5Gi
+      # Changed from 1Gi: hugepages not available on blade nodes
+      CNPG_LIMITS_MEMORY_HUGEPAGES: "0"
+      # Changed from 2Gi: reduce memory footprint for homelab
+      CNPG_LIMITS_MEMORY: 512Mi
+      # Changed from 500m: reduce CPU request for homelab
+      CNPG_REQUESTS_CPU: 100m
       CNPG_LIMITS_MEMORY_HUGEPAGES: 1Gi
       CNPG_LIMITS_MEMORY: 2Gi
     substituteFrom:
