@@ -21,5 +21,6 @@ spec:
   #   - ^eno[0-9]+
   #   - ^eth[0-9]+
   nodeSelector:
-    matchLabels:
-      kubernetes.io/os: linux
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
