@@ -22,7 +22,5 @@ spec:
   postBuild:
     substitute:
       APP: *app
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
+      SECRET_DOMAIN: laurivan.com
   wait: true
