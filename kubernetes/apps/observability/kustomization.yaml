@@ -10,4 +10,5 @@ resources:
   - ./grafana
   - ./kube-prometheus-stack
   - ./keda
-  - ./gitops
+  # Disable headlamp because it's installed as a desktop app
+  # - ./gitops
