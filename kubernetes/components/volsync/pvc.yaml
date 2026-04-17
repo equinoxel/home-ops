@@ -4,6 +4,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: '${APP}'
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssr: "Ignore"
 spec:
   accessModes: ['${VOLSYNC_ACCESSMODES:=ReadWriteOnce}']
   dataSourceRef:
