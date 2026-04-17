@@ -1,0 +1,93 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: navidrome
+spec:
+  interval: 10m
+  chartRef:
+    kind: OCIRepository
+    name: navidrome
+
+  values:
+    controllers:
+      navidrome:
+        containers:
+          navidrome:
+            image:
+              repository: ghcr.io/navidrome/navidrome
+              tag: 0.61.2
+            env:
+              ND_DATAFOLDER: /data
+              ND_ENABLEDOWNLOADS: "true"
+              ND_ENABLEEXTERNALSERVICES: "false"
+              ND_ENABLESHARING: "false"
+              ND_ENABLESTARRATING: "false"
+              ND_LOGLEVEL: info
+              ND_MUSICFOLDER: /music
+              ND_PORT: &port 4533
+              ND_SCANSCHEDULE: 30m
+              # ND_BASEURL: https://navidrome.home.mirceanton.com
+
+            resources:
+              requests:
+                cpu: 20m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+
+            probes:
+              liveness:
+                enabled: true
+              readiness:
+                enabled: true
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
+
+            securityContext:
+              allowPrivilegeEscalation: false
+              # readOnlyRootFilesystem: true
+              capabilities: {drop: ["ALL"]}
+
+    defaultPodOptions:
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: "OnRootMismatch"
+
+    service:
+      app:
+        ports:
+          http:
+            port: *port
+
+    route:
+      home:
+        hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+
+    persistence:
+      config:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /data
+      music:
+        type: nfs
+        server: 10.0.0.14
+        path: /mnt/Main/shares/audio
+        globalMounts:
+          - path: /music
+            readOnly: true
+      cache:
+        type: emptyDir
+        globalMounts:
+          - path: /config/cache
