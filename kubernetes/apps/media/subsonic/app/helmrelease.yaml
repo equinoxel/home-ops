@@ -16,8 +16,8 @@ spec:
         initContainers:
           init-dirs:
             image:
-              repository: ghcr.io/sentriz/gonic
-              tag: v0.20.1
+              repository: docker.io/busybox
+              tag: latest
             command:
               - /bin/sh
               - -c
