@@ -70,7 +70,7 @@ spec:
 
     route:
       home:
-        hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
+        hostnames: ["music.laurivan.com"]
         parentRefs:
           - name: envoy-internal
             namespace: network
