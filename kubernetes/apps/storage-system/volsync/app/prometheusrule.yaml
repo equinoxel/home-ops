@@ -27,3 +27,25 @@ spec:
           for: 5m
           labels:
             severity: critical
+
+        - alert: VolSyncNoSyncInLastSixHours
+          expr: |
+            (time() - volsync_sync_duration_seconds_count) > 21600
+            and
+            volsync_missed_intervals_total > 0
+          annotations:
+            summary: >
+              {{ $labels.obj_namespace }}/{{ $labels.obj_name }} has not synced in over 6 hours
+          for: 10m
+          labels:
+            severity: warning
+
+        - alert: VolSyncMissedIntervals
+          expr: |
+            increase(volsync_missed_intervals_total[6h]) > 2
+          annotations:
+            summary: >
+              {{ $labels.obj_namespace }}/{{ $labels.obj_name }} has missed multiple sync intervals
+          for: 5m
+          labels:
+            severity: warning

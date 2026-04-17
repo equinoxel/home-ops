@@ -68,3 +68,5 @@ kubectl -n <namespace> delete replicationdestination <app>-dst
 kubectl -n <namespace> delete pvc <app>
 flux reconcile ks <ks-name> --with-source
 ```
+
+For the full step-by-step restore procedure including scaling, monitoring, and troubleshooting, see [docs/volsync-restore-runbook.md](../../docs/volsync-restore-runbook.md).

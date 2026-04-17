@@ -1,0 +1,15 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/monitoring.coreos.com/servicemonitor_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: volsync-metrics
+spec:
+  endpoints:
+    - interval: 60s
+      path: /metrics
+      port: http-metrics
+      scheme: http
+  selector:
+    matchLabels:
+      control-plane: volsync-controller
