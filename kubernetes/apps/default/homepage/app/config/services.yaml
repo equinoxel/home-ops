@@ -1,0 +1,36 @@
+---
+# From https://github.com/tholinka/home-ops/blob/f537ab2ac52ffd3730cdee1b3c448a7267fd2cc2/kubernetes/apps/self-hosted/homepage/app/config/services.yaml
+
+- Media:
+    - Autobrr:
+        icon: navidrome.svg
+        href: https://music.laurivan.com
+        #description: Download Automation
+        app: navidrome
+        namespace: media
+        widget:
+          type: navidrome
+          url: http://navidrome.media.svc.cluster.local.:4533
+          key: '{{HOMEPAGE_VAR_NAVIDROME_TOKEN}}'
+
+
+- Infrastructure:
+    - Unifi:
+        icon: unifi.svg
+        href: https://router.internal
+        #description: Unifi Network Application
+        namespace: network
+
+- Calendar:
+    - Agenda:
+        widget:
+          type: calendar
+          view: agenda # optional - possible values monthly, agenda
+          maxEvents: 5 # optional - defaults to 10
+          integrations: # optional
+            - type: sonarr # active widget type that is currently enabled on homepage - possible values: radarr, sonarr, lidarr, readarr, ical
+              service_group: Media # group name where widget exists
+              service_name: Sonarr # service name for that widget
+            - type: radarr # active widget type that is currently enabled on homepage - possible values: radarr, sonarr, lidarr, readarr, ical
+              service_group: Media # group name where widget exists
+              service_name: Radarr # service name for that widget
