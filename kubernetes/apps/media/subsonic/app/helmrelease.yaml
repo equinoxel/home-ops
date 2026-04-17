@@ -28,9 +28,9 @@ spec:
               repository: ghcr.io/sentriz/gonic
               tag: v0.20.1
             env:
-              GONIC_MUSIC_PATH: /audio/music
-              GONIC_PODCAST_PATH: /audio/podcasts
-              GONIC_PLAYLISTS_PATH: /audio/playlists
+              GONIC_MUSIC_PATH: /music
+              GONIC_PODCAST_PATH: /datapodcasts
+              GONIC_PLAYLISTS_PATH: /playlists
               GONIC_CACHE_PATH: /data/cache
               GONIC_DB_PATH: /data/gonic.db
               GONIC_LISTEN_ADDR: ":4747"
@@ -90,8 +90,24 @@ spec:
       music:
         type: nfs
         server: 10.0.0.14
-        path: /mnt/Main/shares/audio
+        path: /mnt/Main/shares/audio/music
         globalMounts:
-          - path: /audio
+          - path: /music
             readOnly: true
+      podcasts:
+        type: nfs
+        server: 10.0.0.14
+        path: /mnt/Main/shares/audio/podcasts
+        globalMounts:
+          - path: /podcasts
+            readOnly: true
+
+      playlists:
+        type: nfs
+        server: 10.0.0.14
+        path: /mnt/Main/shares/audio/playlists
+        globalMounts:
+          - path: /playlists
+            readOnly: false
+
 
