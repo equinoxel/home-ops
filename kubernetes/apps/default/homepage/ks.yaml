@@ -9,7 +9,7 @@ spec:
   interval: 1h
   components:
     - ../../../../components/ext-auth
-  path: ./kubernetes/apps/self-hosted/homepage/app
+  path: ./kubernetes/apps/default/homepage/app
   postBuild:
     substitute:
       APP: *app
