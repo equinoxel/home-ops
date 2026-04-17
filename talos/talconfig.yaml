@@ -87,6 +87,8 @@ nodes:
           hardwareAddr: "2c:cf:67:fc:f1:28"
         dhcp: true
         mtu: 1500
+    patches:
+      - "@./patches/cm5/machine-install.yaml"
   - hostname: "blade-02"
     ipAddress: "10.0.50.11"
     installDisk: "/dev/sda"
@@ -99,6 +101,8 @@ nodes:
           hardwareAddr: "2c:cf:67:fc:f1:37"
         dhcp: true
         mtu: 1500
+    patches:
+      - "@./patches/cm5/machine-install.yaml"
 
 # Global patches
 patches:
