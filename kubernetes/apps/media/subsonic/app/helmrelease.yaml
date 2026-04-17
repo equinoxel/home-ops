@@ -92,6 +92,6 @@ spec:
         server: 10.0.0.14
         path: /mnt/Main/shares/audio
         globalMounts:
-          - path: /music
+          - path: /audio
             readOnly: true
 
