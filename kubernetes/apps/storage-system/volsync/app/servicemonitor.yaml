@@ -12,6 +12,9 @@ spec:
       scheme: https
       tlsConfig:
         insecureSkipVerify: true
+  namespaceSelector:
+    matchNames:
+      - storage-system
   selector:
     matchLabels:
       control-plane: volsync-controller
