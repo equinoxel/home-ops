@@ -13,6 +13,15 @@ spec:
   values:
     controllers:
       subsonic:
+        initContainers:
+          init-dirs:
+            image:
+              repository: ghcr.io/sentriz/gonic
+              tag: v0.20.1
+            command:
+              - /bin/sh
+              - -c
+              - mkdir -p /data/cache /data/playlists
         containers:
           gonic:
             image:
