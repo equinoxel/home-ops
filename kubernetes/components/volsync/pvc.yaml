@@ -5,7 +5,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: '${APP}'
   annotations:
-    kustomize.toolkit.fluxcd.io/ssr: "IfNotPresent"
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
 spec:
   accessModes: ['${VOLSYNC_ACCESSMODES:=ReadWriteOnce}']
   dataSourceRef:
