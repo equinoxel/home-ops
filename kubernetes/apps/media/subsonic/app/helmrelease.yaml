@@ -30,6 +30,7 @@ spec:
             env:
               GONIC_MUSIC_PATH: /music
               GONIC_PODCAST_PATH: /podcasts
+              GONIC_PLAYLISTS_PATH: /data/playlists
               GONIC_CACHE_PATH: /data/cache
               GONIC_DB_PATH: /data/gonic.db
               GONIC_LISTEN_ADDR: ":4747"
