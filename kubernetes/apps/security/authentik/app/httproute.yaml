@@ -15,7 +15,7 @@ metadata:
     gethomepage.dev/widget.url: http://authentik-server.security.svc.cluster.local
     gethomepage.dev/widget.key: '{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}'
 spec:
-  hostnames: ["authentik.laurivan.com"]
+  hostnames: ["authentik.laurivan.com", "auth.laurivan.com"]
   parentRefs:
     - name: envoy-external
       namespace: network
