@@ -15,8 +15,7 @@ metadata:
     gethomepage.dev/widget.url: http://authentik-server.security.svc.cluster.local
     gethomepage.dev/widget.key: '{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}'
 spec:
-  hostnames:
-    - auth.tholinka.dev
+  hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
   parentRefs:
     - name: envoy-external
       namespace: network
