@@ -29,7 +29,7 @@ spec:
               tag: v0.20.1
             env:
               GONIC_MUSIC_PATH: /music
-              GONIC_PODCAST_PATH: /datapodcasts
+              GONIC_PODCAST_PATH: /podcasts
               GONIC_PLAYLISTS_PATH: /playlists
               GONIC_CACHE_PATH: /data/cache
               GONIC_DB_PATH: /data/gonic.db
