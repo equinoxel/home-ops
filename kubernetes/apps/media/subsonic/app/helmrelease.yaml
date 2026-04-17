@@ -20,7 +20,7 @@ spec:
               tag: v0.20.1
             env:
               GONIC_MUSIC_PATH: /music
-              GONIC_PODCAST_PATH: /data/podcasts
+              GONIC_PODCAST_PATH: /podcasts
               GONIC_CACHE_PATH: /data/cache
               GONIC_DB_PATH: /data/gonic.db
               GONIC_LISTEN_ADDR: ":4747"
@@ -84,3 +84,9 @@ spec:
         globalMounts:
           - path: /music
             readOnly: true
+      podcasts:
+        type: nfs
+        server: 10.0.0.14
+        path: /mnt/Main/shares/podcasts
+        globalMounts:
+          - path: /podcasts
