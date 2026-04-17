@@ -109,5 +109,9 @@ spec:
         globalMounts:
           - path: /playlists
             readOnly: false
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
 
 
