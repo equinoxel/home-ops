@@ -9,3 +9,4 @@ components:
   - ../../components/sops
 resources:
   - ./navidrome
+  - ./subsonic
