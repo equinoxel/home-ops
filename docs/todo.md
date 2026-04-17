@@ -22,7 +22,7 @@ Action items identified from operational issues encountered during setup and day
 - [x] Add a Prometheus alert on `volsync_replication_source_last_sync_time` being older than a defined threshold (e.g., 6 hours for 2-hourly backups)
 - [x] Add a Prometheus alert on `volsync_replication_source_last_sync_status` indicating failure
 - [x] Verify that VolSync metrics are being scraped (check ServiceMonitor or PodMonitor configuration)
-- [ ] Add a Grafana dashboard panel for VolSync backup status across all apps
+- [x] Add a Grafana dashboard panel for VolSync backup status across all apps
 
 ---
 

@@ -3,15 +3,14 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: volsync
+  name: volsync-metrics
 spec:
   endpoints:
-    - interval: 30s
+    - interval: 60s
       path: /metrics
       port: https
       scheme: https
       tlsConfig:
-        # Using self-signed cert for connection
         insecureSkipVerify: true
   selector:
     matchLabels:
