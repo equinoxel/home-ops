@@ -5,6 +5,7 @@ kind: Kustomization
 namespace: security
 
 components:
+  - ../../components/sops
   - ../../components/common
 resources:
   - ./external-secrets
