@@ -1,0 +1,27 @@
+---
+# The Authentik embedded outpost auto-creates this Service when a Kubernetes
+# Service Connection is configured in the admin UI. If the Service Connection
+# is missing or the outpost hasn't reconciled, this manifest ensures the
+# Service exists so that Envoy Gateway SecurityPolicies can reach the
+# embedded outpost's ext-auth endpoint on port 9000.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ak-outpost-authentik-embedded-outpost
+  namespace: security
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  selector:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/instance: authentik
+    app.kubernetes.io/name: authentik
+  ports:
+    - name: http
+      port: 9000
+      targetPort: http
+      protocol: TCP
+    - name: https
+      port: 9443
+      targetPort: https
+      protocol: TCP

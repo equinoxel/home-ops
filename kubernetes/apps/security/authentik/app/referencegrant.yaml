@@ -12,6 +12,8 @@ spec:
       kind: SecurityPolicy
       namespace: database
     - <<: *policy
+      namespace: default
+    - <<: *policy
       namespace: flux-system
     - <<: *policy
       namespace: home-automation
