@@ -24,7 +24,7 @@ spec:
               repository: ghcr.io/gethomepage/homepage
               tag: v1.10.1@sha256:0b596092c0b55fe4c65379a428a3fe90bd192f10d1b07d189a34fe5fabe7eedb
             env:
-              HOMEPAGE_ALLOWED_HOSTS: 'home.${SECRET_DOMAIN},${SECRET_DOMAIN},{{ .Release.Name }}.${SECRET_DOMAIN}'
+              HOMEPAGE_ALLOWED_HOSTS: 'home.laurivan.com,laurivan.com,{{ .Release.Name }}.laurivan.com'
             envFrom:
               - secretRef:
                   name: homepage-secret
@@ -124,8 +124,8 @@ spec:
             group: internal
             guarded: true
         hostnames:
-          - '{{ .Release.Name }}.${SECRET_DOMAIN}'
-          - 'home.${SECRET_DOMAIN}'
+          - '{{ .Release.Name }}.laurivan.com'
+          - 'home.laurivan.com'
         parentRefs:
           - name: envoy-internal
             namespace: network
