@@ -7,8 +7,6 @@ metadata:
   namespace: &namespace default
 spec:
   interval: 1h
-  components:
-    - ../../../../components/ext-auth
   path: ./kubernetes/apps/default/homepage/app
   postBuild:
     substitute:
