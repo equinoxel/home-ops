@@ -1,0 +1,89 @@
+---
+# Watchdog for siderolabs/sbc-raspberrypi#82 — RPi5 Ethernet drops due to
+# EEE (802.3az) AutogrEEEn mishandling between BCM54213PE PHY and macb MAC.
+# Pings the gateway and bounces end0 if unreachable.
+# Source: https://gist.github.com/serialx/8bf9e8eff425b1c7ddf1fa1d3785bbd0
+# License: BSD Zero Clause (0BSD) — Copyright (c) 2026 Sung-jin Hong
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nic-watchdog
+  labels:
+    app.kubernetes.io/name: nic-watchdog
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nic-watchdog
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nic-watchdog
+    spec:
+      priorityClassName: system-node-critical
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        node.kubernetes.io/cm5: ""
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: watchdog
+          image: alpine:3.21
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apk add --no-cache iproute2 > /dev/null 2>&1
+
+              GATEWAY="10.0.0.1"
+              IFACE="end0"
+              CHECK_INTERVAL=10
+              FAIL_THRESHOLD=3
+              COOLDOWN=30
+              fail_count=0
+              bounce_count=0
+
+              log() { echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ') [nic-watchdog] $*"; }
+
+              log "Starting — gateway=$GATEWAY iface=$IFACE node=$(hostname)"
+              log "check_interval=${CHECK_INTERVAL}s fail_threshold=$FAIL_THRESHOLD cooldown=${COOLDOWN}s"
+
+              while true; do
+                if ping -c 1 -W 3 "$GATEWAY" > /dev/null 2>&1; then
+                  if [ "$fail_count" -gt 0 ]; then
+                    log "Gateway reachable again after $fail_count failed ping(s)"
+                  fi
+                  fail_count=0
+                else
+                  fail_count=$((fail_count + 1))
+                  log "WARN: ping $GATEWAY failed ($fail_count/$FAIL_THRESHOLD)"
+
+                  if [ "$fail_count" -ge "$FAIL_THRESHOLD" ]; then
+                    bounce_count=$((bounce_count + 1))
+                    log "ACTION: bouncing $IFACE (event #$bounce_count)"
+                    ip link set "$IFACE" down
+                    sleep 2
+                    ip link set "$IFACE" up
+                    log "ACTION: $IFACE cycled — waiting ${COOLDOWN}s cooldown"
+                    sleep "$COOLDOWN"
+                    fail_count=0
+
+                    if ping -c 1 -W 5 "$GATEWAY" > /dev/null 2>&1; then
+                      log "RECOVERY: gateway reachable after bounce #$bounce_count"
+                    else
+                      log "STILL DOWN: gateway unreachable after bounce #$bounce_count"
+                    fi
+                  fi
+                fi
+                sleep "$CHECK_INTERVAL"
+              done
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
