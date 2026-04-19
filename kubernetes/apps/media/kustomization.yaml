@@ -7,6 +7,7 @@ namespace: media
 components:
   - ../../components/common
   - ../../components/sops
+  - ../../components/repos/app-template
 resources:
   - ./navidrome
   - ./subsonic
