@@ -55,11 +55,11 @@ spec:
         serverName: *name
   bootstrap:
     # To restore from backup, switch to recovery mode:
-    # recovery:
-    #   source: source
-    initdb:
-      database: app
-      owner: app
+    recovery:
+      source: source
+    # initdb:
+    #   database: app
+    #   owner: app
   externalClusters:
     - name: source
       plugin:
