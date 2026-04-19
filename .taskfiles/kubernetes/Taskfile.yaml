@@ -72,3 +72,14 @@ tasks:
       vars: [SET]
     preconditions:
       - which kubectl xargs
+
+  reinit-app:
+    desc: Reinitialize a Flux-managed app — suspend, delete all resources, resume and reconcile [APP=required] [NS=optional]
+    cmd: '{{.SCRIPTS_DIR}}/reinit-app.sh {{.APP}} {{.NS}}'
+    vars:
+      NS: '{{.NS | default ""}}'
+    requires:
+      vars: [APP]
+    preconditions:
+      - test -f {{.SCRIPTS_DIR}}/reinit-app.sh
+      - which kubectl flux
