@@ -8,3 +8,5 @@ overlay:
       dtoverlay=dwc2,dr_mode=host
       enable_uart=0
       bootdelay=-2
+      dtparam=sd_cqe=off
+      dtparam=eee=off

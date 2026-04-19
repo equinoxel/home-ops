@@ -1,5 +1,3 @@
 machine:
-  install:
-    extraKernelArgs:
-      - "dtparam=sd_cqe=off"
-    grubUseUKICmdline: false
+  nodeLabels:
+    node.kubernetes.io/cm5: ""

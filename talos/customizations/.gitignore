@@ -1,2 +1,3 @@
 *.raw.xz
 *log
+_out/
