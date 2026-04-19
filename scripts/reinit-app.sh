@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 #
-# Reinitialize a Flux-managed application.
+# Reinitialize a Flux-managed application with VolSync restore.
 #
-# Suspends the Flux kustomization, deletes all resources it owns
-# (pods, PVCs, PVs, jobs), resumes the kustomization, and reconciles.
-# Useful when an app's local storage (openebs-hostpath) is lost after
-# a node reimage and the app is stuck on stale PVCs.
+# Suspends the Flux kustomization, deletes all resources it owns,
+# resumes the kustomization, triggers a VolSync restore from backup,
+# waits for the restore to complete, then scales the app back up.
 #
 # Usage: reinit-app.sh <app-name> [namespace]
 #
@@ -57,7 +56,7 @@ for label in "app.kubernetes.io/name=${APP}" "app=${APP}" "app.kubernetes.io/ins
     fi
 done
 
-# Also delete any pods still stuck (Terminating, etc.)
+# Also delete any pods still stuck (Terminating, etc.) — including volsync movers
 remaining=$(kubectl get pods -n "${NS}" --no-headers -o name 2>/dev/null | grep -i "${APP}" || true)
 if [[ -n "${remaining}" ]]; then
     log "  Force-deleting remaining pods matching '${APP}'..."
@@ -77,13 +76,12 @@ pvcs=$(kubectl get pvc -n "${NS}" --no-headers -o custom-columns='NAME:.metadata
 if [[ -n "${pvcs}" ]]; then
     for pvc in ${pvcs}; do
         log "  Deleting PVC ${pvc}..."
-        # Remove finalizers first to avoid hanging
         kubectl patch pvc "${pvc}" -n "${NS}" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
         kubectl delete pvc "${pvc}" -n "${NS}" --wait=false 2>/dev/null || true
     done
 fi
 
-# Delete VolSync ReplicationSources that might be stuck
+# Delete VolSync resources
 log "Deleting VolSync resources..."
 for kind in replicationsource replicationdestination; do
     resources=$(kubectl get "${kind}" -n "${NS}" --no-headers -o name 2>/dev/null | grep -i "${APP}" || true)
@@ -95,7 +93,7 @@ for kind in replicationsource replicationdestination; do
     fi
 done
 
-# Delete stale PVs that were bound to this app's PVCs
+# Delete stale PVs
 log "Cleaning up stale PVs..."
 stale_pvs=$(kubectl get pv --no-headers -o custom-columns='NAME:.metadata.name,CLAIM:.spec.claimRef.name,NS:.spec.claimRef.namespace,STATUS:.status.phase' 2>/dev/null \
     | grep -i "${APP}" | grep "${NS}" | grep -E 'Released|Failed' | awk '{print $1}' || true)
@@ -106,12 +104,11 @@ if [[ -n "${stale_pvs}" ]]; then
     done
 fi
 
-# Wait a moment for cleanup to propagate
 log "Waiting for cleanup to settle..."
 sleep 5
 
 # ---------------------------------------------------------------------------
-# Step 3: Resume and reconcile
+# Step 3: Resume and reconcile (creates PVC, ReplicationDestination, app)
 # ---------------------------------------------------------------------------
 log "Resuming Flux kustomization ${APP}..."
 flux resume ks "${APP}" -n "${NS}"
@@ -120,11 +117,110 @@ log "Reconciling..."
 flux reconcile ks "${APP}" -n "${NS}" --with-source
 
 # ---------------------------------------------------------------------------
-# Step 4: Wait for health
+# Step 4: VolSync restore
+# ---------------------------------------------------------------------------
+DST="${APP}-dst"
+has_volsync=$(kubectl get replicationdestination -n "${NS}" "${DST}" --no-headers -o name 2>/dev/null || true)
+
+if [[ -n "${has_volsync}" ]]; then
+    log "VolSync ReplicationDestination found — triggering restore..."
+
+    # Scale down the app so it doesn't mount the PVC during restore
+    log "Scaling down app to free PVC for restore..."
+    hr_exists=$(kubectl get helmrelease -n "${NS}" "${APP}" --no-headers -o name 2>/dev/null || true)
+    if [[ -n "${hr_exists}" ]]; then
+        # Suspend the HelmRelease so Flux doesn't fight us
+        flux suspend hr "${APP}" -n "${NS}" 2>/dev/null || true
+    fi
+
+    # Scale down deployments/statefulsets matching the app
+    for kind in deployment statefulset; do
+        resources=$(kubectl get "${kind}" -n "${NS}" --no-headers -o name 2>/dev/null | grep -i "${APP}" || true)
+        if [[ -n "${resources}" ]]; then
+            echo "${resources}" | while read -r res; do
+                log "  Scaling down ${res}..."
+                kubectl scale "${res}" -n "${NS}" --replicas=0 2>/dev/null || true
+            done
+        fi
+    done
+
+    # Wait for app pods to terminate
+    log "Waiting for app pods to terminate..."
+    for i in $(seq 1 30); do
+        app_pods=$(kubectl get pods -n "${NS}" --no-headers 2>/dev/null \
+            | grep -i "${APP}" | grep -v volsync | grep -v dst || true)
+        if [[ -z "${app_pods}" ]]; then
+            log "  App pods terminated."
+            break
+        fi
+        log "  Still waiting... (attempt ${i}/30)"
+        sleep 5
+    done
+
+    # Trigger the restore with a unique manual trigger value
+    TRIGGER="restore-$(date +%s)"
+    log "Patching ReplicationDestination trigger to '${TRIGGER}'..."
+    kubectl patch replicationdestination "${DST}" -n "${NS}" \
+        --type merge -p "{\"spec\":{\"trigger\":{\"manual\":\"${TRIGGER}\"}}}"
+
+    # Wait for the restore to complete
+    log "Waiting for VolSync restore to complete..."
+    for i in $(seq 1 60); do
+        # Check for mover pod
+        mover=$(kubectl get pods -n "${NS}" -l "volsync.backube/replicationdestination=${DST}" \
+            --no-headers -o custom-columns='NAME:.metadata.name,STATUS:.status.phase' 2>/dev/null || true)
+
+        # Check lastSyncTime on the destination
+        last_sync=$(kubectl get replicationdestination "${DST}" -n "${NS}" \
+            -o jsonpath='{.status.lastSyncTime}' 2>/dev/null || true)
+
+        if [[ -n "${last_sync}" ]]; then
+            log "  Restore complete! lastSyncTime=${last_sync}"
+            break
+        fi
+
+        if [[ -n "${mover}" ]]; then
+            log "  Restore in progress: ${mover} (attempt ${i}/60)"
+        else
+            log "  Waiting for restore mover pod... (attempt ${i}/60)"
+        fi
+        sleep 10
+    done
+
+    # Check if restore actually succeeded
+    last_sync=$(kubectl get replicationdestination "${DST}" -n "${NS}" \
+        -o jsonpath='{.status.lastSyncTime}' 2>/dev/null || true)
+    if [[ -z "${last_sync}" ]]; then
+        warn "Restore may not have completed. Check manually:"
+        warn "  kubectl get replicationdestination ${DST} -n ${NS}"
+        warn "  kubectl logs -n ${NS} -l volsync.backube/replicationdestination=${DST}"
+    fi
+
+    # Scale the app back up
+    log "Scaling app back up..."
+    if [[ -n "${hr_exists}" ]]; then
+        flux resume hr "${APP}" -n "${NS}" 2>/dev/null || true
+    fi
+    for kind in deployment statefulset; do
+        resources=$(kubectl get "${kind}" -n "${NS}" --no-headers -o name 2>/dev/null | grep -i "${APP}" || true)
+        if [[ -n "${resources}" ]]; then
+            echo "${resources}" | while read -r res; do
+                log "  Scaling up ${res}..."
+                kubectl scale "${res}" -n "${NS}" --replicas=1 2>/dev/null || true
+            done
+        fi
+    done
+else
+    log "No VolSync ReplicationDestination found — skipping restore."
+    log "App will start with an empty PVC."
+fi
+
+# ---------------------------------------------------------------------------
+# Step 5: Wait for health
 # ---------------------------------------------------------------------------
 log "Waiting for pods to come up..."
 for i in $(seq 1 30); do
-    pods=$(kubectl get pods -n "${NS}" --no-headers 2>/dev/null | grep -i "${APP}" || true)
+    pods=$(kubectl get pods -n "${NS}" --no-headers 2>/dev/null | grep -i "${APP}" | grep -v volsync || true)
     if [[ -n "${pods}" ]]; then
         running=$(echo "${pods}" | grep -c 'Running' || true)
         total=$(echo "${pods}" | wc -l)
