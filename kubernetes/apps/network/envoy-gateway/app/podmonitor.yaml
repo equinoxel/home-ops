@@ -11,6 +11,7 @@ spec:
   podMetricsEndpoints:
     - port: metrics
       path: /stats/prometheus
+      interval: 10s
       honorLabels: true
   selector:
     matchLabels:
