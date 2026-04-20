@@ -24,6 +24,17 @@
           salt: '{{HOMEPAGE_VAR_NAVIDROME_SALT}}'
 
 - Infrastructure:
+    - Authentik:
+        icon: authentik.svg
+        href: https://auth.laurivan.com
+        description: Authentication Provider
+        app: authentik
+        namespace: security
+        widget:
+          type: authentik
+          url: http://authentik-server.security.svc.cluster.local
+          key: '{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}'
+          version: 2
     - Unifi:
         icon: unifi.svg
         href: https://router.internal
