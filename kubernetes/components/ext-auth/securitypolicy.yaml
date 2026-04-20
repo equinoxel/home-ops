@@ -20,6 +20,10 @@ spec:
         - set-cookie
         - x-authentik-*
         - authorization
+      headersToClient:
+        - set-cookie
+        - location
+        - content-type
   targetRefs:
     - group: ${EXT_AUTH_GROUP:-gateway.networking.k8s.io}
       kind: ${EXT_AUTH_KIND:-HTTPRoute}
