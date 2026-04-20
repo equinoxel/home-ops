@@ -1,6 +1,20 @@
 ---
 # From https://github.com/tholinka/home-ops/blob/f537ab2ac52ffd3730cdee1b3c448a7267fd2cc2/kubernetes/apps/self-hosted/homepage/app/config/services.yaml
 
+- Media:
+    - Autobrr:
+        widget:
+          type: autobrr
+          url: http://autobrr.media.svc.cluster.local
+          key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
+    - Navidrome:
+        widget:
+          type: navidrome
+          url: http://navidrome.media.svc.cluster.local:4533
+          user: '{{HOMEPAGE_VAR_NAVIDROME_USER}}'
+          token: '{{HOMEPAGE_VAR_NAVIDROME_TOKEN}}'
+          salt: '{{HOMEPAGE_VAR_NAVIDROME_SALT}}'
+
 - Infrastructure:
     - Unifi:
         icon: unifi.svg
