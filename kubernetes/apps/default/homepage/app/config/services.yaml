@@ -2,7 +2,7 @@
 # From https://github.com/tholinka/home-ops/blob/f537ab2ac52ffd3730cdee1b3c448a7267fd2cc2/kubernetes/apps/self-hosted/homepage/app/config/services.yaml
 
 - Media:
-    - Autobrr:
+    - Navidrome:
         icon: navidrome.svg
         href: https://music.laurivan.com
         #description: Download Automation
@@ -12,6 +12,17 @@
           type: navidrome
           url: http://navidrome.media.svc.cluster.local.:4533
           key: '{{HOMEPAGE_VAR_NAVIDROME_TOKEN}}'
+
+    - Autobrr:
+        icon: autobrr.svg
+        href: https://autobrr.laurivan.com
+        #description: Download Automation
+        app: autobrr
+        namespace: media
+        widget:
+          type: autobrr
+          url: http://autobrr.media.svc.cluster.local.:4533
+          key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
 
 
 - Infrastructure:
