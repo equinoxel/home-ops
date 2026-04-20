@@ -32,7 +32,7 @@
         namespace: security
         widget:
           type: authentik
-          url: http://authentik.security.svc.cluster.local:9000
+          url: http://authentik.security.svc.cluster.local:9300
           key: '{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}'
           version: 2
     - Unifi:
