@@ -68,13 +68,6 @@ spec:
           http:
             port: *port
 
-    route:
-      home:
-        hostnames: ["music.laurivan.com"]
-        parentRefs:
-          - name: envoy-internal
-            namespace: network
-
     persistence:
       config:
         existingClaim: ${APP}

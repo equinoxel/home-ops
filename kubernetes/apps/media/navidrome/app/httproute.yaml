@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/gateway.networking.k8s.io/httproute_v1.json
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: navidrome
+  annotations:
+    gethomepage.dev/enabled: 'true'
+    gethomepage.dev/icon: navidrome.svg
+    gethomepage.dev/name: Navidrome
+    gethomepage.dev/group: Media
+    gethomepage.dev/app: navidrome
+    gethomepage.dev/widget.type: navidrome
+    gethomepage.dev/widget.url: http://navidrome.media.svc.cluster.local:4533
+    gethomepage.dev/widget.user: '{{HOMEPAGE_VAR_NAVIDROME_USER}}'
+    gethomepage.dev/widget.token: '{{HOMEPAGE_VAR_NAVIDROME_TOKEN}}'
+    gethomepage.dev/widget.salt: '{{HOMEPAGE_VAR_NAVIDROME_SALT}}'
+spec:
+  hostnames:
+    - music.laurivan.com
+  parentRefs:
+    - name: envoy-internal
+      namespace: network
+  rules:
+    - backendRefs:
+        - name: navidrome
+          port: 4533

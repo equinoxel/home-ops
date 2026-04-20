@@ -74,22 +74,6 @@ spec:
       app:
         endpoints:
           - port: metrics
-    route:
-      app:
-        annotations:
-          gethomepage.dev/enabled: 'true'
-          gethomepage.dev/icon: autobrr.svg
-          gethomepage.dev/name: Autobrr
-          gethomepage.dev/group: Media
-          gethomepage.dev/app: autobrr
-          gethomepage.dev/widget.type: autobrr
-          gethomepage.dev/widget.url: http://autobrr.media.svc.cluster.local
-          gethomepage.dev/widget.key: '{{`{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}`}}'
-        hostnames:
-          - '{{ .Release.Name }}.laurivan.com'
-        parentRefs:
-          - name: envoy-internal
-            namespace: network
     persistence:
       config:
         existingClaim: autobrr
