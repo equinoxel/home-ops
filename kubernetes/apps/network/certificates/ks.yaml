@@ -15,10 +15,15 @@ spec:
     namespace: flux-system
   targetNamespace: *namespace
   healthChecks:
-    - apiVersion: v1
-      kind: Secret
+    - apiVersion: &esApi external-secrets.io/v1
+      kind: &esKind ExternalSecret
       namespace: *namespace
       name: laurivan-com-tls
+  healthCheckExprs:
+    - apiVersion: *esApi
+      kind: *esKind
+      current: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
+      failed: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'False')
 ---
 # yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
