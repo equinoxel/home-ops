@@ -77,7 +77,7 @@ spec:
 
     route:
       home:
-        hostnames: ["subsonic.${SECRET_DOMAIN}"]
+        hostnames: ["subsonic.laurivan.com"]
         parentRefs:
           - name: envoy-internal
             namespace: network
