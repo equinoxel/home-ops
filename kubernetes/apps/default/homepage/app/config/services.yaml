@@ -2,11 +2,12 @@
 # From https://github.com/tholinka/home-ops/blob/f537ab2ac52ffd3730cdee1b3c448a7267fd2cc2/kubernetes/apps/self-hosted/homepage/app/config/services.yaml
 
 - Media:
-    - Autobrr:
-        widget:
-          type: autobrr
-          url: http://autobrr.media.svc.cluster.local
-          key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
+    # TODO: uncomment after creating autobrr Bitwarden key with AUTOBRR_HOMEPAGE_API_KEY
+    # - Autobrr:
+    #     widget:
+    #       type: autobrr
+    #       url: http://autobrr.media.svc.cluster.local
+    #       key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
     - Navidrome:
         widget:
           type: navidrome
