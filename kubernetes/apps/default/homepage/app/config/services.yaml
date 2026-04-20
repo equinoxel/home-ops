@@ -32,7 +32,7 @@
         namespace: security
         widget:
           type: authentik
-          url: http://authentik-server.security.svc.cluster.local
+          url: https://auth.laurivan.com
           key: '{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}'
           version: 2
     - Unifi:
