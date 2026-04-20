@@ -3,11 +3,11 @@
 
 - Media:
     # TODO: uncomment after creating autobrr Bitwarden key with AUTOBRR_HOMEPAGE_API_KEY
-    # - Autobrr:
-    #     widget:
-    #       type: autobrr
-    #       url: http://autobrr.media.svc.cluster.local
-    #       key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
+    - Autobrr:
+        widget:
+          type: autobrr
+          url: http://autobrr.media.svc.cluster.local
+          key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
     - Navidrome:
         widget:
           type: navidrome
