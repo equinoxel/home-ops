@@ -130,6 +130,10 @@ spec:
           - name: envoy-internal
             namespace: network
     persistence:
+      next-cache:
+        type: emptyDir
+        globalMounts:
+          - path: /app/.next/server/pages
       config:
         type: configMap
         name: homepage-config
