@@ -34,6 +34,11 @@
         #description: Unifi Network Application
         namespace: network
     - Authentik:
+        icon: authentik.svg
+        href: https://auth.laurivan.com
+        description: Authentication Provider
+        app: authentik
+        namespace: security
         widget:
           type: authentik
           url: http://authentik.security.svc.cluster.local.:9300
