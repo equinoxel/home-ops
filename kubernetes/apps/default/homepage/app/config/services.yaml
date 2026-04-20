@@ -23,7 +23,7 @@
         namespace: media
         widget:
           type: autobrr
-          url: http://autobrr.media.svc.cluster.local.:4533
+          url: http://autobrr.media.svc.cluster.local.:80
           key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
 
 
@@ -33,6 +33,14 @@
         href: https://router.internal
         #description: Unifi Network Application
         namespace: network
+    - Authentik:
+        widget:
+          type: authentik
+          url: http://authentik.security.svc.cluster.local.:9300
+          key: '{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}'
+          version: 2
+
+
 
 - Calendar:
     - Agenda:
