@@ -11,7 +11,9 @@
         widget:
           type: navidrome
           url: http://navidrome.media.svc.cluster.local.:4533
-          key: '{{HOMEPAGE_VAR_NAVIDROME_TOKEN}}'
+          user: '{{HOMEPAGE_VAR_NAVIDROME_USER}}'
+          token: '{{HOMEPAGE_VAR_NAVIDROME_TOKEN}}'
+          salt: '{{HOMEPAGE_VAR_NAVIDROME_SALT}}'
 
     - Autobrr:
         icon: autobrr.svg
