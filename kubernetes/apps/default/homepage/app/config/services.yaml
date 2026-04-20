@@ -15,17 +15,6 @@
           token: '{{HOMEPAGE_VAR_NAVIDROME_TOKEN}}'
           salt: '{{HOMEPAGE_VAR_NAVIDROME_SALT}}'
 
-    - Autobrr:
-        icon: autobrr.svg
-        href: https://autobrr.laurivan.com
-        #description: Download Automation
-        app: autobrr
-        namespace: media
-        widget:
-          type: autobrr
-          url: http://autobrr.media.svc.cluster.local.:80
-          key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
-
 
 - Infrastructure:
     - Unifi:
@@ -33,17 +22,6 @@
         href: https://router.internal
         #description: Unifi Network Application
         namespace: network
-    - Authentik:
-        icon: authentik.svg
-        href: https://auth.laurivan.com
-        description: Authentication Provider
-        app: authentik
-        namespace: security
-        widget:
-          type: authentik
-          url: http://authentik.security.svc.cluster.local.:9300
-          key: '{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}'
-          version: 2
 
 
 
