@@ -28,6 +28,8 @@ spec:
     - <<: *policy
       namespace: self-hosted
     - <<: *policy
+      namespace: storage-system
+    - <<: *policy
       namespace: system
   to:
     - group: ''
