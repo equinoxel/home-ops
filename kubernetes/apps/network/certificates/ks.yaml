@@ -51,4 +51,4 @@ spec:
     - apiVersion: *certApi
       kind: *certKind
       current: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
-      failed: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'False')
+      failed: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'False') && status.conditions.filter(e, e.type == 'Issuing').all(e, e.status == 'False')
