@@ -216,7 +216,23 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 5: Wait for health
+# Step 5: Force-sync ExternalSecrets for the app
+# ---------------------------------------------------------------------------
+log "Checking for ExternalSecrets to force-sync..."
+ext_secrets=$(kubectl get externalsecret -n "${NS}" --no-headers -o custom-columns='NAME:.metadata.name' 2>/dev/null | grep -i "${APP}" || true)
+if [[ -n "${ext_secrets}" ]]; then
+    for es in ${ext_secrets}; do
+        log "  Force-syncing ExternalSecret ${es}..."
+        kubectl annotate externalsecret "${es}" -n "${NS}" force-sync="$(date +%s)" --overwrite 2>/dev/null || true
+    done
+    log "Waiting for ExternalSecrets to sync..."
+    sleep 5
+else
+    log "No ExternalSecrets found for ${APP} in ${NS}."
+fi
+
+# ---------------------------------------------------------------------------
+# Step 6: Wait for health
 # ---------------------------------------------------------------------------
 log "Waiting for pods to come up..."
 for i in $(seq 1 30); do
