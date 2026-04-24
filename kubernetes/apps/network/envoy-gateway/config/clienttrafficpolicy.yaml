@@ -9,8 +9,8 @@ spec:
     xForwardedFor:
       trustedCIDRs:
         - "10.42.0.0/16"
-        # TODO: Add IPv6 CIDR
-        # - "fc69::/108"
+        # TODO: Enable IPv6
+        # - fc69::/108
   path:
     disableMergeSlashes: true
     escapedSlashesAction: KeepUnchanged
@@ -25,7 +25,7 @@ spec:
       kind: Gateway
   tcpKeepalive: {}
   tls:
-    minVersion: "1.2"
+    minVersion: '1.2'
     alpnProtocols:
       - h2
       - http/1.1

@@ -18,10 +18,10 @@ spec:
           app:
             image:
               repository: ghcr.io/tarampampam/error-pages
-              tag: 3.8.1
+              tag: 3.8.0
             env:
               TEMPLATE_NAME: connection
-              SHOW_DETAILS: "false"
+              SHOW_DETAILS: 'false'
               LISTEN_PORT: &port 80
             probes:
               liveness:
@@ -42,7 +42,7 @@ spec:
             securityContext:
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
-              capabilities: { drop: ["ALL"] }
+              capabilities: { drop: ['ALL'] }
 
     defaultPodOptions:
       securityContext:
@@ -60,16 +60,16 @@ spec:
     route:
       internal: &route
         annotations:
-          gatus.home-operations.com/enabled: "false"
+          gatus.home-operations.com/enabled: 'false'
         parentRefs:
           - name: envoy-internal
             namespace: network
         hostnames:
-          - "{{ .Release.Name }}.laurivan.com"
+          - '{{ .Release.Name }}.laurivan.com'
       external:
         <<: *route
         annotations:
-          externaldns.enable.custom/internal: "false"
+          externaldns.enable.custom/internal: 'false'
         parentRefs:
           - name: envoy-external
             namespace: network
