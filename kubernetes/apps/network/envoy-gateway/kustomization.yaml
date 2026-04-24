@@ -4,4 +4,5 @@ kind: Kustomization
 
 resources:
   - ./app.ks.yaml
-  # - ./error-pages.ks.yaml  # Disabled: interferes with backend error responses
+  - ./config.ks.yaml
+  - ./error-pages.ks.yaml
