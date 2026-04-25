@@ -33,16 +33,16 @@ The OIDC client ID and secret are pulled from the external secret (see below).
    - Name: `qui`
    - Authorization flow: use your default implicit/explicit consent flow.
    - Client ID / Client Secret: copy these into the Bitwarden `qui` item as `QUI_OIDC_CLIENT_ID` and `QUI_OIDC_CLIENT_SECRET`.
-   - Redirect URIs: `https://qui.tholinka.dev/api/auth/oidc/callback`
+   - Redirect URIs: `https://qui.laurivan.com/api/auth/oidc/callback`
    - Scopes: `openid`, `profile`, `email`.
    - Signing Key: select your self-signed or managed certificate.
 
 2. **Create an Application**
    - Go to **Admin → Applications → Create**.
    - Name: `qui`
-   - Slug: `qui` (this determines the issuer path — `https://auth.tholinka.dev/application/o/qui/`).
+   - Slug: `qui` (this determines the issuer path — `https://auth.laurivan.com/application/o/qui/`).
    - Provider: select the `qui` provider created above.
-   - Launch URL: `https://qui.tholinka.dev`
+   - Launch URL: `https://qui.laurivan.com`
 
 3. **Assign Access**
    - Under the application's **Policy / Group Bindings**, bind the groups or users that should have access.
