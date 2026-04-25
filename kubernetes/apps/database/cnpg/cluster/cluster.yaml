@@ -54,12 +54,12 @@ spec:
         barmanObjectName: *name
         serverName: *name
   bootstrap:
-    # To reinitialize from scratch, switch back to initdb mode:
-    # initdb:
-    #   database: app
-    #   owner: app
-    recovery:
-      source: source
+    # To restore from backup, switch to recovery mode:
+    # recovery:
+    #   source: source
+    initdb:
+      database: app
+      owner: app
   externalClusters:
     - name: source
       plugin:
