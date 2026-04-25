@@ -248,7 +248,7 @@ spec:
                 subPath: auth.toml
       media:
         type: nfs
-        server: nas.servers.internal
+        server: 10.0.0.14
         path: /media
         advancedMounts:
           *app :

@@ -81,7 +81,7 @@ spec:
         existingClaim: '{{ .Release.Name }}'
       media:
         type: nfs
-        server: nas.servers.internal
+        server: 10.0.0.14
         path: /mnt/Main/shares
         globalMounts:
           - path: /media
