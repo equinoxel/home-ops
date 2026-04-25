@@ -12,3 +12,5 @@ resources:
   - ./navidrome
   - ./subsonic
   - ./autobrr
+  - ./flaresolverr
+  - ./qui
