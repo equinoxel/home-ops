@@ -37,6 +37,66 @@ fi
 log "Reinitializing app=${APP} namespace=${NS}"
 
 # ---------------------------------------------------------------------------
+# Step 0: Ensure OpenEBS hostpath base directory exists on target nodes
+# ---------------------------------------------------------------------------
+# On Talos, /var is writable (xfs on NVMe) but /var/mnt/local-hostpath may not
+# exist after a node reinstall. Kubelet's DirectoryOrCreate can't create it
+# because it sees /var/mnt as read-only. We work around this by mounting /var
+# directly and creating the subdirectory from a privileged pod.
+HOSTPATH_BASE="/var/mnt/local-hostpath"
+log "Checking OpenEBS hostpath base directory on nodes with PVCs for ${APP}..."
+pvc_nodes=$(kubectl get pvc -n "${NS}" --no-headers -o custom-columns='NAME:.metadata.name,VOL:.spec.volumeName' 2>/dev/null \
+    | grep -i "${APP}" \
+    | awk '{print $2}' \
+    | xargs -I{} kubectl get pv {} -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}' 2>/dev/null \
+    | sort -u || true)
+
+if [[ -z "${pvc_nodes}" ]]; then
+    # No existing PVCs — check all worker nodes
+    pvc_nodes=$(kubectl get nodes --no-headers -o custom-columns='NAME:.metadata.name' \
+        -l 'node-role.kubernetes.io/control-plane notin ()' 2>/dev/null || \
+        kubectl get nodes --no-headers -o custom-columns='NAME:.metadata.name' 2>/dev/null || true)
+fi
+
+for node in ${pvc_nodes}; do
+    FIX_POD="fix-hostpath-${node}-$(date +%s)"
+    log "  Ensuring ${HOSTPATH_BASE} exists on ${node}..."
+    kubectl run "${FIX_POD}" \
+        --image=busybox:1.37 \
+        --restart=Never \
+        --overrides="{
+            \"spec\":{
+                \"nodeName\":\"${node}\",
+                \"containers\":[{
+                    \"name\":\"fix\",
+                    \"image\":\"busybox:1.37\",
+                    \"command\":[\"sh\",\"-c\",\"mkdir -p /host-var/mnt/local-hostpath\"],
+                    \"volumeMounts\":[{\"name\":\"hostvar\",\"mountPath\":\"/host-var\"}]
+                }],
+                \"volumes\":[{
+                    \"name\":\"hostvar\",
+                    \"hostPath\":{\"path\":\"/var\",\"type\":\"Directory\"}
+                }]
+            }
+        }" \
+        -n default 2>/dev/null || true
+
+    # Wait for the fix pod to complete
+    for i in $(seq 1 12); do
+        phase=$(kubectl get pod "${FIX_POD}" -n default -o jsonpath='{.status.phase}' 2>/dev/null || true)
+        if [[ "${phase}" == "Succeeded" ]]; then
+            log "    ${HOSTPATH_BASE} ensured on ${node}."
+            break
+        elif [[ "${phase}" == "Failed" ]]; then
+            warn "    Failed to ensure ${HOSTPATH_BASE} on ${node}. Check manually."
+            break
+        fi
+        sleep 5
+    done
+    kubectl delete pod "${FIX_POD}" -n default --force 2>/dev/null || true
+done
+
+# ---------------------------------------------------------------------------
 # Step 1: Suspend the Flux kustomization
 # ---------------------------------------------------------------------------
 log "Suspending Flux kustomization ${APP}..."
