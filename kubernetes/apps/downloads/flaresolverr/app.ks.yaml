@@ -3,23 +3,15 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: &app autobrr
+  name: &app flaresolverr
   namespace: &namespace media
 spec:
   interval: 1h
-  components:
-    - ../../../../components/volsync
-  dependsOn:
-    - name: volsync
-      namespace: storage-system
-  path: ./kubernetes/apps/media/autobrr/app
+  path: ./kubernetes/apps/downloads/flaresolverr/app
   postBuild:
     substitute:
       APP: *app
-      VOLSYNC_CAPACITY: 1Gi
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
+      VOLSYNC_CAPACITY: 5Gi
   prune: true
   sourceRef:
     kind: GitRepository

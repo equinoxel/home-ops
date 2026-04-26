@@ -9,5 +9,6 @@ components:
   - ../../components/sops
   - ../../components/repos/app-template
 resources:
-  - ./navidrome
-  - ./subsonic
+  - ./autobrr
+  - ./flaresolverr
+  - ./qui

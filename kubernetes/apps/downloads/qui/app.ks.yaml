@@ -17,7 +17,7 @@ spec:
       namespace: flux-system
     - name: authentik # does not like the oidc provider not being available at startup
       namespace: security
-  path: ./kubernetes/apps/media/qui/app
+  path: ./kubernetes/apps/downloads/qui/app
   postBuild:
     substitute:
       APP: *app
