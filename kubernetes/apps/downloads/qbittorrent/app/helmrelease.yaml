@@ -73,7 +73,7 @@ spec:
               - path: /config
       downloads:
         type: nfs
-        path: /mnt/Main/shares/media
+        path: /mnt/Main/shares
         server: 10.0.0.14
         globalMounts:
           - path: /data/nas-media/Downloads/qbittorrent
@@ -83,7 +83,7 @@ spec:
     route:
       app:
         hostnames:
-          - qbittorrent.bjw-s.dev
+          - qb.laurivan.com
         parentRefs:
           - name: envoy-internal
             namespace: network
@@ -98,12 +98,12 @@ spec:
           http:
             port: *port
         primary: true
-      bittorrent:
-        type: LoadBalancer
-        annotations:
-          lbipam.cilium.io/ips: 10.1.6.61
-        externalTrafficPolicy: Local
-        ports:
-          bittorrent-tcp:
-            port: *torrentPort
-            protocol: TCP
+      # bittorrent:
+      #   type: LoadBalancer
+      #   annotations:
+      #     lbipam.cilium.io/ips: 10.1.6.61
+      #   externalTrafficPolicy: Local
+      #   ports:
+      #     bittorrent-tcp:
+      #       port: *torrentPort
+      #       protocol: TCP
