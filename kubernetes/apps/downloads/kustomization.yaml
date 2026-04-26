@@ -11,4 +11,5 @@ components:
 resources:
   - ./autobrr
   - ./flaresolverr
+  - ./qbittorrent
   - ./qui

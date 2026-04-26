@@ -3,263 +3,107 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: &app qbittorrent
+  name: qbittorrent
 spec:
-  interval: 1h
   chartRef:
     kind: OCIRepository
-    name: app-template
-  driftDetection:
-    ignore:
-      - paths: [/spec/replicas]
+    name: qbittorrent
+  interval: 30m
   values:
     controllers:
-      *app :
+      qbittorrent:
         annotations:
-          reloader.stakater.com/auto: 'true'
-        initContainers:
-          gluetun:
-            image:
-              repository: ghcr.io/qdm12/gluetun
-              tag: v3.41.1@sha256:1a5bf4b4820a879cdf8d93d7ef0d2d963af56670c9ebff8981860b6804ebc8ab
-            env:
-              DNS_SERVER: 'off'
-              DNS_ADDRESS: 10.96.0.10 # coredns is either pihole, dnsmasq, or cloudflare over tls, so it's fine to use
-
-              HTTP_CONTROL_SERVER_AUTH_CONFIG_FILEPATH: &gluetunAuthPath /gluetun/auth.toml
-
-              FIREWALL_INPUT_PORTS: 80,8388,9999 # 80: WebUI, 8388 Socks Proxy, 9999 Kube Probes
-              FIREWALL_OUTBOUND_SUBNETS: 10.69.0.0/16,10.96.0.0/16 # Allow access to k8s subnets
-
-              HEALTH_SERVER_ADDRESS: :9999
-              HEALTH_SUCCESS_WAIT_DURATION: 10s
-
-              VPN_TYPE: wireguard
-              # VPN_TYPE: openvpn
-
-              VPN_PORT_FORWARDING: 'on'
-              PORT_FORWARD_ONLY: 'on'
-
-              VPN_INTERFACE: tun0
-              UPDATER_PERIOD: 24h
-
-              # slightly larger MTU
-              WIREGUARD_MTU: 1400
-              OPENVPN_MSSFIX: 1320
-            envFrom:
-              - secretRef:
-                  name: wireguard
-            probes:
-              liveness:
-                enabled: true
-                custom: true
-                spec: &probe
-                  exec:
-                    command:
-                      - /bin/sh
-                      - -c
-                      - |-
-                        port="$(wget -O - -q --header="X-API-KEY: $GLUETUN_CONTROL_SERVER_API_KEY" http://localhost:8000/v1/portforward)"
-                        echo $port
-                        [ "$port" = '{"port":0}' ] && exit 1 || exit 0
-                  # initialDelaySeconds: 5
-                  # periodSeconds: 60
-                  # successThreshold: 1
-                  # timeoutSeconds: 30
-                  # failureThreshold: 10
-              # randomly gluetun will fail to get public_ip on startup for some reason
-              # startup:
-              #   enabled: true
-              #   custom: true
-              #   spec:
-              #     <<: *probe
-              #     exec:
-              #       command:
-              #         - /bin/sh
-              #         - -c
-              #         - |-
-              #           ip="$(wget -O - -q --header="X-API-KEY: $GLUETUN_CONTROL_SERVER_API_KEY" http://localhost:8000/v1/publicip/ip)"
-              #           echo $ip
-              #           [ "$ip" = '{"public_ip":""}' ] && exit 1 || exit 0
-              #     periodSeconds: 10
-            lifecycle:
-              postStart:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - >-
-                      (ip rule del table 51820; ip -6 rule del table 51820) || true
-            restartPolicy: Always
-            securityContext:
-              # can't be non-root, or it has no access to tunnel
-              runAsNonRoot: false
-              runAsUser: 0
-              runAsGroup: 0
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: false # wants to create a user, etc
-              capabilities:
-                add: [NET_ADMIN]
-            resources:
-              requests:
-                cpu: 20m
-              limits:
-                memory: 100Mi
-          # TODO: Replace once gluetun supports socks5, nothing supports shadowsocks
-          socks5:
-            restartPolicy: Always
-            image:
-              repository: mirror.gcr.io/serjs/go-socks5-proxy
-              tag: latest@sha256:0af522996f402c03ecd985a87997158eabeb28935365e3a384df37eafcf740ea
-            env:
-              PROXY_PORT: &proxy-port 8388
-              REQUIRE_AUTH: 'false'
-            resources:
-              requests:
-                cpu: 5m
-              limits:
-                memory: 32Mi
-            securityContext: &securityContext
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities: { drop: [ALL] }
+          reloader.stakater.com/auto: "true"
+        pod:
+          securityContext:
+            fsGroup: 2000
+            fsGroupChangePolicy: "OnRootMismatch"
+            runAsGroup: 2000
+            runAsNonRoot: true
+            runAsUser: 2000
         containers:
           app:
             image:
               repository: ghcr.io/home-operations/qbittorrent
-              tag: 5.1.4@sha256:bb82ad6668f8eda1d0fcce6c1341498bfa879155bb1295cd9d314a2c35c07a01
+              tag: 5.1.4
             env:
-              UMASK: '022'
-              QBT_WEBUI_PORT: &port 80
-              PUSHOVER_ENABLED: true
-            envFrom:
-              - secretRef:
-                  name: *app
+              QBT_TORRENTING_PORT: &torrentPort 50469
+              QBT_WEBUI_PORT: &port 8080
+            nameOverride: qbittorrent
             probes:
-              startup:
+              liveness:
                 enabled: true
+                spec:
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
                 spec:
                   httpGet:
                     path: /api/v2/app/version
                     port: *port
-                  failureThreshold: 30
                   periodSeconds: 10
                   timeoutSeconds: 5
-            securityContext: *securityContext
+                  failureThreshold: 5
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 10
             resources:
               requests:
-                cpu: 100m
+                cpu: 200m
+                memory: 1Gi
               limits:
-                memory: 8Gi
-          port-forward:
-            image:
-              repository: ghcr.io/tholinka/gluetun-qb-port-sync
-              tag: 0.0.6@sha256:a6405cc2e84cc553cfb0b7796d06468ed9f6d6363690b7f656bf0e10b134346d
-            env:
-              GLUETUN_CONTROL_SERVER_HOST: localhost
-              GLUETUN_CONTROL_SERVER_PORT: 8000
-              CRON_ENABLED: true
-              CRON_SCHEDULE: '*/5 * * * *'
-              LOG_TIMESTAMP: false
-            envFrom:
-              - secretRef:
-                  name: *app
-            resources:
-              requests:
-                cpu: 5m
-              limits:
-                memory: 32Mi
-            securityContext: *securityContext
-    defaultPodOptions:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        fsGroupChangePolicy: OnRootMismatch
-    service:
-      app:
-        primary: true
-        forceRename: *app
-        ports:
-          http:
-            primary: true
-            port: *port
-      gluetun:
-        suffix: gluetun
-        ports:
-          socks-proxy:
-            port: *proxy-port
+                memory: 6Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+    persistence:
+      config:
+        existingClaim: qbittorrent
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /config
+      downloads:
+        type: nfs
+        path: /mnt/Main/shares/media
+        server: 10.0.0.14
+        globalMounts:
+          - path: /data/nas-media/Downloads/qbittorrent
+            subPath: Downloads/qbittorrent
+      tmp:
+        type: emptyDir
     route:
       app:
         hostnames:
-          - qb.tholinka.dev
+          - qbittorrent.bjw-s.dev
         parentRefs:
           - name: envoy-internal
             namespace: network
         rules:
-          - backendRefs: [{ identifier: app }]
-
-    configMaps:
-      config:
-        data:
-          .qbt.toml: |
-            [qbittorrent]
-            addr = "http://localhost:80"
-
-    persistence:
-      config:
-        existingClaim: *app
-        advancedMounts:
-          *app :
-            app:
-              - path: /config
-      config-file:
-        type: configMap
-        name: *app
-        advancedMounts:
-          *app :
-            app:
-              - path: /config/.qbt.toml
-                subPath: .qbt.toml
-                readOnly: true
-
-      tmpfs:
-        type: emptyDir
-        advancedMounts:
-          *app :
-            port-forward:
-              - path: /config
-                subPath: config
-            app:
-              - path: /addons
-                subPath: addons
-            vuetorrent:
-              - path: /addons
-                subPath: addons
-
-      gluetun-auth:
-        type: secret
-        name: '{{ .Release.Name }}-gluetun'
-        advancedMounts:
-          *app :
-            gluetun:
-              - path: *gluetunAuthPath
-                subPath: auth.toml
-      media:
-        type: nfs
-        server: 10.0.0.14
-        path: /media
-        advancedMounts:
-          *app :
-            app:
-              - path: /media/downloads/qbittorrent
-                subPath: downloads/qbittorrent
-      tunnel:
-        type: hostPath
-        hostPath: /dev/net/tun
-        hostPathType: CharDevice
-        advancedMounts:
-          *app :
-            gluetun:
-              - path: /dev/net/tun
+          - backendRefs:
+              - identifier: app
+                port: http
+    service:
+      app:
+        forceRename: "{{ .Release.Name }}"
+        ports:
+          http:
+            port: *port
+        primary: true
+      bittorrent:
+        type: LoadBalancer
+        annotations:
+          lbipam.cilium.io/ips: 10.1.6.61
+        externalTrafficPolicy: Local
+        ports:
+          bittorrent-tcp:
+            port: *torrentPort
+            protocol: TCP
