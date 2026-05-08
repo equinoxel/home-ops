@@ -46,6 +46,7 @@ metadata:
   namespace: &namespace flux-system
 spec:
   interval: 1h
+  timeout: 5m
   targetNamespace: *namespace
   path: ./kubernetes/apps/flux-system/healthcheck/app
   prune: true
