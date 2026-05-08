@@ -14,7 +14,7 @@ spec:
   dependsOn:
     - name: storage-ready
       namespace: flux-system
-  path: ./kubernetes/apps/media/sonarr/app
+  path: ./kubernetes/apps/downloads/sonarr/app
   postBuild:
     substitute:
       APP: *app
