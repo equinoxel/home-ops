@@ -1,3 +1,4 @@
 machine:
   nodeLabels:
     node.kubernetes.io/cm5: ""
+    node.kubernetes.io/download: ""

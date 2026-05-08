@@ -103,6 +103,27 @@ nodes:
         mtu: 1500
     patches:
       - "@./patches/cm5/machine-install.yaml"
+  - hostname: "esxi-2cu-8g-04"
+    ipAddress: "10.0.0.123"
+    installDisk: "/dev/sda"
+    machineSpec:
+      secureboot: false
+    talosImageURL: factory.talos.dev/installer/43a1a6104d8dcd6547983f4ed13abb6f5e8a1b2fdad796c69e7db6e95d122884
+    controlPlane: false
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "34:97:87:58:7b:10"
+        dhcp: false
+        addresses:
+          - "10.0.0.123/24"
+        routes:
+          - gateway: "10.0.0.1"
+            network: 0.0.0.0/0
+        mtu: 1500
+        vip:
+          ip: "10.0.0.155"
+    patches:
+      - "@./patches/intel/machine-install.yaml"
 
 # Global patches
 patches:

@@ -1,0 +1,5 @@
+machine:
+  nodeLabels:
+    node.kubernetes.io/intel: ""
+    node.kubernetes.io/media: ""
+    node.kubernetes.io/download: ""
