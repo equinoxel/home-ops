@@ -92,5 +92,11 @@ spec:
         path: /mnt/Main/shares/video
         globalMounts:
           - path: /media
+      downloads:
+        type: nfs
+        path: /mnt/Main/shares/Downloads/qbittorrent
+        server: 10.0.0.14
+        globalMounts:
+          - path: /qbittorrent
       tmp:
         type: emptyDir
