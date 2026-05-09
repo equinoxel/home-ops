@@ -1,7 +1,7 @@
 ---
 # - Home:
 #     - Home Assistant:
-#         href: https://ha.tholinka.dev
+#         href: https://ha.laurivan.com
 #         icon: home-assistant.png
 #         #description: Home Assistant
 #         app: home-assistant
@@ -21,7 +21,7 @@
 - Media:
     - Autobrr:
         icon: autobrr.svg
-        href: https://autobrr.tholinka.dev
+        href: https://autobrr.laurivan.com
         #description: Download Automation
         app: autobrr
         namespace: media
@@ -31,7 +31,7 @@
           key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
     # - Bazarr:
     #     icon: bazarr.svg
-    #     href: https://bazarr.tholinka.dev
+    #     href: https://bazarr.laurivan.com
     #     #description: Subtitles Management
     #     app: bazarr
     #     namespace: media
@@ -40,7 +40,7 @@
     #       url: http://bazarr.media.svc.cluster.local:6767
     #       key: '{{HOMEPAGE_VAR_BAZARR_TOKEN}}'
     # - Kavita:
-    #     href: https://kavita.tholinka.dev
+    #     href: https://kavita.laurivan.com
     #     icon: kavita.svg
     #     app: kavita
     #     namespace: media
@@ -49,7 +49,7 @@
     #       url: http://kavita.media.svc.cluster.local.:5000
     #       key: '{{HOMEPAGE_VAR_KAVITA_TOKEN}}'
     # - Lidarr:
-    #     href: https://lidarr.tholinka.dev
+    #     href: https://lidarr.laurivan.com
     #     icon: lidarr.svg
     #     app: lidarr
     #     namespace: media
@@ -59,7 +59,7 @@
     #       key: '{{HOMEPAGE_VAR_LIDARR_TOKEN}}'
     # - Plex:
     #     icon: plex.svg
-    #     href: https://plex.tholinka.dev
+    #     href: https://plex.laurivan.com
     #     #description: Media Server
     #     app: plex
     #     namespace: media
@@ -70,7 +70,7 @@
     #       enableNowPlaying: true
     - Prowlarr:
         icon: prowlarr.svg
-        href: https://prowlarr.tholinka.dev
+        href: https://prowlarr.laurivan.com
         app: prowlarr
         namespace: media
         widget:
@@ -79,7 +79,7 @@
           key: '{{HOMEPAGE_VAR_PROWLARR_TOKEN}}'
     - qBittorrent:
         icon: qbittorrent.svg
-        href: https://qb.tholinka.dev
+        href: https://qb.laurivan.com
         app: qbittorrent
         namespace: media
         widget:
@@ -88,11 +88,11 @@
           enableLeechProgress: true # optional, defaults to false
     - qui:
         icon: qui.svg
-        href: https://qui.tholinka.dev
+        href: https://qui.laurivan.com
         app: qui
         namespace: media
     - Radarr:
-        href: https://radarr.tholinka.dev
+        href: https://radarr.laurivan.com
         icon: radarr.svg
         #description: Movies
         app: radarr
@@ -103,7 +103,7 @@
           key: '{{HOMEPAGE_VAR_RADARR_TOKEN}}'
     # - SABnzbd:
     #     icon: sabnzbd.svg
-    #     href: https://sab.tholinka.dev
+    #     href: https://sab.laurivan.com
     #     app: sabnzbd
     #     namespace: media
     #     widget:
@@ -112,15 +112,15 @@
     #       key: '{{HOMEPAGE_VAR_SABNZBD_TOKEN}}'
     - Seerr:
         icon: jellyseerr.svg
-        href: https://requests.tholinka.dev
+        href: https://requests.laurivan.com
         app: seerr
-        namespace: media
+        namespace: downloads
         widget:
           type: jellyseerr
           url: http://seerr.media.svc.cluster.local.:80
           key: '{{HOMEPAGE_VAR_SEERR_TOKEN}}'
     # - slskd:
-    #     href: https://slskd.tholinka.dev
+    #     href: https://slskd.laurivan.com
     #     icon: slskd.svg
     #     app: slskd
     #     namespace: media
@@ -129,18 +129,18 @@
     #       url: http://slskd.media.svc.cluster.local:80
     #       key: '{{HOMEPAGE_VAR_SLSKD_TOKEN}}'
     - Sonarr:
-        href: https://sonarr.tholinka.dev
+        href: https://sonarr.laurivan.com
         icon: sonarr.svg
         #description: TV Shows
         app: sonarr
-        namespace: media
+        namespace: downloads
         widget:
           type: sonarr
           url: http://sonarr.media.svc.cluster.local.:80
           key: '{{HOMEPAGE_VAR_SONARR_TOKEN}}'
     # - Tautulli:
     #     icon: tautulli.svg
-    #     href: https://tautulli.tholinka.dev
+    #     href: https://tautulli.laurivan.com
     #     app: plex
     #     namespace: media
     #     widget:
@@ -150,17 +150,17 @@
     #       enableNowPlaying: true
     ### no widgets at bottom of list
     # - Shelfmark:
-    #     href: https://shelfmark.tholinka.dev
+    #     href: https://shelfmark.laurivan.com
     #     icon: calibre.svg
     #     app: shelfmark
     #     namespace: media
     # - Maintainerr:
-    #     href: https://maintainerr.tholinka.dev
+    #     href: https://maintainerr.laurivan.com
     #     icon: maintainerr.svg
     #     app: maintainerr
     #     namespace: media
     # - Upload-Assistant:
-    #     href: https://upload-assistant.tholinka.dev
+    #     href: https://upload-assistant.laurivan.com
     #     icon: mdi-upload
     #     app: upload-assistant
     #     namespace: media
