@@ -24,20 +24,20 @@
         href: https://autobrr.laurivan.com
         #description: Download Automation
         app: autobrr
-        namespace: media
+        namespace: downloads
         widget:
           type: autobrr
-          url: http://autobrr.media.svc.cluster.local.:80
+          url: http://autobrr.downloads.svc.cluster.local.:80
           key: '{{HOMEPAGE_VAR_AUTOBRR_TOKEN}}'
     # - Bazarr:
     #     icon: bazarr.svg
     #     href: https://bazarr.laurivan.com
     #     #description: Subtitles Management
     #     app: bazarr
-    #     namespace: media
+    #     namespace: downloads
     #     widget:
     #       type: bazarr
-    #       url: http://bazarr.media.svc.cluster.local:6767
+    #       url: http://bazarr.downloads.svc.cluster.local:6767
     #       key: '{{HOMEPAGE_VAR_BAZARR_TOKEN}}'
     # - Kavita:
     #     href: https://kavita.laurivan.com
@@ -52,10 +52,10 @@
     #     href: https://lidarr.laurivan.com
     #     icon: lidarr.svg
     #     app: lidarr
-    #     namespace: media
+    #     namespace: downloads
     #     widget:
     #       type: lidarr
-    #       url: http://lidarr.media.svc.cluster.local
+    #       url: http://lidarr.downloads.svc.cluster.local
     #       key: '{{HOMEPAGE_VAR_LIDARR_TOKEN}}'
     # - Plex:
     #     icon: plex.svg
@@ -72,16 +72,16 @@
         icon: prowlarr.svg
         href: https://prowlarr.laurivan.com
         app: prowlarr
-        namespace: media
+        namespace: downloads
         widget:
           type: prowlarr
-          url: http://prowlarr.media.svc.cluster.local.:80
+          url: http://prowlarr.downloads.svc.cluster.local.:80
           key: '{{HOMEPAGE_VAR_PROWLARR_TOKEN}}'
     - qBittorrent:
         icon: qbittorrent.svg
         href: https://qb.laurivan.com
         app: qbittorrent
-        namespace: media
+        namespace: downloads
         widget:
           type: qbittorrent
           url: '{{HOMEPAGE_VAR_QBITTORRENT_PROXY}}'
@@ -90,25 +90,25 @@
         icon: qui.svg
         href: https://qui.laurivan.com
         app: qui
-        namespace: media
+        namespace: downloads
     - Radarr:
         href: https://radarr.laurivan.com
         icon: radarr.svg
         #description: Movies
         app: radarr
-        namespace: media
+        namespace: downloads
         widget:
           type: radarr
-          url: http://radarr.media.svc.cluster.local.:80
+          url: http://radarr.downloads.svc.cluster.local.:80
           key: '{{HOMEPAGE_VAR_RADARR_TOKEN}}'
     # - SABnzbd:
     #     icon: sabnzbd.svg
     #     href: https://sab.laurivan.com
     #     app: sabnzbd
-    #     namespace: media
+    #     namespace: downloads
     #     widget:
     #       type: sabnzbd
-    #       url: http://sabnzbd.media.svc.cluster.local.:80
+    #       url: http://sabnzbd.downloads.svc.cluster.local.:80
     #       key: '{{HOMEPAGE_VAR_SABNZBD_TOKEN}}'
     - Seerr:
         icon: jellyseerr.svg
@@ -117,7 +117,7 @@
         namespace: downloads
         widget:
           type: jellyseerr
-          url: http://seerr.media.svc.cluster.local.:80
+          url: http://seerr.downloads.svc.cluster.local.:80
           key: '{{HOMEPAGE_VAR_SEERR_TOKEN}}'
     # - slskd:
     #     href: https://slskd.laurivan.com
@@ -136,7 +136,7 @@
         namespace: downloads
         widget:
           type: sonarr
-          url: http://sonarr.media.svc.cluster.local.:80
+          url: http://sonarr.downloads.svc.cluster.local.:80
           key: '{{HOMEPAGE_VAR_SONARR_TOKEN}}'
     # - Tautulli:
     #     icon: tautulli.svg
@@ -158,12 +158,12 @@
     #     href: https://maintainerr.laurivan.com
     #     icon: maintainerr.svg
     #     app: maintainerr
-    #     namespace: media
+    #     namespace: downloads
     # - Upload-Assistant:
     #     href: https://upload-assistant.laurivan.com
     #     icon: mdi-upload
     #     app: upload-assistant
-    #     namespace: media
+    #     namespace: downloads
 
 # - Infrastructure:
 #     - Unifi:
