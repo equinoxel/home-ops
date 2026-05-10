@@ -75,34 +75,6 @@ nodes:
         mtu: 1500
         vip:
           ip: "10.0.0.155"
-  - hostname: "blade-01"
-    ipAddress: "10.0.50.10"
-    installDisk: "/dev/sda"
-    machineSpec:
-      secureboot: false
-    talosImageURL: factory.talos.dev/installer/de1619e16531ddff67ccb4ce636a5e3ba5197eb4fc0e8421f095ec50ce9d26a6
-    controlPlane: false
-    networkInterfaces:
-      - deviceSelector:
-          hardwareAddr: "2c:cf:67:fc:f1:28"
-        dhcp: true
-        mtu: 1500
-    patches:
-      - "@./patches/cm5/machine-install.yaml"
-  - hostname: "blade-02"
-    ipAddress: "10.0.50.11"
-    installDisk: "/dev/sda"
-    machineSpec:
-      secureboot: false
-    talosImageURL: factory.talos.dev/installer/de1619e16531ddff67ccb4ce636a5e3ba5197eb4fc0e8421f095ec50ce9d26a6
-    controlPlane: false
-    networkInterfaces:
-      - deviceSelector:
-          hardwareAddr: "2c:cf:67:fc:f1:37"
-        dhcp: true
-        mtu: 1500
-    patches:
-      - "@./patches/cm5/machine-install.yaml"
   - hostname: "esxi-2cu-8g-04"
     ipAddress: "10.0.0.123"
     installDisk: "/dev/sda"
@@ -124,6 +96,35 @@ nodes:
           ip: "10.0.0.155"
     patches:
       - "@./patches/intel/machine-install.yaml"
+  - hostname: "blade-01"
+    ipAddress: "10.0.50.10"
+    installDisk: "/dev/sda"
+    machineSpec:
+      secureboot: false
+    installerURL: ghcr.io/wheetazlab/talos-rpi-installer-rpi-kernel:v1.12.7-talos-k-rpi
+    controlPlane: false
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "2c:cf:67:fc:f1:28"
+        dhcp: true
+        mtu: 1500
+    patches:
+      - "@./patches/cm5/machine-install.yaml"
+  - hostname: "blade-02"
+    ipAddress: "10.0.50.11"
+    installDisk: "/dev/sda"
+    machineSpec:
+      secureboot: false
+    installerURL: ghcr.io/wheetazlab/talos-rpi-installer-rpi-kernel:v1.12.7-talos-k-rpi
+    controlPlane: false
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "2c:cf:67:fc:f1:37"
+        dhcp: true
+        mtu: 1500
+    patches:
+      - "@./patches/cm5/machine-install.yaml"
+
 
 # Global patches
 patches:
@@ -132,7 +133,8 @@ patches:
   - "@./patches/global/machine-network.yaml"
   - "@./patches/global/machine-sysctls.yaml"
   # - "@./patches/global/machine-hugepages.yaml"
-  - "@./patches/global/machine-time.yaml"
+  # - "@./patches/global/machine-time.yaml" # Talos v1.12+ uses TimeSyncConfig; defaults to time.cloudflare.com
+  - "@./patches/global/network.yaml"
 
 # Controller patches
 controlPlane:
