@@ -5,14 +5,13 @@ name: net0
 selector:
   # some of the backup 1GbE ports are: e8 or 80:e8:2c:2f:b4:ad
   match: >-
-    (link.driver == "r8169" || link.driver == "r8152") &&
-    (mac(link.permanent_addr).startsWith("2c:") || mac(link.permanent_addr).startsWith("34:"))
+    (mac(link.hardware_addr).startsWith("77:") || mac(link.hardware_addr).startsWith("f4:"))
 ---
 apiVersion: v1alpha1
 kind: BondConfig
 name: bond0
 links:
-  - net0
+  - ethSel0
 bondMode: active-backup
 mtu: 9000
 ---
