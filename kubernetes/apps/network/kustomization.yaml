@@ -14,3 +14,4 @@ resources:
   - ./envoy-gateway
   - ./k8s-gateway/ks.yaml
   - ./watchdog-blade/ks.yaml
+  - ./multus
