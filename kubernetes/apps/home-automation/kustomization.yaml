@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: home-automation
+resources:
+  # - ./esphome/ks.yaml
+  # - ./go2rtc/ks.yaml
+  - ./home-assistant
+  # - ./piper/ks.yaml
+  # - ./whisper/ks.yaml
+  # - ./zigbee/ks.yaml
+  # - ./zwave/ks.yaml
+components:
+  - ../../components/common
+  - ../../components/repos/app-template
