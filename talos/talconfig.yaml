@@ -95,6 +95,26 @@ nodes:
     patches:
       - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/slow-disk.yaml"
+  - hostname: "esxi-2cu-8g-05"
+    ipAddress: "10.0.0.123"
+    installDisk: "/dev/sda"
+    machineSpec:
+      secureboot: false
+    talosImageURL: factory.talos.dev/installer/43a1a6104d8dcd6547983f4ed13abb6f5e8a1b2fdad796c69e7db6e95d122884
+    controlPlane: false
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "34:97:87:58:7b:11"
+        dhcp: false
+        addresses:
+          - "10.0.0.127/24"
+        routes:
+          - gateway: "10.0.0.1"
+            network: 0.0.0.0/0
+        mtu: 1500
+    patches:
+      - "@./patches/intel/machine-install.yaml"
+      - "@./patches/worker/slow-disk.yaml"
   - hostname: "blade-01"
     ipAddress: "10.0.50.10"
     installDisk: "/dev/mmcblk0"
