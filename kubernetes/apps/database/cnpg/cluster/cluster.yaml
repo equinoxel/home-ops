@@ -27,6 +27,8 @@ spec:
     enablePodAntiAffinity: true
     topologyKey: kubernetes.io/hostname
     podAntiAffinityType: required
+    nodeSelector:
+      node.kubernetes.io/ssd: ""
   postgresql:
     parameters:
       max_connections: "600"
