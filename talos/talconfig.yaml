@@ -97,7 +97,7 @@ nodes:
       - "@./patches/worker/slow-disk.yaml"
   - hostname: "blade-01"
     ipAddress: "10.0.50.10"
-    installDisk: "/dev/sda"
+    installDisk: "/dev/mmcblk0"
     machineSpec:
       secureboot: false
     installerURL: ghcr.io/wheetazlab/talos-rpi-installer-rpi-kernel:v1.12.7-talos-k-rpi
@@ -107,12 +107,16 @@ nodes:
           hardwareAddr: "2c:cf:67:fc:f1:28"
         dhcp: true
         mtu: 1500
+    machineDisks:
+      - device: /dev/nvme0n1
+        partitions:
+          - mountpoint: /var/mnt/data
     patches:
       - "@./patches/cm5/machine-install.yaml"
       - "@./patches/worker/fast-disk.yaml"
   - hostname: "blade-02"
     ipAddress: "10.0.50.11"
-    installDisk: "/dev/sda"
+    installDisk: "/dev/mmcblk0"
     machineSpec:
       secureboot: false
     installerURL: ghcr.io/wheetazlab/talos-rpi-installer-rpi-kernel:v1.12.7-talos-k-rpi
@@ -122,6 +126,10 @@ nodes:
           hardwareAddr: "2c:cf:67:fc:f1:37"
         dhcp: true
         mtu: 1500
+    machineDisks:
+      - device: /dev/nvme0n1
+        partitions:
+          - mountpoint: /var/mnt/data
     patches:
       - "@./patches/cm5/machine-install.yaml"
       - "@./patches/worker/fast-disk.yaml"
