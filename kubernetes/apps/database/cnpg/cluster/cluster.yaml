@@ -62,6 +62,8 @@ spec:
     #   owner: app
     recovery:
       source: source
+      recoveryTarget:
+        targetTime: "2026-05-10T00:00:01Z"
   externalClusters:
     - name: source
       plugin:
