@@ -11,7 +11,7 @@ apiVersion: v1alpha1
 kind: BondConfig
 name: bond0
 links:
-  - ethSel0
+  - net0
 bondMode: active-backup
 mtu: 9000
 ---
