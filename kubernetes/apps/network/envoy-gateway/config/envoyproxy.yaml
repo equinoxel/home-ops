@@ -20,6 +20,11 @@ spec:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
+        pod:
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
         container:
           imageRepository: mirror.gcr.io/envoyproxy/envoy
           resources:

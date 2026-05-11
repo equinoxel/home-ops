@@ -38,3 +38,8 @@ spec:
           stabilizationWindowSeconds: 300
         scaleDown:
           stabilizationWindowSeconds: 300
+    deployment:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
