@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+tasks:
+  restore:
+    desc: Restore an app from a specific VolSync backup [APP=required] [TYPE=nfs|s3] [DATE=YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS]
+    summary: |
+      Restores an application's PVC from a VolSync/Kopia backup taken before the
+      specified date. The task will:
+        1. Connect to the Kopia repository (NFS or S3)
+        2. List snapshots for the app and find the latest one before DATE
+        3. Scale down the app
+        4. Delete and recreate the PVC + ReplicationDestination
+        5. Trigger a restore from the identified snapshot
+        6. Scale the app back up
+
+      Examples:
+        task volsync:restore APP=pgadmin TYPE=nfs DATE=2026-05-10
+        task volsync:restore APP=autobrr TYPE=s3 DATE=2026-05-09T12:00:00
+    cmd: '{{.SCRIPTS_DIR}}/volsync-restore.sh {{.APP}} {{.TYPE}} {{.DATE}}'
+    requires:
+      vars: [APP, TYPE, DATE]
+    preconditions:
+      - test -f {{.SCRIPTS_DIR}}/volsync-restore.sh
+      - which kubectl flux
+      - sh: '[ "{{.TYPE}}" = "nfs" ] || [ "{{.TYPE}}" = "s3" ]'
+        msg: "TYPE must be 'nfs' or 's3'"
+
+  list-snapshots:
+    desc: List available Kopia snapshots for an app [APP=required] [TYPE=nfs|s3]
+    cmd: '{{.SCRIPTS_DIR}}/volsync-restore.sh {{.APP}} {{.TYPE}} --list-only'
+    requires:
+      vars: [APP, TYPE]
+    preconditions:
+      - test -f {{.SCRIPTS_DIR}}/volsync-restore.sh
+      - which kubectl
+      - sh: '[ "{{.TYPE}}" = "nfs" ] || [ "{{.TYPE}}" = "s3" ]'
+        msg: "TYPE must be 'nfs' or 's3'"
