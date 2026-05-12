@@ -131,51 +131,88 @@ trap cleanup_kopia_pod EXIT
 # Connect to the repository and list snapshots
 # ---------------------------------------------------------------------------
 log "Connecting to Kopia repository..."
-kubectl exec -n "${NS}" "${KOPIA_POD}" -- \
-    kopia repository connect from-config --file=/tmp/repository.config 2>/dev/null || \
-kubectl exec -n "${NS}" "${KOPIA_POD}" -- \
-    sh -c 'kopia repository connect $KOPIA_REPOSITORY --password="$KOPIA_PASSWORD" --override-hostname=volsync --override-username=root' 2>/dev/null || \
-    die "Failed to connect to Kopia repository."
+
+if [[ "${TYPE}" == "nfs" ]]; then
+    # NFS/filesystem backend — connect using local path
+    kubectl exec -n "${NS}" "${KOPIA_POD}" -- \
+        bash -c 'kopia repository connect filesystem --path=/repository --password="$KOPIA_PASSWORD" --override-hostname=volsync --override-username=root' 2>/dev/null || \
+        die "Failed to connect to Kopia repository."
+else
+    # S3 backend — parse KOPIA_REPOSITORY URI the same way VolSync does:
+    #   KOPIA_REPOSITORY=s3://bucket@host:port/prefix  or  s3://bucket/prefix
+    # VolSync extracts:
+    #   bucket = first segment matching [a-z0-9][a-z0-9.-]+[a-z0-9] after s3://
+    #   prefix = everything after the first / following the non-slash segment (s3://[^/]+/PREFIX)
+    #   endpoint = from AWS_S3_ENDPOINT env var (stripped of http(s)://)
+    kubectl exec -n "${NS}" "${KOPIA_POD}" -- \
+        bash -c '
+            # Extract bucket: VolSync uses regex ^s3://([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])
+            if [[ "${KOPIA_REPOSITORY}" =~ ^s3://([a-z0-9][a-z0-9.-]{1,61}[a-z0-9]) ]]; then
+                BUCKET="${BASH_REMATCH[1]}"
+            else
+                echo "ERROR: Cannot parse bucket from KOPIA_REPOSITORY" >&2
+                exit 1
+            fi
+
+            # Extract prefix: VolSync uses regex s3://[^/]+/(.+)
+            PREFIX=""
+            if [[ "${KOPIA_REPOSITORY}" =~ s3://[^/]+/(.+) ]]; then
+                PREFIX="${BASH_REMATCH[1]}"
+                # Ensure trailing slash (VolSync does this)
+                [[ "${PREFIX}" =~ /$ ]] || PREFIX="${PREFIX}/"
+            fi
+
+            # Strip protocol from endpoint
+            ENDPOINT="${AWS_S3_ENDPOINT#http://}"
+            ENDPOINT="${ENDPOINT#https://}"
+
+            # Determine TLS setting
+            DISABLE_TLS_FLAG=""
+            if [[ "${AWS_S3_DISABLE_TLS}" == "true" ]]; then
+                DISABLE_TLS_FLAG="--disable-tls"
+            fi
+
+            CMD=(kopia repository connect s3
+                --bucket="$BUCKET"
+                --endpoint="$ENDPOINT"
+                --access-key="$AWS_ACCESS_KEY_ID"
+                --secret-access-key="$AWS_SECRET_ACCESS_KEY"
+                --password="$KOPIA_PASSWORD"
+                --override-hostname=volsync
+                --override-username=root)
+
+            [[ -n "$PREFIX" ]] && CMD+=(--prefix="$PREFIX")
+            [[ -n "$DISABLE_TLS_FLAG" ]] && CMD+=($DISABLE_TLS_FLAG)
+
+            "${CMD[@]}"
+        ' 2>/dev/null || \
+        die "Failed to connect to Kopia repository."
+fi
 
 log "Listing snapshots for source '${SOURCE_NAME}'..."
 SNAPSHOTS=$(kubectl exec -n "${NS}" "${KOPIA_POD}" -- \
-    kopia snapshot list --json 2>/dev/null || true)
+    kopia snapshot list --all --json 2>/dev/null || true)
 
 if [[ -z "${SNAPSHOTS}" || "${SNAPSHOTS}" == "null" || "${SNAPSHOTS}" == "[]" ]]; then
     die "No snapshots found in the repository."
 fi
 
-# Filter snapshots for this app's source
-# VolSync uses source name as the path identifier
+# Filter snapshots for this app's source using jq (python3 not available in kopia image)
 APP_SNAPSHOTS=$(echo "${SNAPSHOTS}" | \
-    python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-# Filter by source tag matching our app
-results = []
-for snap in data:
-    source = snap.get('source', {})
-    tags = snap.get('tags', {})
-    # VolSync sets the source tag or uses the hostname
-    hostname = source.get('host', '')
-    username = source.get('userName', '')
-    path = source.get('path', '')
-    desc = snap.get('description', '')
-    snap_id = snap.get('id', '')
-    start_time = snap.get('startTime', '')
-    # Match by hostname containing the app name or source name
-    if '${SOURCE_NAME}' in hostname or '${APP}' in hostname or '${APP}' in path or '${APP}' in desc:
-        results.append({'id': snap_id, 'time': start_time, 'host': hostname, 'path': path})
-# Sort by time descending
-results.sort(key=lambda x: x['time'], reverse=True)
-for r in results:
-    print(f\"{r['time']}  {r['id']}  {r['host']}:{r['path']}\")
-" 2>/dev/null || true)
+    jq -r --arg source "${SOURCE_NAME}" --arg app "${APP}" '
+        [.[] | select(
+            (.source.host | contains($source)) or
+            (.source.host | contains($app)) or
+            (.source.userName | contains($source)) or
+            (.source.userName | contains($app))
+        )] | sort_by(.startTime) | reverse | .[] |
+        "\(.startTime)  \(.id)  \(.source.host):\(.source.path)"
+    ' 2>/dev/null || true)
 
 if [[ -z "${APP_SNAPSHOTS}" ]]; then
     # Fallback: just list all snapshots
     log "Could not filter by app name. Listing all snapshots:"
-    kubectl exec -n "${NS}" "${KOPIA_POD}" -- kopia snapshot list 2>/dev/null || true
+    kubectl exec -n "${NS}" "${KOPIA_POD}" -- kopia snapshot list --all 2>/dev/null || true
     die "No snapshots found matching '${APP}'. Check the output above."
 fi
 
@@ -198,19 +235,9 @@ if [[ "${TARGET_DATE}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
 fi
 
 SELECTED_SNAPSHOT=$(echo "${APP_SNAPSHOTS}" | \
-    python3 -c "
-import sys
-target = '${TARGET_DATE}'
-for line in sys.stdin:
-    parts = line.strip().split()
-    if len(parts) >= 2:
-        snap_time = parts[0]
-        snap_id = parts[1]
-        # Compare lexicographically (ISO dates sort correctly)
-        if snap_time <= target:
-            print(snap_id)
-            break
-" 2>/dev/null || true)
+    awk -v target="${TARGET_DATE}" '{
+        if ($1 <= target) { print $2; exit }
+    }' || true)
 
 if [[ -z "${SELECTED_SNAPSHOT}" ]]; then
     die "No snapshot found before ${TARGET_DATE}. Available snapshots listed above."

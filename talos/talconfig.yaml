@@ -96,7 +96,7 @@ nodes:
       - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/slow-disk.yaml"
   - hostname: "esxi-2cu-8g-05"
-    ipAddress: "10.0.0.123"
+    ipAddress: "10.0.0.127"
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
