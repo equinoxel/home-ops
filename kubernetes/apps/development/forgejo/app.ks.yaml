@@ -12,9 +12,7 @@ spec:
     - ../../../../components/anubis
     - ../../../../components/dragonfly
     - ../../../../components/volsync
-  dependsOn:
-    - name: volsync
-      namespace: storage-system
+  dependsOn: []
   healthCheckExprs:
     - apiVersion: dragonflydb.io/v1alpha1
       kind: Dragonfly

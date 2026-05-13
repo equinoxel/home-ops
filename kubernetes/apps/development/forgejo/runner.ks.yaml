@@ -9,8 +9,8 @@ spec:
     labels:
       app.kubernetes.io/name: forgejo
   dependsOn:
-    - name: volsync
-      namespace: storage-system
+    - name: forgejo
+      namespace: development
   interval: 1h
   path: "./kubernetes/apps/development/forgejo/runner"
   prune: true
