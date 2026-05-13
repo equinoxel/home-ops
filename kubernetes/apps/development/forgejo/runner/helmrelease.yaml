@@ -145,7 +145,7 @@ spec:
                 fi
                 echo "Registering runner..."
                 cd /persistent && forgejo-runner register \
-                  --instance http://forgejo-http.dev.svc.cluster.local:3000 \
+                  --instance http://forgejo-http.development.svc.cluster.local:3000 \
                   --token "${RUNNER_TOKEN}" \
                   --name k8s-runner \
                   --labels "default:k8spod:/config/podspec-default.yaml" \
