@@ -6,7 +6,7 @@ metadata:
   name: forgejo
 spec:
   hostnames:
-    - git.laurivan.com
+    - giti.laurivan.com
   parentRefs:
     # TODO: move toe envoy-external after testing
     - name: envoy-internal

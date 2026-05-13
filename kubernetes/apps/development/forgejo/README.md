@@ -1,6 +1,6 @@
 # Forgejo
 
-Self-hosted Git forge running at [https://git.laurivan.com](https://git.laurivan.com).
+Self-hosted Git forge running at [https://giti.laurivan.com](https://giti.laurivan.com).
 
 ## Architecture
 
@@ -56,8 +56,8 @@ graph LR
 
 | Protocol | Hostname | Gateway | Port |
 |----------|----------|---------|------|
-| HTTPS | `git.laurivan.com` | envoy-external | 443 |
-| SSH | `git.laurivan.com` | envoy-external (TCPRoute) | 22 |
+| HTTPS | `giti.laurivan.com` | envoy-external | 443 |
+| SSH | `giti.laurivan.com` | envoy-external (TCPRoute) | 22 |
 
 ## Authentication
 
@@ -71,7 +71,7 @@ Forgejo uses **Authentik** as its sole authentication provider via OpenID Connec
 ### Authentik Setup
 
 1. In Authentik, create an **OAuth2/OpenID Provider** named `forgejo`
-2. Set the redirect URI to `https://git.laurivan.com/user/oauth2/authentik/callback`
+2. Set the redirect URI to `https://giti.laurivan.com/user/oauth2/authentik/callback`
 3. Create an **Application** with slug `forgejo` linked to the provider
 4. Assign users/groups — members of the `forgejo_admins` group get admin privileges in Forgejo
 5. Copy the Client ID and Client Secret into Bitwarden (see below)

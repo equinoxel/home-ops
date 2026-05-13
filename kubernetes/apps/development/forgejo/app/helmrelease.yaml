@@ -45,8 +45,8 @@ spec:
         repository.signing:
           FORMAT: ssh
           SIGNING_KEY: /data/signing/ed25519.pub
-          SIGNING_NAME: git.laurivan.com Instance
-          SIGNING_EMAIL: noreply@git.laurivan.com
+          SIGNING_NAME: giti.laurivan.com Instance
+          SIGNING_EMAIL: noreply@giti.laurivan.com
           INITIAL_COMMIT: pubkey
           CRUD_ACTIONS: pubkey, parentsigned
           WIKI: never
@@ -55,8 +55,8 @@ spec:
           REVERSE_PROXY_TRUSTED_PROXIES: 10.42.0.0/16
         server:
           APP_DATA_PATH: /data/gitea
-          ROOT_URL: https://git.laurivan.com
-          SSH_DOMAIN: git.laurivan.com
+          ROOT_URL: https://giti.laurivan.com
+          SSH_DOMAIN: giti.laurivan.com
           SSH_PORT: &sshPort 22
           SSH_SERVER_HOST_KEYS: ssh/ssh_host_ed25519_key
         service:
