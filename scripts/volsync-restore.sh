@@ -200,13 +200,19 @@ fi
 # Filter snapshots for this app's source using jq (python3 not available in kopia image)
 APP_SNAPSHOTS=$(echo "${SNAPSHOTS}" | \
     jq -r --arg source "${SOURCE_NAME}" --arg app "${APP}" '
+        def human_size:
+            if . >= 1073741824 then "\(. / 1073741824 * 10 | floor / 10) GB"
+            elif . >= 1048576 then "\(. / 1048576 * 10 | floor / 10) MB"
+            elif . >= 1024 then "\(. / 1024 * 10 | floor / 10) KB"
+            else "\(.) B"
+            end;
         [.[] | select(
             (.source.host | contains($source)) or
             (.source.host | contains($app)) or
             (.source.userName | contains($source)) or
             (.source.userName | contains($app))
         )] | sort_by(.startTime) | reverse | .[] |
-        "\(.startTime)  \(.id)  \(.source.host):\(.source.path)"
+        "\(.startTime)  \(.id)  \((.rootEntry.summ.size // 0) | human_size)  \(.source.host):\(.source.path)"
     ' 2>/dev/null || true)
 
 if [[ -z "${APP_SNAPSHOTS}" ]]; then
