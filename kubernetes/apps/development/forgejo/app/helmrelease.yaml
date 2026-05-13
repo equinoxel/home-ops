@@ -106,6 +106,9 @@ spec:
       enabled: false
     image:
       rootless: true
+      registry: codeberg.org
+      repository: forgejo/forgejo
+      tag: 15.0.0-rootless
     persistence:
       create: false
       claimName: forgejo
