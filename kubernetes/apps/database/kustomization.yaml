@@ -9,3 +9,4 @@ components:
 resources:
   - ./cnpg/ks.yaml
   - ./vernemq
+  - ./dragonfly-operator
