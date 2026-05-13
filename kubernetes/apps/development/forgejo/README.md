@@ -14,7 +14,7 @@ graph LR
     subgraph "Cluster (dev namespace)"
         subgraph "Forgejo App"
             Anubis["Anubis<br/>(bot protection)"]
-            Forgejo["Forgejo<br/>code.forgejo.org/forgejo/forgejo:15.0.0-rootless"]
+            Forgejo["Forgejo<br/>(chart default image)"]
             Dragonfly["Dragonfly<br/>(Redis-compatible cache)"]
             PVC["PVC: forgejo<br/>(10Gi, OpenEBS hostpath)"]
         end
