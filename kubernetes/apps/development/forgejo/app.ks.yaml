@@ -12,7 +12,9 @@ spec:
     - ../../../../components/anubis
     - ../../../../components/dragonfly
     - ../../../../components/volsync
-  dependsOn: []
+  dependsOn:
+    - name: dragonfly-operator
+      namespace: database
   healthCheckExprs:
     - apiVersion: dragonflydb.io/v1alpha1
       kind: Dragonfly
