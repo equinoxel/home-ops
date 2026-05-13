@@ -95,7 +95,7 @@ spec:
     extraVolumes:
       - name: signing-key
         secret:
-          secretName: forgejo
+          secretName: forgejo-signing
           items:
             - key: signing_private_key
               path: ed25519
