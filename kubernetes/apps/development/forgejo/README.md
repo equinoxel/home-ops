@@ -16,7 +16,7 @@ graph LR
             Anubis["Anubis<br/>(bot protection)"]
             Forgejo["Forgejo<br/>code.forgejo.org/forgejo/forgejo:15.0.0-rootless"]
             Dragonfly["Dragonfly<br/>(Redis-compatible cache)"]
-            PVC["PVC: forgejo<br/>(10Gi, Rook-Ceph)"]
+            PVC["PVC: forgejo<br/>(10Gi, OpenEBS hostpath)"]
         end
 
         subgraph "Forgejo Runner"
@@ -50,7 +50,7 @@ graph LR
 | **Anubis** | Bot/scraper protection proxy in front of Forgejo HTTP |
 | **Dragonfly** | Redis-compatible in-memory store for cache, sessions, and queues |
 | **Forgejo Runner** | CI/CD runner (Kubernetes executor, spawns job pods in `dev` namespace) |
-| **VolSync** | PVC backup (10Gi Rook-Ceph volume) |
+| **VolSync** | PVC backup (10Gi OpenEBS hostpath volume) |
 
 ## Endpoints
 
@@ -100,7 +100,7 @@ All secrets are stored in a single **Bitwarden item** named `forgejo` and synced
 
 ## Storage
 
-- **PVC**: `forgejo` (10Gi, Rook-Ceph)
+- **PVC**: `forgejo` (10Gi, OpenEBS hostpath)
 - **Backup**: VolSync (configured via component)
 - **Contents**: Git repositories, LFS objects, app data
 
@@ -125,7 +125,6 @@ The runner is deployed as a StatefulSet with a 1Gi persistent volume for registr
 
 ## Dependencies
 
-- `rook-ceph-cluster` — storage backend for the PVC
 - `bitwarden` ClusterSecretStore — secret management
 - `envoy-external` Gateway — ingress (HTTP + SSH)
 - `authentik` — identity provider
@@ -134,7 +133,7 @@ The runner is deployed as a StatefulSet with a 1Gi persistent volume for registr
 
 | Name | Path | Depends On |
 |------|------|------------|
-| `forgejo` | `./kubernetes/apps/development/forgejo/app` | `rook-ceph-cluster` |
+| `forgejo` | `./kubernetes/apps/development/forgejo/app` | — |
 | `forgejo-runner` | `./kubernetes/apps/development/forgejo/runner` | — |
 
 Both deploy to the `dev` namespace.

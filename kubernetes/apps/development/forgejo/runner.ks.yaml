@@ -8,6 +8,9 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: forgejo
+  dependsOn:
+    - name: volsync
+      namespace: storage-system
   interval: 1h
   path: "./kubernetes/apps/development/forgejo/runner"
   prune: true
