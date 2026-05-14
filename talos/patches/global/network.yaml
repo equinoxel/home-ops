@@ -5,7 +5,7 @@ name: net0
 selector:
   # some of the backup 1GbE ports are: e8 or 80:e8:2c:2f:b4:ad
   match: >-
-    (mac(link.hardware_addr).startsWith("77:") || mac(link.hardware_addr).startsWith("f4:"))
+    (mac(link.hardware_addr).startsWith("54:") || mac(link.hardware_addr).startsWith("f4:"))
 ---
 apiVersion: v1alpha1
 kind: BondConfig
