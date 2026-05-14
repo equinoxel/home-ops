@@ -115,6 +115,7 @@ nodes:
     patches:
       - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/slow-disk.yaml"
+      - "@./patches/worker/home-assistant.yaml"
   - hostname: "blade-01"
     ipAddress: "10.0.50.10"
     installDisk: "/dev/mmcblk0"
