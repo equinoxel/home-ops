@@ -22,7 +22,7 @@ spec:
               docker_host: "-"
               workdir_parent: shared/workdir
             kubernetes:
-              namespace: dev
+              namespace: development
               poll_timeout: 10m
             log:
               level: info
@@ -119,6 +119,7 @@ spec:
                 - path: /persistent
               name: persistent
               size: 1Gi
+              storageClass: openebs-hostpath
         pod:
           labels:
             app.kubernetes.io/component: forgejo-runner
