@@ -24,7 +24,7 @@ spec:
     substituteFrom:
       - kind: Secret
         name: ipv6
-        optional: false
+        optional: true
   prune: true
   sourceRef:
     kind: GitRepository
