@@ -67,7 +67,6 @@ spec:
               limits:
                 memory: 512Mi
     defaultPodOptions:
-      hostUsers: false
       nodeSelector:
         node.kubernetes.io/ha: ""
       securityContext:
