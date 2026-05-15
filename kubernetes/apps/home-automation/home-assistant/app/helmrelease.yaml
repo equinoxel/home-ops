@@ -146,3 +146,5 @@ spec:
             subPath: vscode-logs
           - path: /config/.vscode/User/caches
             subPath: vscode-caches
+          - path: /config/.vscode/User/workspaceStorage
+            subPath: vscode-workspace-storage
