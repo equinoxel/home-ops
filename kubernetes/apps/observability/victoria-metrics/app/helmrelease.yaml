@@ -102,6 +102,19 @@ spec:
         externalURL: https://alertmanager.laurivan.com
         image:
           repository: quay.io/prometheus/alertmanager
+        initContainers:
+          - name: fix-permissions
+            image: busybox:latest
+            command:
+              - sh
+              - -c
+              - chown -R 1000:2000 /alertmanager
+            volumeMounts:
+              - name: vmalertmanager-victoria-metrics-db
+                mountPath: /alertmanager
+            securityContext:
+              runAsUser: 0
+              runAsNonRoot: false
         securityContext:
           runAsGroup: 2000
           runAsNonRoot: true
