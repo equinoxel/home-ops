@@ -73,7 +73,28 @@ This allows Grafana to use a single datasource for both metrics and logs.
 ### Storage
 
 - **VMSingle:** 200Gi on `ceph-block`, retention 400 days
-- **VMAlertmanager:** 1Gi on `ceph-block`
+- **VMAlertmanager:** emptyDir (ephemeral, no persistent storage)
+
+> **Note:** VMAlertmanager uses emptyDir instead of a PVC due to openebs-hostpath subPath permission issues. Alertmanager state (silences, notification log) is lost on pod restart. This is acceptable because:
+> - Silences can be recreated manually
+> - The notification log only prevents duplicate notifications within `repeat_interval`
+> - Alert rules and routing config are stored in the HelmRelease (gitops)
+
+#### Restoring VMAlertmanager State After Restart
+
+Alertmanager state consists of two things:
+
+1. **Silences** — If you had active silences before a restart, recreate them:
+   ```bash
+   # List what was silenced (check git history or Alertmanager UI before restart)
+   # Create a new silence via the UI at https://alertmanager.laurivan.com/#/silences/new
+   # Or via amtool:
+   kubectl exec -n observability vmalertmanager-victoria-metrics-0 -c alertmanager -- \
+     amtool silence add --alertmanager.url=http://localhost:9093 \
+     alertname="MyAlert" --comment="Reason" --duration="2h"
+   ```
+
+2. **Notification log** — This tracks which notifications were already sent to avoid duplicates. After a restart, you may receive duplicate notifications for currently-firing alerts (one extra round). No action needed — it self-heals after one `repeat_interval` cycle (12h).
 
 ### Scrape Targets
 

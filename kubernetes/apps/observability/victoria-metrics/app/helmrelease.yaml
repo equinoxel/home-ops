@@ -102,31 +102,11 @@ spec:
         externalURL: https://alertmanager.laurivan.com
         image:
           repository: quay.io/prometheus/alertmanager
-        initContainers:
-          - name: fix-permissions
-            image: busybox:latest
-            command:
-              - sh
-              - -c
-              - mkdir -p /data/alertmanager-db && chown -R 1000:2000 /data
-            volumeMounts:
-              - name: vmalertmanager-victoria-metrics-db
-                mountPath: /data
-            securityContext:
-              runAsUser: 0
-              runAsNonRoot: false
         securityContext:
           runAsGroup: 2000
           runAsNonRoot: true
           runAsUser: 1000
           fsGroup: 2000
-        storage:
-          volumeClaimTemplate:
-            spec:
-              storageClassName: openebs-hostpath
-              resources:
-                requests:
-                  storage: 1Gi
       useManagedConfig: true
     defaultDashboards:
       grafanaOperator:
