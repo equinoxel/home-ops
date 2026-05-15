@@ -12,7 +12,6 @@ Victoria Metrics provides a Prometheus-compatible time-series database with bett
 graph TD
     subgraph Sources
         SM[ServiceMonitors / PodMonitors]
-        SC[ScrapeConfigs<br/>NAS, PiKVM]
     end
 
     subgraph Victoria Metrics Stack
@@ -34,7 +33,6 @@ graph TD
     end
 
     SM --> VMA
-    SC --> VMA
     VMA --> VMS
     VMS --> VMAL
     VMAL --> VMAM
@@ -84,9 +82,7 @@ In addition to in-cluster ServiceMonitors/PodMonitors, external targets are scra
 | Target | Endpoint | Metrics Path |
 |--------|----------|--------------|
 | NAS node-exporter | `nas.servers.internal:9100` | `/metrics` |
-| PiKVM node-exporter | `pikvm.servers.internal:9100` | `/metrics` |
 | NAS smartctl | `nas.servers.internal:9633` | `/metrics` |
-| PiKVM metrics | `pikvm.servers.internal` (HTTPS) | `/api/export/prometheus/metrics` |
 
 ### Alerting
 
@@ -133,15 +129,6 @@ Created from Bitwarden items `pushover` and `alertmanager`.
 | `ALERTMANAGER_PUSHOVER_TOKEN` | Pushover application API token for alertmanager notifications | `axxxxxxxxxxxxxxxxxxxxxxxxxxxxx` (30-char alphanumeric) |
 | `PUSHOVER_USER_KEY` | Pushover user/group key to receive notifications | `uxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` (30-char alphanumeric) |
 | `HEALTHCHECKS_IO_HEARTBEAT_URL` | Healthchecks.io ping URL for Watchdog heartbeat | `https://hc-ping.com/<uuid>` |
-
-### `scrape-target-pikvm-secret` Secret
-
-Created from Bitwarden item `pikvm`.
-
-| Key | Description | Default/Example |
-|-----|-------------|-----------------|
-| `USERNAME` | PiKVM web interface username for metrics scraping | `admin` |
-| `PASSWORD` | PiKVM web interface password | `admin` (change from default) |
 
 ## Dependencies
 

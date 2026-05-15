@@ -8,7 +8,6 @@ spec:
   staticConfigs:
     - targets:
         - nas.servers.internal:9100
-        - pikvm.servers.internal:9100
   metricsPath: /metrics
   relabelings:
     - action: replace
@@ -29,27 +28,4 @@ spec:
     - action: replace
       targetLabel: job
       replacement: *name
----
-# yaml-language-server: $schema=https://schemas.tholinka.dev/monitoring.coreos.com/scrapeconfig_v1alpha1.json
-apiVersion: monitoring.coreos.com/v1alpha1
-kind: ScrapeConfig
-metadata:
-  name: &name pikvm
-spec:
-  basicAuth:
-    username:
-      name: scrape-target-pikvm-secret
-      key: USERNAME
-    password:
-      name: scrape-target-pikvm-secret
-      key: PASSWORD
-  staticConfigs:
-    - targets:
-        - pikvm.servers.internal
-  tlsConfig:
-    insecureSkipVerify: true
-  metricsPath: /api/export/prometheus/metrics
-  relabelings:
-    - action: replace
-      targetLabel: job
-      replacement: *name
+
