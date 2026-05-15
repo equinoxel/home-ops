@@ -10,7 +10,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/master/dashboards/k8s-addons-prometheus.json
 ---
@@ -25,7 +25,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/master/dashboards/k8s-system-api-server.json
 ---
@@ -40,7 +40,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/master/dashboards/k8s-system-coredns.json
 ---
@@ -55,7 +55,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/master/dashboards/k8s-views-global.json
 ---
@@ -70,7 +70,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/master/dashboards/k8s-views-namespaces.json
 ---
@@ -85,7 +85,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/master/dashboards/k8s-views-nodes.json
 ---
@@ -100,7 +100,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/master/dashboards/k8s-views-pods.json
 ---
@@ -115,7 +115,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/15761/revisions/20/download
 ---
@@ -130,7 +130,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/15762/revisions/22/download
 ---
@@ -145,7 +145,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/15757/revisions/43/download
 ---
@@ -160,7 +160,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/15758/revisions/44/download
 ---
@@ -175,7 +175,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/15759/revisions/40/download
 ---
@@ -190,7 +190,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/15760/revisions/37/download
 ---
@@ -205,7 +205,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/11454/revisions/14/download
 ---
@@ -220,7 +220,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_VICTORIAMETRICS
   url: https://grafana.com/api/dashboards/22236/revisions/4/download
 ---
@@ -235,7 +235,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/23233/revisions/6/download
 ---
@@ -250,7 +250,7 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/1860/revisions/42/download
 ---
@@ -265,6 +265,6 @@ spec:
     matchLabels:
       grafana.internal/instance: grafana
   datasources:
-    - datasourceName: prometheus
+    - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/19105/revisions/8/download
