@@ -8,7 +8,9 @@ components:
   - ../../components/common
 resources:
   - ./grafana
-  - ./kube-prometheus-stack
+  # - ./kube-prometheus-stack
+  - ./prometheus-adapter
+  - ./prometheus-operator-crds
   - ./keda
   - ./victoria-metrics
   - ./victoria-logs
