@@ -17,7 +17,7 @@ spec:
     server:
       persistentVolume:
         enabled: true
-        storageClassName: ceph-block
+        storageClassName: openebs-hostpath
         size: 50Gi
       retentionPeriod: 90d
       route:
@@ -29,7 +29,7 @@ spec:
           gethomepage.dev/icon: victorialogs.svg
           gethomepage.dev/pod-selector: app.kubernetes.io/name=victoria-logs-single
         hostnames:
-          - logs.tholinka.dev
+          - logs.laurivan.com
         parentRefs:
           - name: envoy-internal
             namespace: network

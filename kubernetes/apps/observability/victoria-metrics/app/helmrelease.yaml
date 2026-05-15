@@ -110,7 +110,7 @@ spec:
         storage:
           volumeClaimTemplate:
             spec:
-              storageClassName: ceph-block
+              storageClassName: openebs-hostpath
               resources:
                 requests:
                   storage: 1Gi
@@ -227,14 +227,15 @@ spec:
           - name: envoy-internal
             namespace: network
       spec:
-        retentionPeriod: 400d
+        # TODO: Increase the retention period when moving to ceph
+        retentionPeriod: 90d
         storage:
           accessModes:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 200Gi
-          storageClassName: ceph-block
+              storage: 50Gi
+          storageClassName: openebs-hostpath
     additionalVictoriaMetricsMap:
       dockerhub-rules:
         create: true
