@@ -120,7 +120,7 @@ spec:
         ipFamilies: [IPv4]
         ipFamilyPolicy: SingleStack
         sessionAffinity: ClientIP # vernemq docs note that hopping between pods causes a significate data replication/sync cost
-        externalTrafficPolicy: Local
+        externalTrafficPolicy: Cluster
         annotations:
           external-dns.alpha.kubernetes.io/hostname: mqtt.laurivan.com.
           lbipam.cilium.io/ips: "10.0.0.154"
