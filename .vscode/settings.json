@@ -14,5 +14,7 @@
     "yaml.schemaStore.enable": true,
     "yaml.schemas": {
         "kubernetes": "./kubernetes/**/*.yaml"
-    }
+    },
+    "sops.binPath": "/home/linuxbrew/.linuxbrew/bin/sops",
+    "sops.configPath": "/home/laur/.sopsrc"
 }
