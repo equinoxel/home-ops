@@ -7,6 +7,6 @@ components:
   - ../../components/common
   - ../../components/repos/app-template
 resources:
-  - ./cnpg/ks.yaml
+  - ./cnpg
   - ./vernemq
   - ./dragonfly-operator
