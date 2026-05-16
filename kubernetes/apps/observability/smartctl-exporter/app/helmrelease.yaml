@@ -11,6 +11,8 @@ spec:
     name: smartctl-exporter
   values:
     fullnameOverride: *app
+    nodeSelector:
+      kubernetes.io/arch: amd64
     serviceMonitor:
       enabled: true
       relabelings:
