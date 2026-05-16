@@ -13,3 +13,5 @@ spec:
     alertmanagerAddress: http://vmalertmanager-victoria-metrics.observability.svc.cluster.local:9093
     networkPolicy:
       enabled: false
+    nodeSelector:
+      kubernetes.io/arch: amd64
