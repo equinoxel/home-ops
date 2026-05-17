@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &name renovate-operator
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: *name
+  interval: 1h
+  values:
+    fullnameOverride: *name
+    webhook:
+      enabled: true
+    config:
+      defaultJobBackoffLimit: 5
+      defaultJobActiveDeadlineSeconds: 3600
+    route:
+      enabled: true
+      annotations:
+        gethomepage.dev/enabled: 'true'
+        gethomepage.dev/group: Infrastructure
+        gethomepage.dev/name: Renovate Operator
+        gethomepage.dev/icon: renovate.svg
+        gethomepage.dev/pod-selector: app=renovate-operator
+      hostnames: [renovate.laurivan.com]
+      parentRefs:
+        - name: envoy-internal
+          namespace: network
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+      dashboard:
+        enabled: true
+    auth:
+      oidc:
+        enabled: true
+        issuerUrl: https://auth.laurivan.com/application/o/renovate-operator/
+        #clientId: 'your-client-id'
+        existingSecret: *name
+        secretKey: RENOVATE_OPERATOR_CLIENT_SECRET
+        sessionSecretKey: RENOVATE_OPERATOR_SESSION_SECRET
+  valuesFrom:
+    - targetPath: auth.oidc.clientId
+      kind: Secret
+      name: *name
+      valuesKey: RENOVATE_OPERATOR_CLIENT_ID

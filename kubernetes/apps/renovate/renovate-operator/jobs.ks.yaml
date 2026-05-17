@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app renovate-operator-jobs
+  namespace: &namespace renovate
+spec:
+  dependsOn:
+    - name: renovate-operator
+  interval: 1h
+  components:
+    - ../../../../components/dragonfly/manual
+  targetNamespace: *namespace
+  postBuild:
+    substitute:
+      APP: *app
+  path: ./kubernetes/apps/renovate/renovate-operator/jobs
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: false
