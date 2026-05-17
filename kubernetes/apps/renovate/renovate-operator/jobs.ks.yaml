@@ -8,9 +8,16 @@ metadata:
 spec:
   dependsOn:
     - name: renovate-operator
+    - name: dragonfly-operator
+      namespace: database
+  healthCheckExprs:
+    - apiVersion: dragonflydb.io/v1alpha1
+      kind: Dragonfly
+      failed: status.phase != 'ready'
+      current: status.phase == 'ready'
   interval: 1h
   components:
-    - ../../../../components/dragonfly
+    - ../../../../components/dragonfly/own-cluster
   targetNamespace: *namespace
   postBuild:
     substitute:

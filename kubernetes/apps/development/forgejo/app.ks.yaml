@@ -10,7 +10,7 @@ spec:
       app.kubernetes.io/name: forgejo
   components:
     - ../../../../components/anubis
-    - ../../../../components/dragonfly
+    - ../../../../components/dragonfly/own-cluster
     - ../../../../components/volsync
   dependsOn:
     - name: dragonfly-operator
