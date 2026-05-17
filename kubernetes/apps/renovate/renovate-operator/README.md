@@ -6,7 +6,7 @@ Instead of running Renovate as a standalone cron job or relying on the hosted Me
 
 ## What It Does
 
-- **Auto-discovers** repositories in the `tholinka` GitHub organization
+- **Auto-discovers** repositories in the `equinoxel` GitHub organization
 - **Schedules** Renovate runs via cron (hourly) using the `RenovateJob` CRD
 - **Executes** up to 5 parallel Renovate jobs for discovered repositories
 - **Provides** a web UI at `renovate.laurivan.com` (protected by Authentik OIDC)
@@ -62,7 +62,7 @@ flowchart TD
 
 ### How It Works
 
-1. **Discovery trigger** — On the cron schedule (`0 * * * *`), the operator creates a discovery job that queries GitHub for all repos matching `tholinka/*`.
+1. **Discovery trigger** — On the cron schedule (`0 * * * *`), the operator creates a discovery job that queries GitHub for all repos matching `equinoxel/*`.
 2. **Project scheduling** — Discovered projects are tracked in-cluster and scheduled for processing.
 3. **Job execution** — Every 10 seconds, the operator checks for scheduled projects and spawns Renovate executor jobs (up to `parallelism: 5` concurrent).
 4. **Sidecar injection** — A `MutatingAdmissionPolicy` intercepts job creation and injects a stunnel sidecar container with mTLS certificates for secure Dragonfly access.

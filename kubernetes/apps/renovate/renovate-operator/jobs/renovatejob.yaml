@@ -9,7 +9,7 @@ spec:
   provider:
     name: github
   discoveryFilters:
-    - laurivan/*
+    - equinoxel/*
   extraEnv:
     - name: LOG_LEVEL
       value: debug

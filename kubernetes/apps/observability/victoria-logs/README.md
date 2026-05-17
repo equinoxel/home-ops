@@ -20,7 +20,7 @@ graph TD
 
     subgraph Query Layer
         VMAUTH[VMAuth<br/>unified proxy]
-        UI[Web UI<br/>logs.tholinka.dev/select/vmui/]
+        UI[Web UI<br/>logs.laurivan.com/select/vmui/]
     end
 
     subgraph Visualization
@@ -51,7 +51,7 @@ graph TD
 - **Image registry:** `quay.io`
 - **Storage:** 50Gi on `ceph-block`
 - **Retention:** 90 days
-- **Web UI:** `logs.tholinka.dev` (redirects `/` to `/select/vmui/`)
+- **Web UI:** `logs.laurivan.com` (redirects `/` to `/select/vmui/`)
 - **ServiceMonitor:** enabled
 
 ### Collector
@@ -68,7 +68,7 @@ graph TD
 ### Querying
 
 Logs can be queried via:
-1. **Direct UI** at `logs.tholinka.dev/select/vmui/`
+1. **Direct UI** at `logs.laurivan.com/select/vmui/`
 2. **VMAuth proxy** at `vmauth-victoria-metrics:8427/select/logsql/...` (used by Grafana)
 3. **LogsQL API** at `victoria-logs-server:9428/select/logsql/query`
 
@@ -78,7 +78,7 @@ Dashboards are provisioned via the Grafana Operator (`dashboards.grafanaOperator
 
 ### Ext-Auth (Authentik)
 
-The logs web UI at `logs.tholinka.dev` is protected by a SecurityPolicy via authentik's embedded outpost (ext-auth component).
+The logs web UI at `logs.laurivan.com` is protected by a SecurityPolicy via authentik's embedded outpost (ext-auth component).
 
 ## Secrets
 

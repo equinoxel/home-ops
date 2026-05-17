@@ -47,10 +47,10 @@ graph TD
 
 | Component | Purpose | Endpoint |
 |-----------|---------|----------|
-| **VMSingle** | Single-node time-series database | `metrics.tholinka.dev` |
+| **VMSingle** | Single-node time-series database | `metrics.laurivan.com` |
 | **VMAgent** | Scrapes metrics from targets and remote-writes to VMSingle | Internal |
-| **VMAlert** | Evaluates alerting/recording rules | `alerts.tholinka.dev` |
-| **VMAlertmanager** | Routes and sends alert notifications | `alertmanager.tholinka.dev` |
+| **VMAlert** | Evaluates alerting/recording rules | `alerts.laurivan.com` |
+| **VMAlertmanager** | Routes and sends alert notifications | `alertmanager.laurivan.com` |
 | **VMAuth** | Authentication proxy and unified query router | Internal (port 8427) |
 | **VM Operator** | Manages VM CRDs and reconciles resources | Internal |
 
