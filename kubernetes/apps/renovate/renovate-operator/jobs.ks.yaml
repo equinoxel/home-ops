@@ -10,7 +10,7 @@ spec:
     - name: renovate-operator
   interval: 1h
   components:
-    - ../../../../components/dragonfly/manual
+    - ../../../../components/dragonfly
   targetNamespace: *namespace
   postBuild:
     substitute:
