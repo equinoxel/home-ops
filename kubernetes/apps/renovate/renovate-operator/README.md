@@ -20,7 +20,7 @@ flowchart TD
     subgraph Kubernetes Cluster
         subgraph renovate namespace
             OP[Renovate Operator]
-            CRD[RenovateJob CRD<br/>renovate-tholinka]
+            CRD[RenovateJob CRD<br/>renovate-laurivan]
             DJ[Discovery Job]
             EJ1[Executor Job 1]
             EJ2[Executor Job 2]
@@ -39,7 +39,7 @@ flowchart TD
         end
 
         subgraph External
-            GH[GitHub API<br/>tholinka org]
+            GH[GitHub API<br/>equinoxel org]
             DH[Docker Hub]
             AUTH[Authentik OIDC]
         end
