@@ -8,7 +8,7 @@ metadata:
 spec:
   interval: 1h
   components:
-    - ../../../../components/scaler/instance
+    - ../../../../components/keda/nfs-scaler
     - ../../../../components/ext-auth
     - ../../../../components/ext-auth/two
   dependsOn:

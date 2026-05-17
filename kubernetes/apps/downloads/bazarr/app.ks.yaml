@@ -9,7 +9,7 @@ spec:
   interval: 1h
   components:
     - ../../../../components/volsync
-    - ../../../../components/scaler/instance
+    - ../../../../components/keda/nas-nfs-scaler
   dependsOn:
     - name: volsync
       namespace: storage-system

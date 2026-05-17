@@ -9,7 +9,7 @@ spec:
   interval: 1h
   components:
     - ../../../../components/volsync
-    - ../../../../components/scaler/instance
+    - ../../../../components/keda/nfs-scaler
   dependsOn:
     - name: keda
       namespace: observability
