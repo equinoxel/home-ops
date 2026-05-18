@@ -15,6 +15,8 @@ spec:
   values:
     # if I ever lose the db, my setup is based heavily on https://github.com/joryirving/home-ops/tree/77478606352bfb43e6c1c5fcf0b5fa134d007095/terraform/authentik
     global:
+      nodeSelector:
+        node.kubernetes.io/ssd: ""
       podAnnotations:
         reloader.stakater.com/auto: 'true'
       deploymentStrategy:
@@ -64,8 +66,7 @@ spec:
             stabilizationWindowSeconds: 300
       resources:
         requests:
-          cpu: 50m
-          memory: 256Mi
+          cpu: 300m
         limits:
           memory: 1Gi
       metrics:
@@ -76,8 +77,7 @@ spec:
       autoscaling: *autoscaling
       resources:
         requests:
-          cpu: 50m
-          memory: 256Mi
+          cpu: 300m
         limits:
           memory: 1Gi
     prometheus:

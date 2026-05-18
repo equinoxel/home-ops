@@ -28,7 +28,7 @@ spec:
     topologyKey: kubernetes.io/hostname
     podAntiAffinityType: required
     nodeSelector:
-      node.kubernetes.io/hdd: ""
+      node.kubernetes.io/ssd: ""
   postgresql:
     parameters:
       max_connections: "600"
@@ -56,8 +56,14 @@ spec:
         barmanObjectName: *name
         serverName: *name
   bootstrap:
-    recovery:
-      source: source
+    # To restore from backup, switch to recovery mode:
+    # recovery:
+    #   source: source
+    #   recoveryTarget:
+    #     targetTime: "2026-05-10T00:00:01Z"
+    initdb:
+      database: app
+      owner: app
   externalClusters:
     - name: source
       plugin:
