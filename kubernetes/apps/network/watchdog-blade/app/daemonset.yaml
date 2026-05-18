@@ -28,7 +28,7 @@ spec:
         - operator: Exists
       containers:
         - name: watchdog
-          image: alpine:3.21
+          image: alpine:3.23
           command:
             - /bin/sh
             - -c
