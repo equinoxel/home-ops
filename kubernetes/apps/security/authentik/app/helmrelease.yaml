@@ -64,7 +64,8 @@ spec:
             stabilizationWindowSeconds: 300
       resources:
         requests:
-          cpu: 300m
+          cpu: 50m
+          memory: 256Mi
         limits:
           memory: 1Gi
       metrics:
@@ -75,7 +76,8 @@ spec:
       autoscaling: *autoscaling
       resources:
         requests:
-          cpu: 300m
+          cpu: 50m
+          memory: 256Mi
         limits:
           memory: 1Gi
     prometheus:
