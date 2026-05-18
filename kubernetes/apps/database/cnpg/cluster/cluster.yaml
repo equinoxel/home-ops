@@ -56,14 +56,8 @@ spec:
         barmanObjectName: *name
         serverName: *name
   bootstrap:
-    # To restore from backup, switch to recovery mode:
-    # recovery:
-    #   source: source
-    #   recoveryTarget:
-    #     targetTime: "2026-05-10T00:00:01Z"
-    initdb:
-      database: app
-      owner: app
+    recovery:
+      source: source
   externalClusters:
     - name: source
       plugin:
