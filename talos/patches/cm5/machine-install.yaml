@@ -1,4 +1,8 @@
 machine:
+  install:
+    extraKernelArgs:
+      - default_hugepagesz=2M
+      - hugepagesz=2M
   nodeLabels:
     node.kubernetes.io/cm5: ""
     node.kubernetes.io/download: ""
