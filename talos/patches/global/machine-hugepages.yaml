@@ -1,5 +1,6 @@
 machine:
   install:
     extraKernelArgs:
+      - hugepagesz=2M
       - hugepages=1024
     grubUseUKICmdline: false
