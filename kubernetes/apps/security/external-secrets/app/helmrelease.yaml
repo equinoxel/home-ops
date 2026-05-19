@@ -18,7 +18,6 @@ spec:
         cpu: 10m
         memory: 256Mi
       limits:
-        cpu: 10m
         memory: 256Mi
     image:
       repository: ghcr.io/external-secrets/external-secrets
@@ -30,7 +29,6 @@ spec:
           cpu: 10m
           memory: 128Mi
         limits:
-          cpu: 10m
           memory: 128Mi
     certController:
       image:
@@ -40,7 +38,6 @@ spec:
           cpu: 10m
           memory: 128Mi
         limits:
-          cpu: 10m
           memory: 128Mi
     serviceMonitor:
       enabled: true
