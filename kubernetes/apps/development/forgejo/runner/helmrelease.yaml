@@ -18,10 +18,6 @@ spec:
             cache:
               enabled: true
               dir: /data/cache
-            connect:
-              instance: http://forgejo-http.development.svc.cluster.local:3000
-              name: k8s-runner
-              token_file: /secrets/token
             container:
               docker_host: "-"
               workdir_parent: shared/workdir
@@ -135,6 +131,30 @@ spec:
             runAsUser: 1000
         annotations:
           reloader.stakater.com/auto: "true"
+        initContainers:
+          register-runner:
+            image:
+              repository: git.erwanleboucher.dev/eleboucher/runner
+              tag: latest@sha256:96972a9e96630a4d6114fe8afa5dc6fcb352167e44b9b23513bcc490b4ce4abe
+            command:
+              - sh
+              - -c
+              - |
+                if [ -f /persistent/.runner ]; then
+                  echo "Runner already registered, skipping"
+                  exit 0
+                fi
+                echo "Registering runner..."
+                cd /persistent && forgejo-runner create-runner-file \
+                  --instance http://forgejo-http.development.svc.cluster.local:3000 \
+                  --secret "${RUNNER_TOKEN}" \
+                  --name k8s-runner
+            env:
+              - name: RUNNER_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    key: token
+                    name: forgejo-runner-secret
         containers:
           runner:
             image:
