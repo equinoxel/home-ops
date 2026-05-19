@@ -3,6 +3,7 @@ machine:
     extraKernelArgs:
       - default_hugepagesz=2M
       - hugepagesz=2M
+    grubUseUKICmdline: false
   nodeLabels:
     node.kubernetes.io/cm5: ""
     node.kubernetes.io/download: ""
