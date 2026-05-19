@@ -1,5 +1,5 @@
 cluster:
-  allowSchedulingOnControlPlanes: false
+  allowSchedulingOnControlPlanes: true
   apiServer:
     admissionControl:
       $$patch: delete
