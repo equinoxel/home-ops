@@ -15,8 +15,6 @@ spec:
   values:
     # if I ever lose the db, my setup is based heavily on https://github.com/joryirving/home-ops/tree/77478606352bfb43e6c1c5fcf0b5fa134d007095/terraform/authentik
     global:
-      nodeSelector:
-        node.kubernetes.io/ssd: ""
       podAnnotations:
         reloader.stakater.com/auto: 'true'
       deploymentStrategy:
