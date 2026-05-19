@@ -161,6 +161,12 @@ spec:
           enabled: false
       operator:
         enable_converter_ownership: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
     vmagent:
       spec:
         extraArgs:

@@ -109,6 +109,12 @@ spec:
       registry: codeberg.org
       repository: forgejo/forgejo
       tag: 15.0.0-rootless
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
     persistence:
       create: false
       claimName: forgejo

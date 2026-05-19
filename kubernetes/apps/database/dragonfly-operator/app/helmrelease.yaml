@@ -13,6 +13,12 @@ spec:
     manager:
       image:
         repository: ghcr.io/dragonflydb/operator
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 128Mi
     grafanaDashboard:
       enabled: true
       folder: database
