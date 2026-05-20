@@ -17,7 +17,6 @@ spec:
         cpu: 10m
         memory: 256Mi
       limits:
-        cpu: 10m
         memory: 256Mi
     cainjector:
       resources:
@@ -25,7 +24,6 @@ spec:
           cpu: 10m
           memory: 256Mi
         limits:
-          cpu: 10m
           memory: 256Mi
     webhook:
       resources:
@@ -33,7 +31,6 @@ spec:
           cpu: 10m
           memory: 128Mi
         limits:
-          cpu: 10m
           memory: 128Mi
     dns01RecursiveNameservers: https://1.1.1.1:443/dns-query,https://1.0.0.1:443/dns-query
     dns01RecursiveNameserversOnly: true
