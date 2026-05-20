@@ -18,7 +18,6 @@ spec:
           cpu: 10m
           memory: 128Mi
         limits:
-          cpu: 10m
           memory: 128Mi
     grafanaDashboard:
       enabled: true
