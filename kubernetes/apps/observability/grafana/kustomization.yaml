@@ -5,3 +5,4 @@ kind: Kustomization
 resources:
   - ./app.ks.yaml
   - ./instance.ks.yaml
+  - ./dashboard.ks.yaml
