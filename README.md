@@ -49,7 +49,7 @@ A Kubernetes cluster deployed with [Talos Linux](https://github.com/siderolabs/t
     - [ ] book management (tbd kavita, grimmory...)
     - [ ] paperless
 - [ ] smarthome
-    - [ ] home assistant
+    - [x] home assistant
     - [ ] mqtt, zigbee, z-wave
     - [ ] whisper
     - [ ] piper
@@ -63,14 +63,14 @@ A Kubernetes cluster deployed with [Talos Linux](https://github.com/siderolabs/t
     - [ ] searxng (careful when using with AI - needs IP rotation)
     - [ ] publish k8s schemas (so I don't depend on tholinka.dev)
     - [ ] gatus
-    - [ ] alert manager
+    - [x] alert manager (via VictoriaMetrics stack, healthchecks.io heartbeat only)
     - [ ] json, smartctl, nut, blackbox exporter
     - [ ] kromgo
-    - [ ] silence operator
+    - [x] silence operator
     - [ ] slskd
     - [ ] shelfmark
-    - [ ] victoria logs (not sure I need this if I have grafana)
-    - [ ] dragonfly (db)
+    - [x] victoria logs (not sure I need this if I have grafana)
+    - [x] dragonfly (db)
     - [ ] pihole?
     - [ ] frigate
     - [ ] unifi
