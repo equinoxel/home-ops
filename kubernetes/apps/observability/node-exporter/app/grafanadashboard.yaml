@@ -31,5 +31,5 @@ spec:
     - datasourceName: prometheus
       inputName: DS_PROMETHEUS
   grafanaCom:
-    id: 6417
+    id: 24784
     revision: 1
