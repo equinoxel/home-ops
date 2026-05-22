@@ -80,6 +80,14 @@ spec:
           memory: 256Mi
         limits:
           memory: 1Gi
+      startupProbe:
+        timeoutSeconds: 10
+        failureThreshold: 30
+        periodSeconds: 10
+      livenessProbe:
+        timeoutSeconds: 10
+        failureThreshold: 6
+        periodSeconds: 30
     prometheus:
       rules:
         enabled: true

@@ -55,8 +55,10 @@ spec:
                     command:
                       - "anubis"
                       - "--healthcheck"
-                  initialDelaySeconds: 1
-                  periodSeconds: 10
+                  initialDelaySeconds: 5
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
               readiness:
                 enabled: true
                 custom: true
@@ -65,8 +67,10 @@ spec:
                     command:
                       - "anubis"
                       - "--healthcheck"
-                  initialDelaySeconds: 1
-                  periodSeconds: 5
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
             resources:
               requests:
                 memory: 64Mi
