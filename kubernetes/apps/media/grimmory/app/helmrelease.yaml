@@ -16,6 +16,17 @@ spec:
         annotations:
           reloader.stakater.com/auto: "true"
         initContainers:
+          init-dirs:
+            image:
+              repository: busybox
+              tag: latest
+            command:
+              - sh
+              - -c
+              - mkdir -p /data/app /data/mysql && chown -R 1000:1000 /data
+            securityContext:
+              runAsUser: 0
+              runAsNonRoot: false
           mariadb:
             image:
               repository: docker.io/library/mariadb
@@ -121,6 +132,8 @@ spec:
         existingClaim: "{{ .Release.Name }}"
         advancedMounts:
           grimmory:
+            init-dirs:
+              - path: /data
             app:
               - path: /app/data
                 subPath: app
