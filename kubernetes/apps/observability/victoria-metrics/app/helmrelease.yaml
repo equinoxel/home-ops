@@ -146,6 +146,7 @@ spec:
             cpu: 500m
     vmalert:
       spec:
+        evaluationInterval: 60s
         extraArgs:
           external.url: https://alerts.laurivan.com
         datasource:
@@ -196,8 +197,8 @@ spec:
           - name: envoy-internal
             namespace: network
       spec:
-        # TODO: Increase the retention period when moving to ceph
-        retentionPeriod: 90d
+        # Reduced from 90d to 30d to lower compaction overhead and memory usage
+        retentionPeriod: 30d
         storage:
           accessModes:
             - ReadWriteOnce
