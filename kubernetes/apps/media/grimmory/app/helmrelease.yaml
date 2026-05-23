@@ -1,9 +1,8 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: &app grimmory
+  name: grimmory
 spec:
   interval: 1h
   chartRef:
@@ -11,65 +10,24 @@ spec:
     name: app-template
   values:
     controllers:
-      *app :
+      grimmory:
+        labels:
+          nfsMount: "true"
         annotations:
-          reloader.stakater.com/auto: 'true'
-        containers:
-          app:
-            image:
-              repository: ghcr.io/grimmory-tools/grimmory
-              tag: latest
-            env:
-              TZ: Europe/Bucharest
-              USER_ID: '1000'
-              GROUP_ID: '1000'
-              BOOKLORE_PORT: '6060'
-            envFrom:
-              - secretRef:
-                  name: '{{ .Release.Name }}'
-            probes:
-              startup:
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /
-                    port: 6060
-                  initialDelaySeconds: 15
-                  periodSeconds: 10
-                  timeoutSeconds: 5
-                  failureThreshold: 30
-              liveness: &probes
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /
-                    port: 6060
-                  periodSeconds: 30
-                  timeoutSeconds: 5
-                  failureThreshold: 3
-              readiness: *probes
-            resources:
-              requests:
-                cpu: 50m
-                memory: 512Mi
-              limits:
-                memory: 2Gi
-            securityContext:
-              allowPrivilegeEscalation: false
-              capabilities: { drop: ['ALL'] }
+          reloader.stakater.com/auto: "true"
+        initContainers:
           mariadb:
             image:
-              repository: lscr.io/linuxserver/mariadb
-              tag: 11.4.5
+              repository: docker.io/library/mariadb
+              tag: 12.2.2-noble
             env:
-              TZ: Europe/Bucharest
-              PUID: '1000'
-              PGID: '1000'
-            envFrom:
+              MARIADB_DATABASE: grimmory
+              MARIADB_USER: grimmory
+              PGID: 1000
+              PUID: 1000
+            envFrom: &envFrom
               - secretRef:
-                  name: '{{ .Release.Name }}'
+                  name: grimmory-secret
             probes:
               liveness:
                 enabled: true
@@ -77,74 +35,124 @@ spec:
                 spec:
                   exec:
                     command:
-                      - mariadb-admin
-                      - ping
-                      - -h
-                      - localhost
-                  initialDelaySeconds: 10
-                  periodSeconds: 10
-                  timeoutSeconds: 5
-                  failureThreshold: 5
-              readiness:
+                      - bash
+                      - -c
+                      - |-
+                        mariadb-admin ping --socket=/run/mysqld/mysqld.sock --user=root --password=$${MARIADB_ROOT_PASSWORD}
+            restartPolicy: Always
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+              seccompProfile: {type: Unconfined}
+          wait-for-mariadb:
+            image:
+              repository: docker.io/wait4x/wait4x
+              tag: 3.6.0
+            args:
+              - "mysql"
+              - "grimmory:$(DATABASE_PASSWORD)@tcp(localhost:3306)/grimmory"
+            envFrom: *envFrom
+        containers:
+          app:
+            image:
+              repository: ghcr.io/grimmory-tools/grimmory
+              tag: v3.1.0@sha256:c83dcb59975c9a680ecdf84d60e7e5c9b05200818bab8794f4d84a7e008a549a
+            command:
+              - java
+            args:
+              - -jar
+              - /app/app.jar
+            env:
+              DATABASE_URL: jdbc:mariadb://localhost:3306/grimmory
+              DATABASE_USERNAME: grimmory
+            envFrom: *envFrom
+            probes:
+              liveness: &probe
                 enabled: true
                 custom: true
                 spec:
-                  exec:
-                    command:
-                      - mariadb-admin
-                      - ping
-                      - -h
-                      - localhost
-                  initialDelaySeconds: 10
-                  periodSeconds: 5
+                  httpGet:
+                    path: /api/v1/healthcheck
+                    port: &port 6060
+              readiness: *probe
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/v1/healthcheck
+                    port: *port
+                  initialDelaySeconds: 15
+                  periodSeconds: 10
                   timeoutSeconds: 5
-                  failureThreshold: 3
+                  failureThreshold: 30
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
             resources:
               requests:
-                cpu: 25m
-                memory: 256Mi
+                cpu: 50m
+                memory: 500Mi
               limits:
-                memory: 512Mi
+                memory: 2Gi
     defaultPodOptions:
       securityContext:
-        runAsNonRoot: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
     service:
       app:
         ports:
           http:
-            port: 6060
+            port: *port
     route:
       app:
         hostnames:
-          - '{{ .Release.Name }}.laurivan.com'
+          - "{{ .Release.Name }}.laurivan.com"
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: networking
     persistence:
-      config:
-        existingClaim: '{{ .Release.Name }}'
-        globalMounts:
-          - path: /app/data
-      books:
+      data:
+        existingClaim: "{{ .Release.Name }}"
+        advancedMounts:
+          grimmory:
+            app:
+              - path: /app/data
+                subPath: app
+            mariadb:
+              - path: /var/lib/mysql
+                subPath: mysql
+      media:
         type: nfs
         server: 10.0.0.14
         path: /mnt/Main/shares/books
-        globalMounts:
-          - path: /books
-      bookdrop:
-        type: nfs
-        server: 10.0.0.14
-        path: /mnt/Main/shares/bookdrop
-        globalMounts:
-          - path: /bookdrop
-      mariadb-config:
-        type: persistentVolumeClaim
-        accessMode: ReadWriteOnce
-        size: 2Gi
-        storageClass: openebs-hostpath
         advancedMounts:
-          *app :
+          grimmory:
+            app:
+              - path: /books
+                subPath: books
+              - path: /bookdrop
+                subPath: nzb/books
+      mysqld:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 1Mi
+        advancedMounts:
+          grimmory:
             mariadb:
-              - path: /config
+              - path: /run/mysqld
+      tmpfs:
+        type: emptyDir
+        advancedMounts:
+          grimmory:
+            app:
+              - path: /tmp
+                subPath: app
+            mariadb:
+              - path: /tmp
+                subPath: mysql
