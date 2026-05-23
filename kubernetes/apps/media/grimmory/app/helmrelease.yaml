@@ -115,7 +115,7 @@ spec:
           - "{{ .Release.Name }}.laurivan.com"
         parentRefs:
           - name: envoy-internal
-            namespace: networking
+            namespace: network
     persistence:
       data:
         existingClaim: "{{ .Release.Name }}"
