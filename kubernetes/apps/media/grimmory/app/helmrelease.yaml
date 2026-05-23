@@ -1,0 +1,150 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app grimmory
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: 'true'
+        containers:
+          app:
+            image:
+              repository: ghcr.io/grimmory-tools/grimmory
+              tag: latest
+            env:
+              TZ: Europe/Bucharest
+              USER_ID: '1000'
+              GROUP_ID: '1000'
+              BOOKLORE_PORT: &port '6060'
+            envFrom:
+              - secretRef:
+                  name: '{{ .Release.Name }}'
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *port
+                  initialDelaySeconds: 15
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *probes
+            resources:
+              requests:
+                cpu: 50m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: { drop: ['ALL'] }
+          mariadb:
+            image:
+              repository: lscr.io/linuxserver/mariadb
+              tag: 11.4.5
+            env:
+              TZ: Europe/Bucharest
+              PUID: '1000'
+              PGID: '1000'
+            envFrom:
+              - secretRef:
+                  name: '{{ .Release.Name }}'
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - mariadb-admin
+                      - ping
+                      - -h
+                      - localhost
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - mariadb-admin
+                      - ping
+                      - -h
+                      - localhost
+                  initialDelaySeconds: 10
+                  periodSeconds: 5
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+            resources:
+              requests:
+                cpu: 25m
+                memory: 256Mi
+              limits:
+                memory: 512Mi
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: false
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+    service:
+      app:
+        ports:
+          http:
+            port: *port
+    route:
+      app:
+        hostnames:
+          - '{{ .Release.Name }}.laurivan.com'
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+    persistence:
+      config:
+        existingClaim: '{{ .Release.Name }}'
+        globalMounts:
+          - path: /app/data
+      books:
+        type: nfs
+        server: 10.0.0.14
+        path: /mnt/Main/shares/books
+        globalMounts:
+          - path: /books
+      bookdrop:
+        type: nfs
+        server: 10.0.0.14
+        path: /mnt/Main/shares/bookdrop
+        globalMounts:
+          - path: /bookdrop
+      mariadb-config:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 2Gi
+        storageClass: openebs-hostpath
+        advancedMounts:
+          *app :
+            mariadb:
+              - path: /config
