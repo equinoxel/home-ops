@@ -1,0 +1,131 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app atuin
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    controllers:
+      *app :
+        replicas: 2
+        strategy: RollingUpdate
+        annotations:
+          reloader.stakater.com/auto: 'true'
+        containers:
+          app:
+            image:
+              repository: ghcr.io/atuinsh/atuin
+              tag: 18.16.1@sha256:9d4d79507b51be6d292b218f5cc791d79ca0a72f51ab48f786b091bd6eafb39f
+            env:
+              ATUIN_HOST: '::'
+              ATUIN_PORT: &port 80
+              ATUIN_OPEN_REGISTRATION: true
+              ATUIN_METRICS__ENABLE: true
+              ATUIN_METRICS__HOST: 0.0.0.0
+              ATUIN_METRICS__PORT: &metricsPort 8081
+              ATUIN_DB_URI:
+                valueFrom:
+                  secretKeyRef:
+                    name: '${APP}-postgres'
+                    key: url
+            args:
+              - start
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
+                  initialDelaySeconds: 0
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 3
+              readiness: *probes
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ['ALL'] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+
+    defaultPodOptions:
+      hostUsers: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+    service:
+      app:
+        ports:
+          http:
+            primary: true
+            port: *port
+          metrics:
+            port: *metricsPort
+
+    route:
+      app:
+        hostnames:
+          - '{{ .Release.Name }}.laurivan.com'
+          - sh.laurivan.com
+        parentRefs:
+          - name: &gateway envoy-internal
+            namespace: &gatewayns network
+        annotations:
+          gethomepage.dev/enabled: 'true'
+          gethomepage.dev/name: Atuin
+          gethomepage.dev/group: Dev Tools
+          gethomepage.dev/icon: atuin.svg
+          gethomepage.dev/href: https://sh.laurivan.com
+
+    serviceMonitor:
+      app:
+        endpoints:
+          - port: metrics
+
+    persistence:
+      config:
+        type: emptyDir
+
+    rawResources:
+      netpol:
+        manifest:
+          apiVersion: cilium.io/v2
+          kind: CiliumNetworkPolicy
+          spec:
+            endpointSelector:
+              matchLabels:
+                app.kubernetes.io/name: *app
+                app.kubernetes.io/instance: *app
+            ingress:
+              - fromEndpoints:
+                  - matchLabels:
+                      gateway.networking.k8s.io/gateway-name: *gateway
+                      k8s:io.kubernetes.pod.namespace: *gatewayns
+                toPorts:
+                  - ports:
+                      - port: '80'
+                        protocol: TCP
+              - fromEndpoints:
+                  - matchLabels:
+                      k8s:io.kubernetes.pod.namespace: observability
+                      app.kubernetes.io/name: vmagent
+                      app.kubernetes.io/instance: victoria-metrics
+                toPorts:
+                  - ports:
+                      - port: '8081'
+                        protocol: TCP

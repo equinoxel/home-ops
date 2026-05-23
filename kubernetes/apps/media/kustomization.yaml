@@ -10,4 +10,5 @@ components:
   - ../../components/repos/app-template
 resources:
   - ./navidrome
-  - ./subsonic
+  #- ./plex
+  #- ./subsonic
