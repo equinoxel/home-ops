@@ -23,7 +23,7 @@ spec:
               TZ: Europe/Bucharest
               USER_ID: '1000'
               GROUP_ID: '1000'
-              BOOKLORE_PORT: &port '6060'
+              BOOKLORE_PORT: '6060'
             envFrom:
               - secretRef:
                   name: '{{ .Release.Name }}'
@@ -34,7 +34,7 @@ spec:
                 spec:
                   httpGet:
                     path: /
-                    port: *port
+                    port: 6060
                   initialDelaySeconds: 15
                   periodSeconds: 10
                   timeoutSeconds: 5
@@ -45,7 +45,7 @@ spec:
                 spec:
                   httpGet:
                     path: /
-                    port: *port
+                    port: 6060
                   periodSeconds: 30
                   timeoutSeconds: 5
                   failureThreshold: 3
@@ -114,7 +114,7 @@ spec:
       app:
         ports:
           http:
-            port: *port
+            port: 6060
     route:
       app:
         hostnames:
