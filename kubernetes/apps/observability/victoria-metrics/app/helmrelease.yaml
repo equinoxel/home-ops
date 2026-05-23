@@ -199,6 +199,9 @@ spec:
       spec:
         # Reduced from 90d to 30d to lower compaction overhead and memory usage
         retentionPeriod: 30d
+        extraArgs:
+          search.maxLabelsAPIDuration: 30s
+          search.maxQueryDuration: 60s
         storage:
           accessModes:
             - ReadWriteOnce
