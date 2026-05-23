@@ -61,7 +61,7 @@ spec:
               tag: 3.6.0
             args:
               - "mysql"
-              - "grimmory:$(DATABASE_PASSWORD)@tcp(localhost:3306)/grimmory"
+              - "grimmory:$(DATABASE_PASSWORD)@tcp(127.0.0.1:3306)/grimmory"
             envFrom: *envFrom
         containers:
           app:
@@ -74,7 +74,7 @@ spec:
               - -jar
               - /app/app.jar
             env:
-              DATABASE_URL: jdbc:mariadb://localhost:3306/grimmory
+              DATABASE_URL: jdbc:mariadb://127.0.0.1:3306/grimmory
               DATABASE_USERNAME: grimmory
             envFrom: *envFrom
             probes:
