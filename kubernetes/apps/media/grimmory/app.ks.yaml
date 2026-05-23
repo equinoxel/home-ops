@@ -9,9 +9,6 @@ spec:
   interval: 1h
   components:
     - ../../../../components/volsync
-  dependsOn:
-    - name: storage-ready
-      namespace: flux-system
   path: ./kubernetes/apps/media/grimmory/app
   postBuild:
     substitute:

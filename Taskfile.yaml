@@ -29,15 +29,16 @@ tasks:
   default: task --list
 
   reconcile:
-    desc: Force Flux to pull in changes from your Git repository [APP=optional]
+    desc: Force Flux to pull in changes from your Git repository [APP=optional] [NS=flux-system]
     cmd: |
       {{if .APP}}
-        flux --namespace flux-system reconcile kustomization {{.APP}} --with-source
+        flux --namespace {{.NS}} reconcile kustomization {{.APP}} --with-source
       {{else}}
         flux --namespace flux-system reconcile kustomization flux-system --with-source
       {{end}}
     vars:
       APP: '{{.APP | default ""}}'
+      NS: '{{.NS | default "flux-system"}}'
     preconditions:
       - test -f {{.KUBECONFIG}}
       - which flux
