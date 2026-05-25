@@ -8,6 +8,7 @@ metadata:
 spec:
   interval: 1h
   components:
+    - ../../../../components/cnpg/app
     - ../../../../components/volsync
   dependsOn:
     - name: postgres-cluster
@@ -17,6 +18,7 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 1Gi
+      DATABASE_EXTENSIONS: '[{"name":"uuid-ossp"},{"name":"pg_trgm"},{"name":"vector"}]'
   prune: true
   sourceRef:
     kind: GitRepository

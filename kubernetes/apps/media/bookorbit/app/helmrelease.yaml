@@ -24,9 +24,14 @@ spec:
               PUID: '1000'
               PGID: '1000'
               APP_URL: https://bookorbit.laurivan.com
-              APP_PORT: &port '3000'
+              APP_PORT: '3000'
               PORT: '3000'
               BOOKORBIT_FIX_PERMISSIONS: 'true'
+              DATABASE_URL:
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ .Release.Name }}-postgres'
+                    key: url
             envFrom:
               - secretRef:
                   name: '{{ .Release.Name }}'
@@ -87,3 +92,9 @@ spec:
         path: /mnt/Main/shares/books
         globalMounts:
           - path: /books
+      postgres-certs:
+        type: secret
+        name: postgres-bookorbit-cert
+        defaultMode: 0440
+        globalMounts:
+          - path: /var/run/secrets/postgresql
