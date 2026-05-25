@@ -9,6 +9,7 @@ spec:
   interval: 1h
   components:
     - ../../../../components/cnpg/app
+    - ../../../../components/ext-auth
     - ../../../../components/volsync
   dependsOn:
     - name: postgres-cluster

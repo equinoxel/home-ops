@@ -18,10 +18,15 @@ graph TD
         SEC[Secret<br/>bookorbit]
         CERT[Certificate<br/>postgres-bookorbit-cert]
         DBSEC[Secret<br/>bookorbit-postgres]
+        SP[SecurityPolicy<br/>bookorbit]
     end
 
     subgraph network namespace
         GW[Gateway<br/>envoy-internal]
+    end
+
+    subgraph security namespace
+        AK[Authentik<br/>embedded-outpost]
     end
 
     subgraph database namespace
@@ -42,6 +47,8 @@ graph TD
     HR --> SVC
     HR --> ROUTE[HTTPRoute<br/>bookorbit.laurivan.com]
     ROUTE --> GW
+    SP --> ROUTE
+    SP --> AK
     DEP --> PVC
     DEP --> NFS_BOOKS
     DEP --> CERT
@@ -122,8 +129,16 @@ Create a Bitwarden item named `bookorbit` with the following fields:
 ## Enabling
 
 1. Create the Bitwarden item `bookorbit` with the fields above
-2. Uncomment `#- ./bookorbit` in [`kubernetes/apps/media/kustomization.yaml`](../kustomization.yaml)
-3. Commit and push — Flux will create the database, certificate, and deploy the app
+2. Create an **Authentik Proxy Provider** for BookOrbit:
+   - Name: `bookorbit`
+   - External host: `https://bookorbit.laurivan.com`
+   - Mode: Forward auth (single application)
+3. Create an **Authentik Application** linked to the provider
+4. Uncomment `#- ./bookorbit` in [`kubernetes/apps/media/kustomization.yaml`](../kustomization.yaml)
+5. Commit and push — Flux will create the database, certificate, and deploy the app
+6. After first login, configure OIDC/SSO in BookOrbit UI (Settings > OIDC / SSO):
+   - Issuer: `https://auth.laurivan.com/application/o/bookorbit/`
+   - Client ID / Secret: from the Authentik provider
 
 ## References
 
@@ -131,4 +146,5 @@ Create a Bitwarden item named `bookorbit` with the following fields:
 - [`app/helmrelease.yaml`](./app/helmrelease.yaml) — App deployment via app-template chart
 - [`app/externalsecret.yaml`](./app/externalsecret.yaml) — Bitwarden secret sync
 - [`../../components/cnpg/app`](../../components/cnpg/app) — CNPG database component
+- [`../../components/ext-auth`](../../components/ext-auth) — Authentik external auth SecurityPolicy
 - [`../../components/volsync`](../../components/volsync) — VolSync backup component
