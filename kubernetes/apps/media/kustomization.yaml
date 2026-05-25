@@ -9,6 +9,7 @@ components:
   - ../../components/sops
   - ../../components/repos/app-template
 resources:
+  #- ./bookorbit
   # - ./grimmory
   - ./navidrome
   #- ./plex
