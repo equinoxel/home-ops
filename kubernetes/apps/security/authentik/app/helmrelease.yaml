@@ -81,13 +81,13 @@ spec:
         limits:
           memory: 1Gi
       startupProbe:
-        timeoutSeconds: 10
+        timeoutSeconds: 20
         failureThreshold: 30
-        periodSeconds: 10
+        periodSeconds: 20
       livenessProbe:
-        timeoutSeconds: 10
+        timeoutSeconds: 20
         failureThreshold: 6
-        periodSeconds: 30
+        periodSeconds: 60
     prometheus:
       rules:
         enabled: true
