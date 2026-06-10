@@ -256,18 +256,20 @@ log "Selected snapshot: ${SELECTED_SNAPSHOT} (latest before ${TARGET_DATE})"
 # ---------------------------------------------------------------------------
 log "Starting restore process..."
 
-# Step 1: Suspend HelmRelease and scale down
+# Step 1: Suspend HelmRelease, save replica counts, and scale down
 log "Suspending HelmRelease and scaling down app..."
 flux suspend hr "${APP}" -n "${NS}" 2>/dev/null || true
 
+# Save replica counts to a temp file before scaling down
+REPLICAS_FILE=$(mktemp)
 for kind in deployment statefulset; do
-    resources=$(kubectl get "${kind}" -n "${NS}" --no-headers -o name 2>/dev/null | grep -i "${APP}" || true)
-    if [[ -n "${resources}" ]]; then
-        echo "${resources}" | while read -r res; do
-            log "  Scaling down ${res}..."
-            kubectl scale "${res}" -n "${NS}" --replicas=0 2>/dev/null || true
-        done
-    fi
+    while IFS= read -r res; do
+        [[ -z "${res}" ]] && continue
+        replicas=$(kubectl get "${res}" -n "${NS}" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "1")
+        echo "${res}=${replicas}" >> "${REPLICAS_FILE}"
+        log "  Scaling down ${res} (was ${replicas} replicas)..."
+        kubectl scale "${res}" -n "${NS}" --replicas=0 2>/dev/null || true
+    done <<< "$(kubectl get "${kind}" -n "${NS}" --no-headers -o name 2>/dev/null | grep -i "${APP}" || true)"
 done
 
 # Wait for pods to terminate
@@ -351,7 +353,7 @@ for i in $(seq 1 60); do
     sleep 10
 done
 
-# Step 7: Restore backup schedules and resume app
+# Step 7: Restore backup schedules, resume app, and restore replica counts
 log "Restoring backup schedules..."
 kubectl patch replicationsource -n "${NS}" "${APP}" --type merge \
     -p '{"spec":{"trigger":{"schedule":"0 */2 * * *"}}}' 2>/dev/null || true
@@ -360,6 +362,21 @@ kubectl patch replicationsource -n "${NS}" "${APP}-s3" --type merge \
 
 log "Resuming HelmRelease..."
 flux resume hr "${APP}" -n "${NS}" 2>/dev/null || true
+
+# Restore saved replica counts
+log "Restoring replica counts..."
+if [[ -f "${REPLICAS_FILE}" ]]; then
+    while IFS='=' read -r res replicas; do
+        [[ -z "${res}" ]] && continue
+        replicas="${replicas:-1}"
+        log "  Scaling ${res} to ${replicas} replicas..."
+        kubectl scale "${res}" -n "${NS}" --replicas="${replicas}" 2>/dev/null || true
+    done < "${REPLICAS_FILE}"
+    rm -f "${REPLICAS_FILE}"
+fi
+
+# Force Helm to reconcile (ensures chart defaults are re-applied)
+flux reconcile hr "${APP}" -n "${NS}" 2>/dev/null || true
 
 # Step 8: Wait for app to come back
 log "Waiting for app to start..."

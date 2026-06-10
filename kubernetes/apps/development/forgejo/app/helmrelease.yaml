@@ -10,6 +10,7 @@ spec:
     name: forgejo
   interval: 30m
   values:
+    replicaCount: 1
     gitea:
       admin:
         username: ""
