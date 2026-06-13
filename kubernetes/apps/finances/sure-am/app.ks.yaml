@@ -9,13 +9,18 @@ spec:
   interval: 1h
   components:
     - ../../../../components/cnpg/app
-    - ../../../../components/dragonfly/app-template
+    - ../../../../components/dragonfly/own-cluster
     - ../../../../components/volsync
   dependsOn:
     - name: postgres-cluster
       namespace: database
-    - name: dragonfly-cluster
+    - name: dragonfly-operator
       namespace: database
+  healthCheckExprs:
+    - apiVersion: dragonflydb.io/v1alpha1
+      kind: Dragonfly
+      failed: status.phase != 'ready'
+      current: status.phase == 'ready'
   path: ./kubernetes/apps/finances/sure-am/app
   postBuild:
     substitute:

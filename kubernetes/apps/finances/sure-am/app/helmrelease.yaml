@@ -32,12 +32,7 @@ spec:
                   secretKeyRef:
                     name: "{{ .Release.Name }}-postgres"
                     key: url
-              REDIS_URL:
-                valueFrom:
-                  secretKeyRef:
-                    name: "{{ .Release.Name }}-dragonfly"
-                    key: url
-              # Authentik OIDC SSO
+              REDIS_URL: redis://sure-am-dragonfly:6379
               AUTH_PROVIDERS_SOURCE: db
               AUTH_LOCAL_LOGIN_ENABLED: "true"
               AUTH_LOCAL_ADMIN_OVERRIDE_ENABLED: "true"
@@ -94,11 +89,7 @@ spec:
                   secretKeyRef:
                     name: "{{ .Release.Name }}-postgres"
                     key: url
-              REDIS_URL:
-                valueFrom:
-                  secretKeyRef:
-                    name: "{{ .Release.Name }}-dragonfly"
-                    key: url
+              REDIS_URL: redis://sure-am-dragonfly:6379
               AUTH_PROVIDERS_SOURCE: db
               OIDC_AUTHENTIK_ISSUER: https://auth.laurivan.com/application/o/sure-am/
             envFrom:
