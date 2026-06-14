@@ -27,7 +27,7 @@ spec:
               repository: ghcr.io/actualbudget/actual
               tag: 25.6.1
             env:
-              ACTUAL_PORT: &port "5006"
+              ACTUAL_PORT: &port 5006
               ACTUAL_LOGIN_METHOD: openid
               ACTUAL_OPENID_DISCOVERY_URL: https://auth.laurivan.com/application/o/actual-budget/
               ACTUAL_OPENID_SERVER_HOSTNAME: https://actual.laurivan.com
