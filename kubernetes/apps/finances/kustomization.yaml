@@ -10,4 +10,4 @@ components:
   - ../../components/repos/app-template
 resources:
   - ./actual-budget
-  - ./sure-am
+  # - ./sure-am - It is too slow for my cluster. Also Enable Banking fails.
