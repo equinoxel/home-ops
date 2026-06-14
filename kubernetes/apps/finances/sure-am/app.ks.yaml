@@ -22,6 +22,14 @@ spec:
       failed: status.phase != 'ready'
       current: status.phase == 'ready'
   path: ./kubernetes/apps/finances/sure-am/app
+  patches:
+    - target:
+        kind: Dragonfly
+        name: sure-am-dragonfly
+      patch: |
+        - op: replace
+          path: /spec/replicas
+          value: 1
   postBuild:
     substitute:
       APP: *app
