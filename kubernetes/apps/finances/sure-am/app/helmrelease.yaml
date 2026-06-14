@@ -49,10 +49,10 @@ spec:
                   httpGet:
                     path: /
                     port: &port 3000
-                  initialDelaySeconds: 15
+                  initialDelaySeconds: 30
                   periodSeconds: 10
                   timeoutSeconds: 5
-                  failureThreshold: 30
+                  failureThreshold: 60
               liveness: &probes
                 enabled: true
                 custom: true
