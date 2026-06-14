@@ -9,5 +9,5 @@ components:
   - ../../components/sops
   - ../../components/repos/app-template
 resources:
-  # - ./actual-budget
+  - ./actual-budget
   - ./sure-am
