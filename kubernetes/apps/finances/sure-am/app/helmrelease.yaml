@@ -46,8 +46,7 @@ spec:
                 enabled: true
                 custom: true
                 spec:
-                  httpGet:
-                    path: /
+                  tcpSocket:
                     port: &port 3000
                   initialDelaySeconds: 30
                   periodSeconds: 10
@@ -57,8 +56,7 @@ spec:
                 enabled: true
                 custom: true
                 spec:
-                  httpGet:
-                    path: /
+                  tcpSocket:
                     port: *port
                   periodSeconds: 30
                   timeoutSeconds: 5
