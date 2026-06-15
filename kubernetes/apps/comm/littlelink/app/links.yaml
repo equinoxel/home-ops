@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: littlelink-links
+data:
+  # --- Profile ---
+  META_TITLE: "Laur Ivan"
+  META_DESCRIPTION: "Laur Ivan's links"
+  META_AUTHOR: "Laur Ivan"
+  NAME: "Laur Ivan"
+  BIO: "Links to my stuff"
+  FOOTER: "Thanks for stopping by!"
+
+  # --- Theme & Appearance ---
+  LANG: "en"
+  THEME: "Dark"
+  META_INDEX_STATUS: "all"
+  BUTTON_TARGET: "_blank"
+  # AVATAR_URL: "https://example.com/avatar.jpg"
+  # AVATAR_2X_URL: "https://example.com/avatar@2x.jpg"
+  # AVATAR_ALT: "Laur Ivan"
+  # FAVICON_URL: "https://example.com/favicon.png"
+
+  # --- Links (uncomment and fill in as needed) ---
+  # GITHUB: "https://github.com/youruser"
+  # TWITTER: "https://twitter.com/youruser"
+  # MASTODON: "https://mastodon.social/@youruser"
+  # LINKED_IN: "https://linkedin.com/in/youruser"
+  # YOUTUBE: "https://youtube.com/@youruser"
+  # INSTAGRAM: "https://instagram.com/youruser"
+  # EMAIL: "you@example.com"
+  # EMAIL_TEXT: "Email Me!"
+  # BLUESKY: "https://bsky.app/profile/youruser"
+  # GHOST: "https://ghost.laurivan.com"
+  # DISCORD: "https://discord.gg/invite"
+  # REDDIT: "https://reddit.com/u/youruser"
+
+  # --- Button Order (comma-separated, controls display order) ---
+  # BUTTON_ORDER: "GITHUB,MASTODON,TWITTER,LINKED_IN,YOUTUBE,EMAIL"
