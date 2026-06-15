@@ -9,7 +9,7 @@ data:
   META_DESCRIPTION: "Laur Ivan's links"
   META_AUTHOR: "Laur Ivan"
   NAME: "Laur Ivan"
-  BIO: "Links to my stuff"
+  BIO: "Me, me, me, me..."
   FOOTER: "Thanks for stopping by!"
 
   # --- Theme & Appearance ---
@@ -18,7 +18,7 @@ data:
   META_INDEX_STATUS: "all"
   BUTTON_TARGET: "_blank"
   AVATAR_URL: "https://giti.laurivan.com/web/assets/raw/branch/main/portraits/portrait-256.jpg"
-  # AVATAR_2X_URL: "https://giti.laurivan.com/web/assets/raw/branch/main/portraits/portrait-512.jpg"
+  AVATAR_2X_URL: "https://giti.laurivan.com/web/assets/raw/branch/main/portraits/portrait-512.jpg"
   AVATAR_ALT: "Laur Ivan"
   # FAVICON_URL: "https://example.com/favicon.png"
 
