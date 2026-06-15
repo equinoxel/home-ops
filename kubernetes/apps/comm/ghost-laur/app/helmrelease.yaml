@@ -68,9 +68,9 @@ spec:
     route:
       app:
         hostnames:
-          - "ghost.laurivan.com"
+          - "www.laurivan.com"
         parentRefs:
-          - name: envoy-internal
+          - name: envoy-external
             namespace: network
     persistence:
       content:

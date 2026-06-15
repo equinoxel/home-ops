@@ -126,6 +126,6 @@ spec:
       enabled: true
       parentRefs:
         # TODO: move to envoy-external after testing
-        - name: envoy-internal
+        - name: envoy-external
           namespace: network
           sectionName: ssh
