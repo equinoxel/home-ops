@@ -23,19 +23,13 @@ spec:
               PGHOST: postgres-cluster-rw.database.svc.cluster.local
               PGPORT: "5432"
               PGDATABASE: postgres
-              DB_ROLE: shlink
             envFrom:
               - secretRef:
                   name: shlink-pginit
               - secretRef:
                   name: "{{ .Release.Name }}"
-            command:
-              - sh
-              - -c
-              - |
-                echo "Setting password for role '${DB_ROLE}'..."
-                psql -c "ALTER ROLE ${DB_ROLE} WITH PASSWORD '${DB_PASSWORD}';"
-                echo "Done."
+            command: ["/bin/sh"]
+            args: ["-c", "psql -c \"ALTER ROLE shlink WITH PASSWORD '$${DB_PASSWORD}';\""]
         containers:
           app:
             image:
