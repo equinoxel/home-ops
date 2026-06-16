@@ -99,6 +99,12 @@ spec:
         superuser: false
         disablePassword: true
 
+      - name: shlink
+        ensure: present
+        login: true
+        superuser: false
+        disablePassword: false
+
       - name: sure-am
         ensure: present
         login: true
