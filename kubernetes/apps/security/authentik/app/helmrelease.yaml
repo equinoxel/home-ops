@@ -55,7 +55,7 @@ spec:
       autoscaling: &autoscaling
         enabled: true
         minReplicas: 1
-        maxReplicas: 5
+        maxReplicas: 1
         targetCPUUtilizationPercentage: 60
         behavior:
           scaleUp:
@@ -64,7 +64,8 @@ spec:
             stabilizationWindowSeconds: 300
       resources:
         requests:
-          cpu: 300m
+          cpu: 50m
+          memory: 256Mi
         limits:
           memory: 1Gi
       metrics:
@@ -75,9 +76,18 @@ spec:
       autoscaling: *autoscaling
       resources:
         requests:
-          cpu: 300m
+          cpu: 50m
+          memory: 256Mi
         limits:
           memory: 1Gi
+      startupProbe:
+        timeoutSeconds: 20
+        failureThreshold: 30
+        periodSeconds: 20
+      livenessProbe:
+        timeoutSeconds: 20
+        failureThreshold: 6
+        periodSeconds: 60
     prometheus:
       rules:
         enabled: true

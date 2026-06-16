@@ -95,6 +95,7 @@ nodes:
     patches:
       - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/slow-disk.yaml"
+      - "@./patches/worker/fast-disk.yaml"
   - hostname: "esxi-2cu-8g-05"
     ipAddress: "10.0.0.127"
     installDisk: "/dev/sda"
@@ -115,7 +116,33 @@ nodes:
     patches:
       - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/slow-disk.yaml"
+      - "@./patches/worker/fast-disk.yaml"
       - "@./patches/worker/home-assistant.yaml"
+  - hostname: "esxi-4cu-16g-06"
+    ipAddress: "10.0.0.131"
+    installDisk: "/dev/sda"
+    machineSpec:
+      secureboot: false
+    talosImageURL: factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba
+    controlPlane: false
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "34:97:87:58:7b:12"
+        dhcp: false
+        addresses:
+          - "10.0.0.131/24"
+        routes:
+          - gateway: "10.0.0.1"
+            network: 0.0.0.0/0
+        mtu: 1500
+    patches:
+      - "@./patches/intel/machine-install.yaml"
+      - "@./patches/worker/slow-disk.yaml"
+      - "@./patches/worker/fast-disk.yaml"
+      - "@./patches/worker/home-assistant.yaml"
+
+  # Blades
+  #
   - hostname: "blade-01"
     ipAddress: "10.0.50.10"
     installDisk: "/dev/mmcblk0"

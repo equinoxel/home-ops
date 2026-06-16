@@ -29,7 +29,7 @@ spec:
           init:
             image: &image
               repository: mirror.gcr.io/dpage/pgadmin4
-              tag: 9.13.0@sha256:d243a4bcc02d2ee6b447c601692813531d2d0fbca18b583d9f7f9658da835d81
+              tag: 9.15.0@sha256:cefc4cc6b7d9d71a9e81e76fb9d7e14038ab5661b539a190eea1b63fa612589a
             command: # pgadmin only creates the per-user .pgpass when the user is first created, so this manually updates it
               - /bin/sh
               - -c
@@ -84,7 +84,16 @@ spec:
                     port: *port
                   failureThreshold: 10
               readiness: *probes
-              startup: *probes
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /misc/ping
+                    port: *port
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                  failureThreshold: 30
             resources:
               requests:
                 cpu: 50m

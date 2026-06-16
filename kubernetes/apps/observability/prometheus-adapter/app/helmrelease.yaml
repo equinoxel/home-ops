@@ -13,5 +13,11 @@ spec:
     prometheus:
       url: http://vmsingle-victoria-metrics.observability.svc.cluster.local
       port: 8428
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
     rules:
       default: false

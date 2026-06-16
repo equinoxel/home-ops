@@ -10,4 +10,4 @@ components:
 
 resources:
   - ./echo/ks.yaml
-  - ./homepage/ks.yaml
+  # - ./homepage/ks.yaml

@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: littlelink-links
+data:
+  # --- Profile ---
+  META_TITLE: "Laur Ivan"
+  META_DESCRIPTION: "Laur Ivan's links"
+  META_AUTHOR: "Laur Ivan"
+  NAME: "Laur Ivan"
+  BIO: "Me, me, me, me..."
+  FOOTER: "Thanks for stopping by!"
+
+  # --- Theme & Appearance ---
+  LANG: "en"
+  THEME: "Dark"
+  META_INDEX_STATUS: "all"
+  BUTTON_TARGET: "_blank"
+  AVATAR_URL: "https://giti.laurivan.com/web/assets/raw/branch/main/portraits/portrait-256.jpg"
+  AVATAR_2X_URL: "https://giti.laurivan.com/web/assets/raw/branch/main/portraits/portrait-512.jpg"
+  AVATAR_ALT: "Laur Ivan"
+  # FAVICON_URL: "https://example.com/favicon.png"
+
+  # --- Links (uncomment and fill in as needed) ---
+  GITHUB: "https://github.com/equinoxel"
+  TWITTER: "https://x.com/pro_laur"
+  # MASTODON: "https://mastodon.social/@youruser"
+  LINKED_IN: "https://www.linkedin.com/in/laurivan/"
+  # YOUTUBE: "https://youtube.com/@youruser"
+  # INSTAGRAM: "https://instagram.com/youruser"
+  # EMAIL: "you@example.com"
+  # EMAIL_TEXT: "Email Me!"
+  # BLUESKY: "https://bsky.app/profile/youruser"
+  GHOST: "https://www.laurivan.com"
+  FORGEJO: "https://giti.laurivan.com/"
+  # DISCORD: "https://discord.gg/invite"
+  # REDDIT: "https://reddit.com/u/youruser"
+
+  # --- Button Order (comma-separated, controls display order) ---
+  # BUTTON_ORDER: "GITHUB,MASTODON,TWITTER,LINKED_IN,YOUTUBE,EMAIL"

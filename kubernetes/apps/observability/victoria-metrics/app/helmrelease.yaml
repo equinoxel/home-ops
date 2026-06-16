@@ -17,7 +17,7 @@ spec:
     alertmanager:
       config:
         route:
-          receiver: pushover
+          receiver: heartbeat
           repeat_interval: 12h
           routes:
             - receiver: blackhole
@@ -50,41 +50,6 @@ spec:
               - url_secret:
                   name: &secret vmalertmanager
                   key: HEALTHCHECKS_IO_HEARTBEAT_URL
-          - name: pushover
-            pushover_configs:
-              - html: true
-                message: |-
-                  {{- range .Alerts }}
-                    {{- if ne .Annotations.description "" }}
-                      {{ .Annotations.description }}
-                    {{- else if ne .Annotations.summary "" }}
-                      {{ .Annotations.summary }}
-                    {{- else if ne .Annotations.message "" }}
-                      {{ .Annotations.message }}
-                    {{- else }}
-                      Alert description not available
-                    {{- end }}
-                    {{- if gt (len .Labels.SortedPairs) 0 }}
-                      <small>
-                        {{- range .Labels.SortedPairs }}
-                          <b>{{ .Name }}:</b> {{ .Value }}
-                        {{- end }}
-                      </small>
-                    {{- end }}
-                  {{- end }}
-                priority: |-
-                  {{ if eq .Status "firing" }}1{{ else }}0{{ end }}
-                send_resolved: true
-                sound: gamelan
-                title: >-
-                  [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}
-                token:
-                  name: *secret
-                  key: ALERTMANAGER_PUSHOVER_TOKEN
-                url_title: View in Alertmanager
-                user_key:
-                  name: *secret
-                  key: PUSHOVER_USER_KEY
       route:
         enabled: true
         annotations:
@@ -161,19 +126,27 @@ spec:
           enabled: false
       operator:
         enable_converter_ownership: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
     vmagent:
       spec:
+        scrapeInterval: 60s
         extraArgs:
           promscrape.dropOriginalLabels: 'true'
           promscrape.maxScrapeSize: 50MiB
           promscrape.streamParse: 'true'
         resources:
           requests:
-            cpu: 200m
+            cpu: 100m
           limits:
             cpu: 500m
     vmalert:
       spec:
+        evaluationInterval: 60s
         extraArgs:
           external.url: https://alerts.laurivan.com
         datasource:
@@ -224,8 +197,11 @@ spec:
           - name: envoy-internal
             namespace: network
       spec:
-        # TODO: Increase the retention period when moving to ceph
-        retentionPeriod: 90d
+        # Reduced from 90d to 30d to lower compaction overhead and memory usage
+        retentionPeriod: 30d
+        extraArgs:
+          search.maxLabelsAPIDuration: 30s
+          search.maxQueryDuration: 60s
         storage:
           accessModes:
             - ReadWriteOnce

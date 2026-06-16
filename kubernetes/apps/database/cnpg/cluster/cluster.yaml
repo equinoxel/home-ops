@@ -56,14 +56,8 @@ spec:
         barmanObjectName: *name
         serverName: *name
   bootstrap:
-    # To restore from backup, switch to recovery mode:
-    # recovery:
-    #   source: source
-    #   recoveryTarget:
-    #     targetTime: "2026-05-10T00:00:01Z"
-    initdb:
-      database: app
-      owner: app
+    recovery:
+      source: source
   externalClusters:
     - name: source
       plugin:
@@ -93,6 +87,12 @@ spec:
         superuser: false
         disablePassword: true
 
+      - name: bookorbit
+        ensure: present
+        login: true
+        superuser: false
+        disablePassword: true
+
       - name: immich
         ensure: present
         login: true
@@ -100,6 +100,18 @@ spec:
         disablePassword: true
 
       - name: paperless
+        ensure: present
+        login: true
+        superuser: false
+        disablePassword: true
+
+      - name: shlink
+        ensure: present
+        login: true
+        superuser: false
+        disablePassword: false
+
+      - name: sure-am
         ensure: present
         login: true
         superuser: false

@@ -1,29 +1,35 @@
 #!/usr/bin/env bash
 #
-# Restore an app's PVC from a VolSync/Kopia backup taken before a given date.
+# Restore an app's PVC from a VolSync/Kopia backup.
 #
 # Usage:
-#   volsync-restore.sh <app> <type> <date>
+#   volsync-restore.sh <app> <type> <date|hash>
 #   volsync-restore.sh <app> <type> --list-only
 #
 # Arguments:
 #   app   - Application name (matches the ReplicationSource name)
 #   type  - Backup type: "nfs" (local/fast) or "s3" (remote/slow)
-#   date  - Target date in YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS format
+#   date  - Target date in YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, or full ISO8601 format.
 #           The script restores from the latest snapshot BEFORE this date.
+#   hash  - A Kopia snapshot ID (hex string). Restores that exact snapshot.
 #   --list-only - Just list available snapshots, don't restore
 #
 
 set -euo pipefail
 
-APP="${1:?Usage: volsync-restore.sh <app> <nfs|s3> <date|--list-only>}"
-TYPE="${2:?Usage: volsync-restore.sh <app> <nfs|s3> <date|--list-only>}"
-DATE_OR_FLAG="${3:?Usage: volsync-restore.sh <app> <nfs|s3> <date|--list-only>}"
+APP="${1:?Usage: volsync-restore.sh <app> <nfs|s3> <date|hash|--list-only>}"
+TYPE="${2:?Usage: volsync-restore.sh <app> <nfs|s3> <date|hash|--list-only>}"
+DATE_OR_FLAG="${3:?Usage: volsync-restore.sh <app> <nfs|s3> <date|hash|--list-only>}"
 
 LIST_ONLY=false
+TARGET_DATE=""
+TARGET_HASH=""
+
 if [[ "${DATE_OR_FLAG}" == "--list-only" ]]; then
     LIST_ONLY=true
-    TARGET_DATE=""
+elif [[ "${DATE_OR_FLAG}" =~ ^[0-9a-f]{16,}$ ]]; then
+    # Looks like a Kopia snapshot hash (hex string, 16+ chars)
+    TARGET_HASH="${DATE_OR_FLAG}"
 else
     TARGET_DATE="${DATE_OR_FLAG}"
 fi
@@ -233,41 +239,53 @@ if [[ "${LIST_ONLY}" == "true" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Find the latest snapshot before TARGET_DATE
+# Find the target snapshot (by date or by hash)
 # ---------------------------------------------------------------------------
-# Normalize date to ISO format for comparison
-if [[ "${TARGET_DATE}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    TARGET_DATE="${TARGET_DATE}T23:59:59"
+if [[ -n "${TARGET_HASH}" ]]; then
+    # Verify the hash exists in the snapshot list
+    SELECTED_SNAPSHOT=$(echo "${APP_SNAPSHOTS}" | awk -v hash="${TARGET_HASH}" '$2 == hash { print $2; exit }' || true)
+    if [[ -z "${SELECTED_SNAPSHOT}" ]]; then
+        die "Snapshot hash '${TARGET_HASH}' not found. Available snapshots listed above."
+    fi
+    # Get the timestamp of the selected snapshot for the restoreAsOf field
+    TARGET_DATE=$(echo "${APP_SNAPSHOTS}" | awk -v hash="${TARGET_HASH}" '$2 == hash { print $1; exit }')
+    log "Selected snapshot by hash: ${SELECTED_SNAPSHOT} (${TARGET_DATE})"
+else
+    # Normalize date to ISO format for comparison
+    if [[ "${TARGET_DATE}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        TARGET_DATE="${TARGET_DATE}T23:59:59"
+    fi
+
+    SELECTED_SNAPSHOT=$(echo "${APP_SNAPSHOTS}" | \
+        awk -v target="${TARGET_DATE}" '{
+            if ($1 <= target) { print $2; exit }
+        }' || true)
+
+    if [[ -z "${SELECTED_SNAPSHOT}" ]]; then
+        die "No snapshot found before ${TARGET_DATE}. Available snapshots listed above."
+    fi
+    log "Selected snapshot: ${SELECTED_SNAPSHOT} (latest before ${TARGET_DATE})"
 fi
-
-SELECTED_SNAPSHOT=$(echo "${APP_SNAPSHOTS}" | \
-    awk -v target="${TARGET_DATE}" '{
-        if ($1 <= target) { print $2; exit }
-    }' || true)
-
-if [[ -z "${SELECTED_SNAPSHOT}" ]]; then
-    die "No snapshot found before ${TARGET_DATE}. Available snapshots listed above."
-fi
-
-log "Selected snapshot: ${SELECTED_SNAPSHOT} (latest before ${TARGET_DATE})"
 
 # ---------------------------------------------------------------------------
 # Perform the restore
 # ---------------------------------------------------------------------------
 log "Starting restore process..."
 
-# Step 1: Suspend HelmRelease and scale down
+# Step 1: Suspend HelmRelease, save replica counts, and scale down
 log "Suspending HelmRelease and scaling down app..."
 flux suspend hr "${APP}" -n "${NS}" 2>/dev/null || true
 
+# Save replica counts to a temp file before scaling down
+REPLICAS_FILE=$(mktemp)
 for kind in deployment statefulset; do
-    resources=$(kubectl get "${kind}" -n "${NS}" --no-headers -o name 2>/dev/null | grep -i "${APP}" || true)
-    if [[ -n "${resources}" ]]; then
-        echo "${resources}" | while read -r res; do
-            log "  Scaling down ${res}..."
-            kubectl scale "${res}" -n "${NS}" --replicas=0 2>/dev/null || true
-        done
-    fi
+    while IFS= read -r res; do
+        [[ -z "${res}" ]] && continue
+        replicas=$(kubectl get "${res}" -n "${NS}" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "1")
+        echo "${res}=${replicas}" >> "${REPLICAS_FILE}"
+        log "  Scaling down ${res} (was ${replicas} replicas)..."
+        kubectl scale "${res}" -n "${NS}" --replicas=0 2>/dev/null || true
+    done <<< "$(kubectl get "${kind}" -n "${NS}" --no-headers -o name 2>/dev/null | grep -i "${APP}" || true)"
 done
 
 # Wait for pods to terminate
@@ -288,70 +306,156 @@ kubectl patch replicationsource -n "${NS}" "${APP}" --type merge \
 kubectl patch replicationsource -n "${NS}" "${APP}-s3" --type merge \
     -p '{"spec":{"trigger":{"schedule":""}}}' 2>/dev/null || true
 
-# Step 3: Delete ReplicationDestination and PVC
-log "Deleting ReplicationDestination and PVC..."
-kubectl delete replicationdestination -n "${NS}" "${DST_NAME}" --wait=false 2>/dev/null || true
-kubectl delete pvc -n "${NS}" "${APP}" --wait=false 2>/dev/null || true
+# Step 3: Ensure PVC exists (don't delete it — we'll restore directly into it)
+log "Verifying PVC exists..."
+pvc_exists=$(kubectl get pvc -n "${NS}" "${APP}" --no-headers 2>/dev/null || true)
+if [[ -z "${pvc_exists}" ]]; then
+    log "PVC not found, reconciling Flux to recreate it..."
+    flux reconcile ks "${APP}" -n "${NS}" --with-source 2>/dev/null || true
+    sleep 10
+    for i in $(seq 1 20); do
+        pvc_exists=$(kubectl get pvc -n "${NS}" "${APP}" --no-headers 2>/dev/null || true)
+        if [[ -n "${pvc_exists}" ]]; then
+            break
+        fi
+        sleep 5
+    done
+    if [[ -z "${pvc_exists}" ]]; then
+        die "PVC '${APP}' could not be created."
+    fi
+fi
 
-# Wait for deletion
-for i in $(seq 1 20); do
-    pvc_exists=$(kubectl get pvc -n "${NS}" "${APP}" --no-headers 2>/dev/null || true)
-    dst_exists=$(kubectl get replicationdestination -n "${NS}" "${DST_NAME}" --no-headers 2>/dev/null || true)
-    if [[ -z "${pvc_exists}" && -z "${dst_exists}" ]]; then
+# Step 5: Restore directly using Kopia (bypasses VolSync's restoreAsOf limitations)
+log "Restoring snapshot ${SELECTED_SNAPSHOT} directly via Kopia..."
+
+# The Kopia pod is still running from the snapshot listing phase.
+# Mount the target PVC into a new pod and restore directly.
+RESTORE_POD="volsync-direct-restore-${APP}-$(date +%s)"
+
+# Build volume/mount spec — includes the app PVC as the restore target
+if [[ "${TYPE}" == "nfs" ]]; then
+    RESTORE_VOLUMES_JSON='[
+        {"name":"repo","nfs":{"server":"10.0.0.14","path":"/mnt/Main/backup/VolsyncKopia"}},
+        {"name":"data","persistentVolumeClaim":{"claimName":"'"${APP}"'"}},
+        {"name":"tmp","emptyDir":{}}
+    ]'
+    RESTORE_MOUNTS_JSON='[
+        {"name":"repo","mountPath":"/repository"},
+        {"name":"data","mountPath":"/restore-target"},
+        {"name":"tmp","mountPath":"/tmp"}
+    ]'
+else
+    RESTORE_VOLUMES_JSON='[
+        {"name":"data","persistentVolumeClaim":{"claimName":"'"${APP}"'"}},
+        {"name":"tmp","emptyDir":{}}
+    ]'
+    RESTORE_MOUNTS_JSON='[
+        {"name":"data","mountPath":"/restore-target"},
+        {"name":"tmp","mountPath":"/tmp"}
+    ]'
+fi
+
+# Clean up old kopia pod (we'll create a new one with PVC access)
+kubectl delete pod "${KOPIA_POD}" -n "${NS}" --force --grace-period=0 2>/dev/null || true
+sleep 3
+
+# Create a restore pod with PVC mounted
+kubectl run "${RESTORE_POD}" \
+    --image="${KOPIA_IMAGE}" \
+    --restart=Never \
+    --namespace="${NS}" \
+    --env="KOPIA_CHECK_FOR_UPDATES=false" \
+    --overrides="{
+        \"spec\":{
+            \"containers\":[{
+                \"name\":\"kopia\",
+                \"image\":\"${KOPIA_IMAGE}\",
+                \"command\":[\"sleep\",\"3600\"],
+                \"envFrom\":[{\"secretRef\":{\"name\":\"${SECRET_NAME}\"}}],
+                \"volumeMounts\":${RESTORE_MOUNTS_JSON}
+            }],
+            \"volumes\":${RESTORE_VOLUMES_JSON},
+            \"securityContext\":{\"runAsUser\":0,\"runAsGroup\":0,\"fsGroup\":0}
+        }
+    }" >/dev/null 2>&1
+
+# Update trap to also clean up restore pod
+trap "kubectl delete pod '${KOPIA_POD}' -n '${NS}' --force --grace-period=0 2>/dev/null || true; kubectl delete pod '${RESTORE_POD}' -n '${NS}' --force --grace-period=0 2>/dev/null || true" EXIT
+
+# Wait for restore pod to be ready
+log "Waiting for restore pod to start..."
+for i in $(seq 1 60); do
+    phase=$(kubectl get pod "${RESTORE_POD}" -n "${NS}" -o jsonpath='{.status.phase}' 2>/dev/null || true)
+    if [[ "${phase}" == "Running" ]]; then
         break
+    elif [[ "${phase}" == "Failed" || "${phase}" == "Error" ]]; then
+        kubectl logs "${RESTORE_POD}" -n "${NS}" 2>/dev/null || true
+        die "Restore pod failed to start."
     fi
     sleep 3
 done
 
-# Step 4: Reconcile Flux to recreate PVC and ReplicationDestination
-log "Reconciling Flux to recreate resources..."
-flux reconcile ks "${APP}" -n "${NS}" --with-source 2>/dev/null || true
-sleep 10
+# Connect to the repository from the restore pod
+log "Connecting to Kopia repository from restore pod..."
+if [[ "${TYPE}" == "nfs" ]]; then
+    kubectl exec -n "${NS}" "${RESTORE_POD}" -- \
+        bash -c 'kopia repository connect filesystem --path=/repository --password="$KOPIA_PASSWORD" --override-hostname=volsync --override-username=root' 2>/dev/null || \
+        die "Failed to connect to Kopia repository from restore pod."
+else
+    kubectl exec -n "${NS}" "${RESTORE_POD}" -- \
+        bash -c '
+            if [[ "${KOPIA_REPOSITORY}" =~ ^s3://([a-z0-9][a-z0-9.-]{1,61}[a-z0-9]) ]]; then
+                BUCKET="${BASH_REMATCH[1]}"
+            else
+                echo "ERROR: Cannot parse bucket from KOPIA_REPOSITORY" >&2
+                exit 1
+            fi
+            PREFIX=""
+            if [[ "${KOPIA_REPOSITORY}" =~ s3://[^/]+/(.+) ]]; then
+                PREFIX="${BASH_REMATCH[1]}"
+                [[ "${PREFIX}" =~ /$ ]] || PREFIX="${PREFIX}/"
+            fi
+            ENDPOINT="${AWS_S3_ENDPOINT#http://}"
+            ENDPOINT="${ENDPOINT#https://}"
+            DISABLE_TLS_FLAG=""
+            if [[ "${AWS_S3_DISABLE_TLS}" == "true" ]]; then
+                DISABLE_TLS_FLAG="--disable-tls"
+            fi
+            CMD=(kopia repository connect s3
+                --bucket="$BUCKET"
+                --endpoint="$ENDPOINT"
+                --access-key="$AWS_ACCESS_KEY_ID"
+                --secret-access-key="$AWS_SECRET_ACCESS_KEY"
+                --password="$KOPIA_PASSWORD"
+                --override-hostname=volsync
+                --override-username=root)
+            [[ -n "$PREFIX" ]] && CMD+=(--prefix="$PREFIX")
+            [[ -n "$DISABLE_TLS_FLAG" ]] && CMD+=($DISABLE_TLS_FLAG)
+            "${CMD[@]}"
+        ' 2>/dev/null || \
+        die "Failed to connect to Kopia repository from restore pod."
+fi
 
-# Wait for PVC and ReplicationDestination to appear
-for i in $(seq 1 20); do
-    pvc_exists=$(kubectl get pvc -n "${NS}" "${APP}" --no-headers 2>/dev/null || true)
-    dst_exists=$(kubectl get replicationdestination -n "${NS}" "${DST_NAME}" --no-headers 2>/dev/null || true)
-    if [[ -n "${pvc_exists}" && -n "${dst_exists}" ]]; then
-        break
-    fi
-    sleep 5
-done
+# Clear the target directory before restoring
+log "Clearing restore target..."
+kubectl exec -n "${NS}" "${RESTORE_POD}" -- bash -c 'rm -rf /restore-target/* /restore-target/.[!.]* 2>/dev/null; true'
 
-# Step 5: Trigger restore with the specific snapshot
-TRIGGER="restore-${SELECTED_SNAPSHOT}-$(date +%s)"
-log "Triggering restore from snapshot ${SELECTED_SNAPSHOT}..."
-kubectl patch replicationdestination "${DST_NAME}" -n "${NS}" \
-    --type merge \
-    -p "{\"spec\":{\"trigger\":{\"manual\":\"${TRIGGER}\"},\"kopia\":{\"restoreAsOf\":\"${TARGET_DATE}\"}}}" 2>/dev/null || \
-kubectl patch replicationdestination "${DST_NAME}" -n "${NS}" \
-    --type merge \
-    -p "{\"spec\":{\"trigger\":{\"manual\":\"${TRIGGER}\"}}}"
+# Restore the specific snapshot by ID
+log "Restoring snapshot ${SELECTED_SNAPSHOT} to /restore-target..."
+kubectl exec -n "${NS}" "${RESTORE_POD}" -- \
+    kopia snapshot restore "${SELECTED_SNAPSHOT}" /restore-target/ --overwrite-files --overwrite-directories --overwrite-symlinks 2>&1 | tail -5
 
-# Step 6: Wait for restore to complete
-log "Waiting for restore to complete..."
-for i in $(seq 1 60); do
-    last_sync=$(kubectl get replicationdestination "${DST_NAME}" -n "${NS}" \
-        -o jsonpath='{.status.lastSyncTime}' 2>/dev/null || true)
+# Verify restore
+RESTORED_SIZE=$(kubectl exec -n "${NS}" "${RESTORE_POD}" -- du -sh /restore-target/ 2>/dev/null | awk '{print $1}')
+log "Restored data size: ${RESTORED_SIZE}"
 
-    if [[ -n "${last_sync}" ]]; then
-        duration=$(kubectl get replicationdestination "${DST_NAME}" -n "${NS}" \
-            -o jsonpath='{.status.lastSyncDuration}' 2>/dev/null || true)
-        log "Restore complete! lastSync=${last_sync} duration=${duration}"
-        break
-    fi
+# Fix ownership (match VolSync's mover security context)
+kubectl exec -n "${NS}" "${RESTORE_POD}" -- chown -R 1000:1000 /restore-target/ 2>/dev/null || true
 
-    mover=$(kubectl get pods -n "${NS}" -l "volsync.backube/replicationdestination=${DST_NAME}" \
-        --no-headers -o custom-columns='NAME:.metadata.name,PHASE:.status.phase' 2>/dev/null || true)
-    if [[ -n "${mover}" ]]; then
-        log "  Restore in progress: ${mover} (${i}/60)"
-    else
-        log "  Waiting for restore mover... (${i}/60)"
-    fi
-    sleep 10
-done
+# Cleanup restore pod
+kubectl delete pod "${RESTORE_POD}" -n "${NS}" --force --grace-period=0 2>/dev/null || true
 
-# Step 7: Restore backup schedules and resume app
+# Step 7: Restore backup schedules, resume app, and restore replica counts
 log "Restoring backup schedules..."
 kubectl patch replicationsource -n "${NS}" "${APP}" --type merge \
     -p '{"spec":{"trigger":{"schedule":"0 */2 * * *"}}}' 2>/dev/null || true
@@ -360,6 +464,21 @@ kubectl patch replicationsource -n "${NS}" "${APP}-s3" --type merge \
 
 log "Resuming HelmRelease..."
 flux resume hr "${APP}" -n "${NS}" 2>/dev/null || true
+
+# Restore saved replica counts
+log "Restoring replica counts..."
+if [[ -f "${REPLICAS_FILE}" ]]; then
+    while IFS='=' read -r res replicas; do
+        [[ -z "${res}" ]] && continue
+        replicas="${replicas:-1}"
+        log "  Scaling ${res} to ${replicas} replicas..."
+        kubectl scale "${res}" -n "${NS}" --replicas="${replicas}" 2>/dev/null || true
+    done < "${REPLICAS_FILE}"
+    rm -f "${REPLICAS_FILE}"
+fi
+
+# Force Helm to reconcile (ensures chart defaults are re-applied)
+flux reconcile hr "${APP}" -n "${NS}" 2>/dev/null || true
 
 # Step 8: Wait for app to come back
 log "Waiting for app to start..."

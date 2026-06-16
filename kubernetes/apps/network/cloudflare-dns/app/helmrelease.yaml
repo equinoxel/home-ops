@@ -11,6 +11,12 @@ spec:
   values:
     fullnameOverride: *app
     provider: cloudflare
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
     env:
       - name: CF_API_TOKEN
         valueFrom:
