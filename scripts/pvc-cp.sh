@@ -150,8 +150,9 @@ function do_copy() {
     file_count=$(find "${local_dir}" -type f | wc -l)
     log info "Copying files to PVC" "source=${local_dir}" "dest=${PVC_NAME}:${PVC_PATH}" "files=${file_count}"
 
-    # Copy files one by one preserving directory structure
+    # Copy files one by one preserving directory structure (skip if same size)
     local copied=0
+    local skipped=0
     local failed=0
 
     while IFS= read -r -d '' file; do
@@ -162,6 +163,19 @@ function do_copy() {
         local remote_file="/mnt/pvc${PVC_PATH}/${rel_path}"
         local remote_dir
         remote_dir=$(dirname "${remote_file}")
+
+        # Get local file size
+        local local_size
+        local_size=$(stat --printf='%s' "${file}" 2>/dev/null || stat -f '%z' "${file}" 2>/dev/null)
+
+        # Check if remote file exists with the same size
+        local remote_size
+        remote_size=$(kubectl exec --namespace "${ns}" "${pod_name}" -- stat -c '%s' "${remote_file}" 2>/dev/null || echo "")
+
+        if [[ -n "${remote_size}" && "${local_size}" == "${remote_size}" ]]; then
+            skipped=$((skipped + 1))
+            continue
+        fi
 
         # Create remote directory structure
         kubectl exec --namespace "${ns}" "${pod_name}" -- mkdir -p "${remote_dir}" >/dev/null 2>&1
@@ -177,7 +191,7 @@ function do_copy() {
     done < <(find "${local_dir}" -type f -print0)
 
     echo "---"
-    log info "Copy complete" "copied=${copied}" "failed=${failed}" "total=${file_count}"
+    log info "Copy complete" "copied=${copied}" "skipped=${skipped}" "failed=${failed}" "total=${file_count}"
 }
 
 function do_chown() {
