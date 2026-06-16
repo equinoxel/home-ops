@@ -145,7 +145,7 @@ function do_copy() {
     # Ensure remote directory exists
     kubectl exec --namespace "${ns}" "${pod_name}" -- mkdir -p "/mnt/pvc${PVC_PATH}" >/dev/null 2>&1
 
-    # Count files
+    # Count local files
     local file_count
     file_count=$(find "${local_dir}" -type f | wc -l)
     log info "Copying files to PVC" "source=${local_dir}" "dest=${PVC_NAME}:${PVC_PATH}" "files=${file_count}"
@@ -158,53 +158,56 @@ function do_copy() {
         find "/mnt/pvc${PVC_PATH}" -type f -printf '%s\t%p\n' 2>/dev/null || true)
     if [[ -n "${index_output}" ]]; then
         while IFS=$'\t' read -r size path; do
-            # Strip the /mnt/pvc${PVC_PATH}/ prefix to get relative path
             local rel="${path#/mnt/pvc${PVC_PATH}/}"
             remote_sizes["${rel}"]="${size}"
         done <<< "${index_output}"
     fi
     log info "Remote index built" "remote_files=${#remote_sizes[@]}"
 
-    # Copy files one by one preserving directory structure (skip if same size)
-    local copied=0
-    local skipped=0
-    local failed=0
+    # Determine which files need copying (missing or different size)
+    local copy_list
+    copy_list=$(mktemp)
+    trap "rm -f '${copy_list}'; delete_helper_pod '${pod_name}' '${ns}'" EXIT
 
+    local skipped=0
     while IFS= read -r -d '' file; do
-        # Get relative path from local_dir
         local rel_path="${file#"${local_dir}"}"
         rel_path="${rel_path#/}"
 
-        local remote_file="/mnt/pvc${PVC_PATH}/${rel_path}"
-        local remote_dir
-        remote_dir=$(dirname "${remote_file}")
-
-        # Get local file size
         local local_size
         local_size=$(stat --printf='%s' "${file}" 2>/dev/null || stat -f '%z' "${file}" 2>/dev/null)
 
-        # Check if remote file exists with the same size (from pre-built index)
         local remote_size="${remote_sizes["${rel_path}"]:-}"
         if [[ -n "${remote_size}" && "${local_size}" == "${remote_size}" ]]; then
             skipped=$((skipped + 1))
             continue
         fi
 
-        # Create remote directory structure
-        kubectl exec --namespace "${ns}" "${pod_name}" -- mkdir -p "${remote_dir}" >/dev/null 2>&1
-
-        # Copy file
-        if kubectl cp "${file}" --namespace "${ns}" "${pod_name}:${remote_file}" >/dev/null 2>&1; then
-            copied=$((copied + 1))
-            log info "[${copied}/${file_count}] Copied: ${rel_path}"
-        else
-            failed=$((failed + 1))
-            log warn "Failed to copy: ${rel_path}"
-        fi
+        # Write relative path to copy list
+        echo "${rel_path}" >> "${copy_list}"
     done < <(find "${local_dir}" -type f -print0)
 
-    echo "---"
-    log info "Copy complete" "copied=${copied}" "skipped=${skipped}" "failed=${failed}" "total=${file_count}"
+    local to_copy
+    to_copy=$(wc -l < "${copy_list}" | tr -d ' ')
+
+    if [[ "${to_copy}" -eq 0 ]]; then
+        log info "All files already up to date, nothing to copy"
+        log info "Copy complete" "copied=0" "skipped=${skipped}" "failed=0" "total=${file_count}"
+        return 0
+    fi
+
+    log info "Transferring files via tar stream" "to_copy=${to_copy}" "skipped=${skipped}"
+
+    # Stream files as a tar archive into the pod (single kubectl exec call)
+    if tar -cf - -C "${local_dir}" -T "${copy_list}" | \
+        kubectl exec -i --namespace "${ns}" "${pod_name}" -- \
+        tar -xf - -C "/mnt/pvc${PVC_PATH}"; then
+        log info "Copy complete" "copied=${to_copy}" "skipped=${skipped}" "failed=0" "total=${file_count}"
+    else
+        log error "Tar stream transfer failed"
+        log info "Copy complete" "copied=0" "skipped=${skipped}" "failed=${to_copy}" "total=${file_count}"
+        exit 1
+    fi
 }
 
 function do_chown() {
