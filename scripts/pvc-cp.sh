@@ -152,13 +152,17 @@ function do_copy() {
 
     # Build remote file size map in a single kubectl exec call
     log info "Building remote file index..."
-    declare -A remote_sizes
-    while IFS=$'\t' read -r size path; do
-        # Strip the /mnt/pvc${PVC_PATH}/ prefix to get relative path
-        local rel="${path#/mnt/pvc${PVC_PATH}/}"
-        remote_sizes["${rel}"]="${size}"
-    done < <(kubectl exec --namespace "${ns}" "${pod_name}" -- \
+    declare -A remote_sizes=()
+    local index_output
+    index_output=$(kubectl exec --namespace "${ns}" "${pod_name}" -- \
         find "/mnt/pvc${PVC_PATH}" -type f -printf '%s\t%p\n' 2>/dev/null || true)
+    if [[ -n "${index_output}" ]]; then
+        while IFS=$'\t' read -r size path; do
+            # Strip the /mnt/pvc${PVC_PATH}/ prefix to get relative path
+            local rel="${path#/mnt/pvc${PVC_PATH}/}"
+            remote_sizes["${rel}"]="${size}"
+        done <<< "${index_output}"
+    fi
     log info "Remote index built" "remote_files=${#remote_sizes[@]}"
 
     # Copy files one by one preserving directory structure (skip if same size)
@@ -180,7 +184,8 @@ function do_copy() {
         local_size=$(stat --printf='%s' "${file}" 2>/dev/null || stat -f '%z' "${file}" 2>/dev/null)
 
         # Check if remote file exists with the same size (from pre-built index)
-        if [[ -n "${remote_sizes["${rel_path}"]+x}" && "${local_size}" == "${remote_sizes["${rel_path}"]}" ]]; then
+        local remote_size="${remote_sizes["${rel_path}"]:-}"
+        if [[ -n "${remote_size}" && "${local_size}" == "${remote_size}" ]]; then
             skipped=$((skipped + 1))
             continue
         fi
