@@ -13,5 +13,6 @@ resources:
   - ./cloudflare-tunnel/ks.yaml
   - ./envoy-gateway
   - ./k8s-gateway/ks.yaml
+  - ./unifi
   - ./watchdog-blade/ks.yaml
   - ./multus
