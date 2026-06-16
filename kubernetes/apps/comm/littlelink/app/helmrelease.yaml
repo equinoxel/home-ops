@@ -70,6 +70,7 @@ spec:
       app:
         hostnames:
           - "links.laurivan.com"
+          - "laurivan.com"
         parentRefs:
           - name: envoy-external
             namespace: network
