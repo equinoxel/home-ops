@@ -11,6 +11,7 @@ components:
 resources:
   - ./bookorbit
   # - ./grimmory
+  - ./mealie
   - ./navidrome
   #- ./plex
   #- ./subsonic
