@@ -14,6 +14,28 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
+        initContainers:
+          db-init:
+            image:
+              repository: docker.io/library/postgres
+              tag: 18-alpine
+            env:
+              PGHOST: postgres-cluster-rw.database.svc.cluster.local
+              PGPORT: "5432"
+              PGDATABASE: postgres
+              DB_ROLE: shlink
+            envFrom:
+              - secretRef:
+                  name: shlink-pginit
+              - secretRef:
+                  name: "{{ .Release.Name }}"
+            command:
+              - sh
+              - -c
+              - |
+                echo "Setting password for role '${DB_ROLE}'..."
+                psql -c "ALTER ROLE ${DB_ROLE} WITH PASSWORD '${DB_PASSWORD}';"
+                echo "Done."
         containers:
           app:
             image:

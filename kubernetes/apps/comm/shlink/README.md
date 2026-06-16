@@ -16,6 +16,7 @@ graph LR
 
     subgraph "Cluster (comm namespace)"
         subgraph "Shlink App"
+            Init["Init: db-init<br/>(sets role password)"]
             Shlink["Shlink API<br/>(ghcr.io/shlinkio/shlink)"]
         end
 
@@ -32,8 +33,10 @@ graph LR
     User -->|"HTTPS (s.laurivan.com)"| Shlink
     User -->|"HTTPS (shlink.laurivan.com)"| Web
     Web -->|"REST API"| Shlink
+    Init -->|"ALTER ROLE"| Postgres
     Shlink --> Postgres
     Bitwarden -.->|ExternalSecret| Shlink
+    Bitwarden -.->|ExternalSecret| Init
 ```
 
 ## Components
@@ -42,6 +45,7 @@ graph LR
 |-----------|---------|
 | **Shlink** | URL shortener API server (handles redirects, REST API, visit tracking) |
 | **Shlink Web Client** | Management UI (create/edit short URLs, view analytics) |
+| **db-init** (init container) | Sets the PostgreSQL role password on each startup (idempotent) |
 | **PostgreSQL (CNPG)** | Database backend via shared postgres-cluster |
 
 ## Endpoints
@@ -51,6 +55,18 @@ graph LR
 | Shlink API | `s.laurivan.com` | envoy-external | Public (short URL redirects + API) |
 | Shlink Web | `shlink.laurivan.com` | envoy-internal | Internal only (management UI) |
 
+## Deployment Flow
+
+The deployment is fully automated — no manual database steps required:
+
+1. **Set secrets in Bitwarden** (item: `shlink`) with `INITIAL_API_KEY` and `DB_PASSWORD`
+2. **Push/merge** the manifests — Flux deploys everything
+3. **CNPG component** creates the `shlink` database and role (no password yet)
+4. **Init container** (`db-init`) connects as superuser and sets the role password from Bitwarden
+5. **Shlink** starts and connects using the same `DB_PASSWORD`
+
+No manual intervention needed between steps.
+
 ## Integration
 
 The web client connects to the Shlink API server. On first launch of the web UI:
@@ -59,11 +75,7 @@ The web client connects to the Shlink API server. On first launch of the web UI:
 2. The server is pre-configured via env vars (`SHLINK_SERVER_URL=https://s.laurivan.com`)
 3. Enter the API key (the `INITIAL_API_KEY` from the Bitwarden secret) to authenticate
 
-The web client env vars `SHLINK_SERVER_URL` and `SHLINK_SERVER_NAME` pre-populate the server entry in the UI so you only need to provide the API key.
-
 ### API Usage
-
-You can also use the REST API directly:
 
 ```bash
 # Create a short URL
@@ -79,25 +91,28 @@ curl https://s.laurivan.com/rest/v3/short-urls \
 
 ## Secrets
 
-All secrets are stored in a **Bitwarden item** named `shlink` and synced via ExternalSecret (ClusterSecretStore: `bitwarden`).
-
-### Required Bitwarden Fields
+### Bitwarden Item: `shlink`
 
 | Field | Usage | How to Obtain |
 |-------|-------|---------------|
-| `INITIAL_API_KEY` | API key for the Shlink REST API (used by web client and external integrations) | Generate a random string: `openssl rand -base64 32` |
-| `DB_PASSWORD` | PostgreSQL password for the `shlink` role | Set via pgAdmin after CNPG creates the role (see Database section) |
-| `GEOLITE_LICENSE_KEY` | (Optional) MaxMind GeoLite2 license for visit geolocation | Free account at [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| `INITIAL_API_KEY` | API key for the Shlink REST API | `openssl rand -base64 32` |
+| `DB_PASSWORD` | PostgreSQL password for the `shlink` role | `openssl rand -base64 24` |
+| `GEOLITE_LICENSE_KEY` | (Optional) MaxMind GeoLite2 for visit geolocation | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
 
-### Auto-generated Resources (CNPG component)
+### Bitwarden Item: `cloudnative_pg` (shared, already exists)
 
-| Resource | Type | Purpose |
-|----------|------|---------|
-| `postgres-shlink` | Database CR | Ensures `shlink` database + `shlink` owner role exist |
-| `postgres-shlink-cert` | Certificate | mTLS client cert (created but unused by Shlink) |
-| `shlink-postgres` | Secret | Connection URL with mTLS (created but unused by Shlink) |
+| Field | Usage |
+|-------|-------|
+| `POSTGRES_SUPER_USER` | Superuser name (used by init container to ALTER ROLE) |
+| `POSTGRES_SUPER_PASS` | Superuser password |
 
-> **Note**: The CNPG component creates the mTLS cert and URL secret as part of its standard flow. Shlink does not use these because it connects via password auth with individual env vars (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, etc.). The cert and URL secret are harmless overhead that keep the deployment pattern consistent with other apps.
+### Generated Kubernetes Secrets
+
+| Secret Name | Source | Used By |
+|-------------|--------|---------|
+| `shlink` | Bitwarden `shlink` | Shlink app + init container (`DB_PASSWORD`, `INITIAL_API_KEY`) |
+| `shlink-pginit` | Bitwarden `cloudnative_pg` | Init container (`PGUSER`, `PGPASSWORD` for superuser access) |
+| `shlink-postgres` | CNPG component | Not used (mTLS URL — Shlink uses password auth instead) |
 
 ## Database
 
@@ -105,23 +120,18 @@ The **CNPG component** (`components/cnpg/app`) declaratively provisions:
 - A `shlink` database on the shared `postgres-cluster`
 - A `shlink` role as the database owner
 
-Shlink connects using password authentication (not mTLS). After initial deployment:
+The **init container** (`db-init`) then:
+- Connects as the postgres superuser
+- Runs `ALTER ROLE shlink WITH PASSWORD '<DB_PASSWORD>'`
+- This is idempotent — safe to run on every pod restart
 
-1. The CNPG operator creates the database and role automatically
-2. Set a password on the role via pgAdmin (`pgadmin.laurivan.com`) or kubectl:
-   ```bash
-   kubectl port-forward -n database svc/postgres-cluster-rw 5432:5432
-   psql -h localhost -U postgres -c "ALTER ROLE shlink WITH PASSWORD '<password>';"
-   ```
-3. Store the password as `DB_PASSWORD` in the Bitwarden item `shlink`
-
-The connection details are set as plain env vars in the HelmRelease:
+Shlink connects with:
 - `DB_DRIVER=postgres`
 - `DB_HOST=postgres-cluster-rw.database.svc.cluster.local`
 - `DB_PORT=5432`
 - `DB_NAME=shlink`
 - `DB_USER=shlink`
-- `DB_PASSWORD` → from Bitwarden secret
+- `DB_PASSWORD` → from Bitwarden
 
 ## Dependencies
 
@@ -138,5 +148,3 @@ The connection details are set as plain env vars in the HelmRelease:
 | `shlink` | `./kubernetes/apps/comm/shlink/app` | `postgres-cluster` |
 | `shlink-db` | `./kubernetes/components/cnpg/app/database` | `cnpg` (auto-created by component) |
 | `shlink-web` | `./kubernetes/apps/comm/shlink/web` | `shlink` |
-
-Both app kustomizations deploy to the `comm` namespace. The DB kustomization deploys to `database`.
