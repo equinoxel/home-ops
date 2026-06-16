@@ -26,6 +26,7 @@ spec:
               DB_NAME: shlink
               DB_HOST: postgres-cluster-rw.database.svc.cluster.local
               DB_PORT: "5432"
+              DB_USER: shlink
             envFrom:
               - secretRef:
                   name: "{{ .Release.Name }}"

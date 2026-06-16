@@ -7,6 +7,8 @@ metadata:
   namespace: &namespace comm
 spec:
   interval: 1h
+  components:
+    - ../../../../components/cnpg/app
   dependsOn:
     - name: postgres-cluster
       namespace: database

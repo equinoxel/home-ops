@@ -86,36 +86,47 @@ All secrets are stored in a **Bitwarden item** named `shlink` and synced via Ext
 | Field | Usage | How to Obtain |
 |-------|-------|---------------|
 | `INITIAL_API_KEY` | API key for the Shlink REST API (used by web client and external integrations) | Generate a random string: `openssl rand -base64 32` |
-| `DB_USER` | PostgreSQL username | Create a role on the CNPG cluster (see Database section) |
-| `DB_PASSWORD` | PostgreSQL password | Set when creating the DB role |
+| `DB_PASSWORD` | PostgreSQL password for the `shlink` role | Set via pgAdmin after CNPG creates the role (see Database section) |
 | `GEOLITE_LICENSE_KEY` | (Optional) MaxMind GeoLite2 license for visit geolocation | Free account at [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+
+### Auto-generated Resources (CNPG component)
+
+| Resource | Type | Purpose |
+|----------|------|---------|
+| `postgres-shlink` | Database CR | Ensures `shlink` database + `shlink` owner role exist |
+| `postgres-shlink-cert` | Certificate | mTLS client cert (created but unused by Shlink) |
+| `shlink-postgres` | Secret | Connection URL with mTLS (created but unused by Shlink) |
+
+> **Note**: The CNPG component creates the mTLS cert and URL secret as part of its standard flow. Shlink does not use these because it connects via password auth with individual env vars (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, etc.). The cert and URL secret are harmless overhead that keep the deployment pattern consistent with other apps.
 
 ## Database
 
-Shlink connects to the shared **CNPG PostgreSQL cluster** (`postgres-cluster-rw.database.svc.cluster.local`) using password-based authentication.
+The **CNPG component** (`components/cnpg/app`) declaratively provisions:
+- A `shlink` database on the shared `postgres-cluster`
+- A `shlink` role as the database owner
 
-> **Note**: The CNPG component is not used here because Shlink does not support mTLS certificate-based PostgreSQL connections. Instead, credentials are provided via the Bitwarden secret.
+Shlink connects using password authentication (not mTLS). After initial deployment:
 
-### Setup
+1. The CNPG operator creates the database and role automatically
+2. Set a password on the role via pgAdmin (`pgadmin.laurivan.com`) or kubectl:
+   ```bash
+   kubectl port-forward -n database svc/postgres-cluster-rw 5432:5432
+   psql -h localhost -U postgres -c "ALTER ROLE shlink WITH PASSWORD '<password>';"
+   ```
+3. Store the password as `DB_PASSWORD` in the Bitwarden item `shlink`
 
-Create the database and role on the CNPG cluster:
-
-```sql
-CREATE ROLE shlink WITH LOGIN PASSWORD '<password>';
-CREATE DATABASE shlink OWNER shlink;
-```
-
-You can do this via pgAdmin (`pgadmin.laurivan.com`) or by exec-ing into the postgres pod:
-
-```bash
-kubectl exec -it -n database postgres-cluster-1 -- psql -U postgres
-```
-
-Then store the credentials (`DB_USER=shlink`, `DB_PASSWORD=<password>`) in the Bitwarden item.
+The connection details are set as plain env vars in the HelmRelease:
+- `DB_DRIVER=postgres`
+- `DB_HOST=postgres-cluster-rw.database.svc.cluster.local`
+- `DB_PORT=5432`
+- `DB_NAME=shlink`
+- `DB_USER=shlink`
+- `DB_PASSWORD` → from Bitwarden secret
 
 ## Dependencies
 
 - `postgres-cluster` (database namespace) — PostgreSQL backend
+- `cnpg` (database namespace) — CNPG operator for DB provisioning
 - `bitwarden` ClusterSecretStore — secret management
 - `envoy-external` Gateway — public ingress for short URLs
 - `envoy-internal` Gateway — internal ingress for web management UI
@@ -125,6 +136,7 @@ Then store the credentials (`DB_USER=shlink`, `DB_PASSWORD=<password>`) in the B
 | Name | Path | Depends On |
 |------|------|------------|
 | `shlink` | `./kubernetes/apps/comm/shlink/app` | `postgres-cluster` |
+| `shlink-db` | `./kubernetes/components/cnpg/app/database` | `cnpg` (auto-created by component) |
 | `shlink-web` | `./kubernetes/apps/comm/shlink/web` | `shlink` |
 
-Both deploy to the `comm` namespace.
+Both app kustomizations deploy to the `comm` namespace. The DB kustomization deploys to `database`.
