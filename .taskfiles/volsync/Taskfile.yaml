@@ -3,6 +3,35 @@
 version: '3'
 
 tasks:
+  backup:
+    desc: Trigger an on-demand VolSync backup for an app [APP=required] [TYPE=nfs|s3|both]
+    summary: |
+      Triggers an immediate VolSync backup by annotating the ReplicationSource
+      with a manual trigger. The backup runs outside the normal cron schedule.
+
+      TYPE controls which ReplicationSource to trigger:
+        - nfs  → triggers the local (NFS) backup (ReplicationSource named APP)
+        - s3   → triggers the remote (S3) backup (ReplicationSource named APP-s3)
+        - both → triggers both NFS and S3 backups
+
+      The task will:
+        1. Determine the namespace from the Flux Kustomization
+        2. Annotate the ReplicationSource(s) with volsync.backube/trigger=manual
+        3. Wait for the backup to complete
+
+      Examples:
+        task volsync:backup APP=forgejo TYPE=nfs
+        task volsync:backup APP=ghost-laur TYPE=s3
+        task volsync:backup APP=autobrr TYPE=both
+    cmd: '{{.SCRIPTS_DIR}}/volsync-backup.sh {{.APP}} {{.TYPE}}'
+    requires:
+      vars: [APP, TYPE]
+    preconditions:
+      - test -f {{.SCRIPTS_DIR}}/volsync-backup.sh
+      - which kubectl
+      - sh: '[ "{{.TYPE}}" = "nfs" ] || [ "{{.TYPE}}" = "s3" ] || [ "{{.TYPE}}" = "both" ]'
+        msg: "TYPE must be 'nfs', 's3', or 'both'"
+
   restore:
     desc: Restore an app from a specific VolSync backup [APP=required] [TYPE=nfs|s3] [DATE=timestamp or snapshot hash]
     summary: |

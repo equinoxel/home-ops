@@ -1,0 +1,101 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app shlink
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        initContainers:
+          db-init:
+            image:
+              repository: docker.io/library/postgres
+              tag: 18-alpine
+            env:
+              PGHOST: postgres-cluster-rw.database.svc.cluster.local
+              PGPORT: "5432"
+              PGDATABASE: postgres
+              DB_ROLE: shlink
+            envFrom:
+              - secretRef:
+                  name: shlink-pginit
+              - secretRef:
+                  name: "{{ .Release.Name }}"
+            command:
+              - sh
+              - -c
+              - |
+                echo "Setting password for role '${DB_ROLE}'..."
+                psql -c "ALTER ROLE ${DB_ROLE} WITH PASSWORD '${DB_PASSWORD}';"
+                echo "Done."
+        containers:
+          app:
+            image:
+              repository: ghcr.io/shlinkio/shlink
+              tag: 4.4.1
+            env:
+              DEFAULT_DOMAIN: s.laurivan.com
+              IS_HTTPS_ENABLED: "true"
+              DB_DRIVER: postgres
+              DB_NAME: shlink
+              DB_HOST: postgres-cluster-rw.database.svc.cluster.local
+              DB_PORT: "5432"
+              DB_USER: shlink
+            envFrom:
+              - secretRef:
+                  name: "{{ .Release.Name }}"
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: &port 8080
+                  initialDelaySeconds: 10
+                  periodSeconds: 5
+                  timeoutSeconds: 3
+                  failureThreshold: 30
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /rest/health
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *probes
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+    service:
+      app:
+        ports:
+          http:
+            port: *port
+    route:
+      app:
+        hostnames:
+          - "s.laurivan.com"
+        parentRefs:
+          - name: envoy-external
+            namespace: network
+            sectionName: https
