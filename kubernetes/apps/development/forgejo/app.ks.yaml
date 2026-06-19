@@ -10,16 +10,11 @@ spec:
       app.kubernetes.io/name: forgejo
   components:
     - ../../../../components/anubis
-    - ../../../../components/dragonfly/own-cluster
+    - ../../../../components/dragonfly/app-template-tunnel
     - ../../../../components/volsync
   dependsOn:
-    - name: dragonfly-operator
+    - name: dragonfly-cluster
       namespace: database
-  healthCheckExprs:
-    - apiVersion: dragonflydb.io/v1alpha1
-      kind: Dragonfly
-      failed: status.phase != 'ready'
-      current: status.phase == 'ready'
   interval: 1h
   path: "./kubernetes/apps/development/forgejo/app"
   postBuild:

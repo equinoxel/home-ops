@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app immich
+  namespace: &namespace media
+spec:
+  interval: 1h
+  components:
+    # also cpu scales the api, which is fine, but theoretically only really need to scale the microservices
+    # needs https://github.com/immich-app/immich-charts/issues/94
+    - ../../../../components/scaler/instance
+    - ../../../../components/cnpg/app-template
+    - ../../../../components/dragonfly/app-template-tunnel
+  dependsOn:
+    - name: dragonfly-cluster
+      namespace: database
+    - name: postgres-cluster
+      namespace: database
+  path: ./kubernetes/apps/media/immich/app
+  postBuild:
+    substitute:
+      APP: *app
+      SCALER_NAME: immich-server
+
+      DATABASE_EXTENSIONS: |
+        [
+          { name: vector },
+          { name: vchord },
+          { name: cube },
+          { name: earthdistance }
+        ]
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
