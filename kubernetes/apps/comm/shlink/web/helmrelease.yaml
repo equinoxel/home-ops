@@ -16,7 +16,7 @@ spec:
           app:
             image:
               repository: ghcr.io/shlinkio/shlink-web-client
-              tag: 4.3.1
+              tag: 4.1.2
             env:
               SHLINK_SERVER_URL: https://s.laurivan.com
               SHLINK_SERVER_NAME: Shlink
