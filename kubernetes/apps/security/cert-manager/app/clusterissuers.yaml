@@ -1,0 +1,153 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: &name letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: *name
+    profile: shortlived
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-issuer-secret
+              key: CLOUDFLARE_DNS_TOKEN
+        selector:
+          dnsZones:
+            - tholinka.dev
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cluster-selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: &name cluster-signed-issuer
+spec:
+  isCA: true
+  commonName: *name
+  subject:
+    organizations:
+      - tholinka.dev
+  secretName: cluster-signed-issuer-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: cluster-selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cluster-signed-issuer
+spec:
+  ca:
+    secretName: cluster-signed-issuer-secret
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/certificate_v1.json
+# base of CNPG ClusterIssuer for clients
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: &name postgres-cluster-client-ca
+spec:
+  isCA: true
+  commonName: Postgres Authentication Certificate Authority
+  secretName: *name
+  subject:
+    countries:
+      - US
+    organizations:
+      - homelab-cluster
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    # Exclude everything. Only the CN may be set.
+    excluded:
+      dnsDomains: []
+      ipRanges: []
+      emailAddresses: []
+      uriDomains: []
+  duration: 87660h # 10 years - it's a large pain when this renews, need to manually renew all downstream certs and restart all apps
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ''
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+    encoding: PKCS8
+    rotationPolicy: Never
+  issuerRef:
+    name: cluster-signed-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/clusterissuer_v1.json
+# used by clients for cert-based connections
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: &name postgres-cluster-client-ca
+spec:
+  ca:
+    secretName: *name
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: &name dfguard-client-ca
+spec:
+  isCA: true
+  commonName: DFGuard Authentication Certificate Authority
+  subject:
+    countries:
+      - US
+    organizations:
+      - homelab-cluster
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    # Exclude everything. Only the CN may be set.
+    excluded:
+      dnsDomains: []
+      ipRanges: []
+      emailAddresses: []
+      uriDomains: []
+  duration: 87660h # 10 years
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+    encoding: PKCS8
+    rotationPolicy: Never
+  issuerRef:
+    name: cluster-signed-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: *name
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: &name dfguard-client-ca
+spec:
+  ca:
+    secretName: *name
