@@ -88,7 +88,7 @@ spec:
             readOnly: true
       client-ca:
         type: secret
-        name: dfguard-client-ca
+        name: dragonfly-client-ca
         globalMounts:
           - path: /tls/client
             readOnly: true
