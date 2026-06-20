@@ -117,7 +117,6 @@ spec:
       forgejo-runner:
         type: statefulset
         replicas: 1
-        statefulset: {}
         pod:
           labels:
             app.kubernetes.io/component: forgejo-runner
@@ -129,7 +128,6 @@ spec:
             runAsUser: 1000
         annotations:
           reloader.stakater.com/auto: "true"
-        initContainers: {}
         containers:
           runner:
             image:
