@@ -28,13 +28,18 @@ spec:
               level: info
             runner:
               capacity: 4
-              file: /persistent/.runner
               labels:
                 - ubuntu-latest:k8spod:/config/podspec-default.yaml
                 - ubuntu-24.04:k8spod:/config/podspec-default.yaml
                 - default:k8spod:/config/podspec-default.yaml
                 - docker:k8spod:/config/podspec-dind.yaml
               timeout: 3h
+            server:
+              connections:
+                forgejo:
+                  url: http://forgejo-http.development.svc.cluster.local:3000
+                  uuid: 63396264-3930-6531-6334-323261373430
+                  token: c9bd90e1c422a740b6fa5448ffd895550ea307a6
           podspec-default.yaml: |-
             containers:
               - env:
@@ -112,14 +117,7 @@ spec:
       forgejo-runner:
         type: statefulset
         replicas: 1
-        statefulset:
-          volumeClaimTemplates:
-            - accessMode: ReadWriteOnce
-              globalMounts:
-                - path: /persistent
-              name: persistent
-              size: 1Gi
-              storageClass: openebs-hostpath
+        statefulset: {}
         pod:
           labels:
             app.kubernetes.io/component: forgejo-runner
@@ -131,32 +129,7 @@ spec:
             runAsUser: 1000
         annotations:
           reloader.stakater.com/auto: "true"
-        initContainers:
-          register-runner:
-            image:
-              repository: git.erwanleboucher.dev/eleboucher/runner
-              tag: latest@sha256:96972a9e96630a4d6114fe8afa5dc6fcb352167e44b9b23513bcc490b4ce4abe
-            command:
-              - sh
-              - -c
-              - |
-                if [ -f /persistent/.runner ]; then
-                  echo "Runner already registered, skipping"
-                  exit 0
-                fi
-                echo "Registering runner..."
-                cd /persistent && forgejo-runner register \
-                  --instance http://forgejo-http.development.svc.cluster.local:3000 \
-                  --token "${RUNNER_TOKEN}" \
-                  --name k8s-runner \
-                  --labels "default:k8spod:/config/podspec-default.yaml" \
-                  --no-interactive
-            env:
-              - name: RUNNER_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    key: token
-                    name: forgejo-runner-secret
+        initContainers: {}
         containers:
           runner:
             image:
@@ -183,13 +156,6 @@ spec:
         identifier: config
         globalMounts:
           - path: /config
-      secrets:
-        type: secret
-        name: forgejo-runner-secret
-        globalMounts:
-          - path: /secrets/token
-            subPath: token
-            readOnly: true
       tmpfs:
         type: emptyDir
         sizeLimit: 10Gi
