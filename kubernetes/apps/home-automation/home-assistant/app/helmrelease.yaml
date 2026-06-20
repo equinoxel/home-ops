@@ -130,7 +130,6 @@ spec:
         existingClaim: home-assistant-cache
         globalMounts:
           - path: /config/.venv
-            subPath: ha-venv
       tmpfs:
         type: emptyDir
         globalMounts:
