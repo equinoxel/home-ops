@@ -39,11 +39,6 @@ spec:
     character-set-server=utf8mb4
     collation-server=utf8mb4_unicode_ci
 
-  podSecurityContext:
-    runAsUser: 999
-    runAsGroup: 999
-    fsGroup: 999
-
   nodeSelector:
     node.kubernetes.io/ssd: ""
 
