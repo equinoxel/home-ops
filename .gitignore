@@ -17,5 +17,6 @@ talosconfig
 .private/
 .task/
 .venv/
+data/
 .DS_Store
 Thumbs.db
