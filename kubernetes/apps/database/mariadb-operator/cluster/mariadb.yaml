@@ -13,6 +13,9 @@ spec:
 
   port: 3306
 
+  tls:
+    enabled: false
+
   storage:
     size: 5Gi
     storageClassName: openebs-hostpath
