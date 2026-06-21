@@ -23,6 +23,16 @@ spec:
   # Single instance for homelab
   replicas: 1
 
+  # Give more time for initialization on slow storage
+  livenessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 15
+    failureThreshold: 10
+  readinessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    failureThreshold: 10
+
   # Burstable QoS
   resources:
     requests:
