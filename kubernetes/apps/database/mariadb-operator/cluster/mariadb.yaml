@@ -39,10 +39,6 @@ spec:
     character-set-server=utf8mb4
     collation-server=utf8mb4_unicode_ci
 
-  healthCheck:
-    interval: 30s
-    retryInterval: 10s
-
   podSecurityContext:
     runAsUser: 999
     runAsGroup: 999
