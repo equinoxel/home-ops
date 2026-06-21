@@ -10,4 +10,4 @@ resources:
   - ./cnpg
   - ./vernemq
   - ./dragonfly
-  # - ./mariadb-operator
+  - ./mariadb-operator
