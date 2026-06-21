@@ -24,9 +24,9 @@ spec:
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 256Mi
     limits:
-      memory: 512Mi
+      memory: 1Gi
 
   myCnf: |
     [mariadb]
@@ -34,7 +34,7 @@ spec:
     default_storage_engine=InnoDB
     binlog_format=row
     innodb_autoinc_lock_mode=2
-    innodb_buffer_pool_size=256M
+    innodb_buffer_pool_size=128M
     max_allowed_packet=256M
     character-set-server=utf8mb4
     collation-server=utf8mb4_unicode_ci
