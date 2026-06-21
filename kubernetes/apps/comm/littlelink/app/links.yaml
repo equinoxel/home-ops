@@ -23,17 +23,17 @@ data:
   # FAVICON_URL: "https://example.com/favicon.png"
 
   # --- Links (uncomment and fill in as needed) ---
-  GITHUB: "https://github.com/equinoxel"
-  TWITTER: "https://x.com/pro_laur"
+  GITHUB: "https://s.laurivan.com/github"
+  TWITTER: "https://s.laurivan.com/twitter"
   # MASTODON: "https://mastodon.social/@youruser"
-  LINKED_IN: "https://www.linkedin.com/in/laurivan/"
+  LINKED_IN: "https://s.laurivan.com/lin"
   # YOUTUBE: "https://youtube.com/@youruser"
   # INSTAGRAM: "https://instagram.com/youruser"
   # EMAIL: "you@example.com"
   # EMAIL_TEXT: "Email Me!"
   # BLUESKY: "https://bsky.app/profile/youruser"
   GHOST: "https://www.laurivan.com"
-  FORGEJO: "https://giti.laurivan.com/"
+  FORGEJO: "https://s.laurivan.com/dxkKp"
   # DISCORD: "https://discord.gg/invite"
   # REDDIT: "https://reddit.com/u/youruser"
 
