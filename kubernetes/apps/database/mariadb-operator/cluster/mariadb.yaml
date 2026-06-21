@@ -32,8 +32,6 @@ spec:
     [mariadb]
     bind-address=*
     default_storage_engine=InnoDB
-    binlog_format=row
-    innodb_autoinc_lock_mode=2
     innodb_buffer_pool_size=128M
     max_allowed_packet=256M
     character-set-server=utf8mb4
