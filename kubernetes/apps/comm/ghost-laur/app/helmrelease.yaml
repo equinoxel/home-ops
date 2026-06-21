@@ -18,6 +18,23 @@ spec:
           securityContext:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
+        initContainers:
+          init-wal:
+            image:
+              repository: docker.io/library/alpine
+              tag: "3.22"
+            command:
+              - sh
+              - -c
+              - |
+                apk add --no-cache sqlite > /dev/null 2>&1
+                DB="/var/lib/ghost/content/data/ghost.db"
+                if [ -f "$DB" ]; then
+                  sqlite3 "$DB" "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;"
+                  echo "SQLite WAL mode enabled"
+                else
+                  echo "DB not found yet, skipping"
+                fi
         containers:
           app:
             image:
@@ -29,6 +46,7 @@ spec:
               database__client: sqlite3
               database__connection__filename: /var/lib/ghost/content/data/ghost.db
               database__useNullAsDefault: "true"
+              database__acquireConnectionTimeout: "120000"
             envFrom:
               - secretRef:
                   name: "{{ .Release.Name }}"
