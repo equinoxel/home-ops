@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+components:
+  - ../app
+patches:
+  - target:
+      kind: HelmRelease
+      group: helm.toolkit.fluxcd.io
+      version: v2
+    patch: |-
+      apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: not-used
+      spec:
+        valuesFrom:
+          - kind: Secret
+            name: "${APP}-mariadb-password"
+            valuesKey: password
+            targetPath: mariadb.password

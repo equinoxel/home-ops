@@ -1,0 +1,17 @@
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: ${APP}
+spec:
+  mariaDbRef:
+    name: ${MARIADB_INSTANCE}
+  privileges:
+    - ALL PRIVILEGES
+  database: ${APP}
+  table: "*"
+  username: ${MARIADB_OWNER}
+  host: "%"
+  cleanupPolicy: Skip
+  requeueInterval: 30s
+  retryInterval: 5s

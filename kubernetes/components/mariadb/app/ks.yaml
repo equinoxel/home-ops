@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ${APP}-mariadb
+  namespace: &namespace database
+spec:
+  dependsOn:
+    - name: mariadb-operator
+      namespace: database
+  interval: 1h
+  path: ./kubernetes/components/mariadb/app/database
+  postBuild:
+    substitute:
+      APP: ${APP}
+      MARIADB_OWNER: ${DATABASE_OWNER:=${APP}}
+      MARIADB_INSTANCE: ${MARIADB_INSTANCE:=mariadb}
+  prune: true
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  timeout: 5m
+  wait: false
