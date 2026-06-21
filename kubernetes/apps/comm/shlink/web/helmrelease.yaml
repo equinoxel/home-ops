@@ -62,7 +62,7 @@ spec:
     route:
       app:
         hostnames:
-          - "s.laurivan.com"
+          - "shlink.laurivan.com"
         parentRefs:
           - name: envoy-internal
             namespace: network
