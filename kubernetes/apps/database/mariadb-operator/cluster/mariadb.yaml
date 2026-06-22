@@ -51,7 +51,7 @@ spec:
     collation-server=utf8mb4_unicode_ci
 
   nodeSelector:
-    node.kubernetes.io/ssd: ""
+    kubernetes.io/hostname: esxi-2cu-8g-05
 
   metrics:
     enabled: true
