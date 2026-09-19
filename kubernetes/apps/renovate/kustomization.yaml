@@ -5,5 +5,5 @@ kind: Kustomization
 namespace: renovate
 components:
   - ../../components/common
-resources:
-  - ./renovate-operator
+resources: []
+  # - ./renovate-operator

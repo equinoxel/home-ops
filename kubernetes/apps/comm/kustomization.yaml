@@ -7,7 +7,7 @@ namespace: comm
 components:
   - ../../components/common
   - ../../components/repos/app-template
-resources:
-  - ./ghost-laur
-  - ./littlelink
-  - ./shlink
+resources: []
+  #- ./ghost-laur
+  #- ./littlelink
+  #- ./shlink

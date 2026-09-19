@@ -3,11 +3,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: home-automation
-resources:
+resources: []
   # - ./esphome/ks.yaml
   # - ./go2rtc/ks.yaml
-  - ./home-assistant
-  - ./nodered
+  #- ./home-assistant
+  #- ./nodered
   # - ./piper/ks.yaml
   # - ./whisper/ks.yaml
   # - ./zigbee/ks.yaml

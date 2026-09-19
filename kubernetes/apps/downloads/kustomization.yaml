@@ -8,12 +8,12 @@ components:
   - ../../components/common
   - ../../components/sops
   - ../../components/repos/app-template
-resources:
-  - ./autobrr
-  - ./flaresolverr
-  - ./qbittorrent
-  - ./qui
-  - ./sonarr
-  - ./radarr
-  - ./seerr
-  - ./prowlarr
+resources: []
+  #- ./autobrr
+  #- ./flaresolverr
+  #- ./qbittorrent
+  #- ./qui
+  #- ./sonarr
+  #- ./radarr
+  #- ./seerr
+  #- ./prowlarr
