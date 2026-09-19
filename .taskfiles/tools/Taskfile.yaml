@@ -43,6 +43,18 @@ tasks:
       - test -f {{.ROOT_DIR}}/.sops.yaml
       - test -f {{.SCRIPTS_DIR}}/bootstrap-apps.sh
       - test -f {{.SOPS_AGE_KEY_FILE}}
+  scan:
+    desc: List machines on your 192.168.x.x subnets [CIDR=192.168.0.0/16] (use SUDO=1 for OS detection)
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - "{{if eq .SUDO \"1\"}}sudo {{end}}{{.SCRIPTS_DIR}}/scan-subnet.sh {{.CIDR}}"
+    vars:
+      CIDR: '{{.CIDR | default "192.168.0.0/16"}}'
+      SUDO: '{{.SUDO | default ""}}'
+    preconditions:
+      - { msg: "nmap is required (install it or `mise use nmap`)", sh: "command -v nmap" }
+      - test -f {{.SCRIPTS_DIR}}/scan-subnet.sh
+
   ping:
     desc: Ping the available routes
     dir: "{{.ROOT_DIR}}"
