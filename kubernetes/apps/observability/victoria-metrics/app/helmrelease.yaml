@@ -78,6 +78,14 @@ spec:
         enabled: true
         spec:
           allowCrossNamespaceImport: true
+      dashboards:
+        # Owned by the standalone node-exporter app
+        # (apps/observability/node-exporter). The k8s-stack chart also ships a
+        # GrafanaDashboard named "node-exporter-full"; since spec.instanceSelector
+        # is immutable, the duplicate name blocks the whole victoria-metrics
+        # Kustomization from applying. Disable it here to avoid the collision.
+        node-exporter-full:
+          enabled: false
     defaultDatasources:
       grafanaOperator:
         enabled: true
