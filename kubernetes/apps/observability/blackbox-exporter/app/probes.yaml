@@ -35,8 +35,11 @@ spec:
   targets:
     staticConfig:
       static:
-        - nas.servers.internal:2049
+        # Literal NAS IP, not nas.servers.internal — this probe must not depend
+        # on Pi-hole DNS being up (Pi-hole down would fail the probe, which in
+        # turn holds the kopia KEDA scaler at 0). See components/keda/nfs-scaler.
+        - 192.168.2.44:2049
   metricRelabelings:
     - targetLabel: instance
-      replacement: nas.servers.internal # HPA external can't handle :'s in a label
+      replacement: 192.168.2.44:2049
       action: replace

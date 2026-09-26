@@ -7,6 +7,7 @@ namespace: observability
 components:
   - ../../components/common
 resources:
+  - ./blackbox-exporter
   - ./grafana
   - ./monitor-core
   ## - ./kube-prometheus-stack

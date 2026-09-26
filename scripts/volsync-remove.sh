@@ -82,7 +82,7 @@ launch_kopia_pod() {
     local volumes_json volume_mounts_json
     if [[ "${type}" == "nfs" ]]; then
         volumes_json='[
-            {"name":"repo","nfs":{"server":"192.168.2.14","path":"/mnt/Main/backup/VolsyncKopia"}},
+            {"name":"repo","nfs":{"server":"192.168.2.44","path":"/mnt/Main/backup/VolsyncKopia"}},
             {"name":"tmp","emptyDir":{}}
         ]'
         volume_mounts_json='[

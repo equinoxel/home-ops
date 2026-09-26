@@ -8,10 +8,12 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/triggers/0/metadata/query
-        # Matches the blackbox NFS probe, which relabels its instance to
-        # nas.servers.internal (see apps/observability/blackbox-exporter probes.yaml).
-        # DNS-based and node-agnostic — don't hardcode a node IP/VIP here.
-        value: max_over_time(probe_success{instance="nas.servers.internal"}[1m])
+        # Matches the blackbox NFS probe, which relabels its instance to the
+        # literal NAS IP (see apps/observability/blackbox-exporter probes.yaml).
+        # Deliberately IP-based, NOT nas.servers.internal: the probe/scaler must
+        # not depend on Pi-hole DNS, since Pi-hole being down would fail the
+        # probe and hold this scaler at 0 replicas.
+        value: max_over_time(probe_success{instance="192.168.2.44:2049"}[1m])
     target: &target
       group: keda.sh
       kind: ScaledObject
