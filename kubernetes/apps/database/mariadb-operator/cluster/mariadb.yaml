@@ -7,7 +7,10 @@ spec:
   rootPasswordSecretKeyRef:
     name: mariadb-root
     key: password
-    generate: false
+    # Let the operator generate the root password secret. Previously `false`,
+    # which required a pre-existing `mariadb-root` secret that nothing created,
+    # so the operator failed with "Secret mariadb-root not found".
+    generate: true
 
   image: docker.io/library/mariadb:11.8
 
@@ -50,8 +53,9 @@ spec:
     character-set-server=utf8mb4
     collation-server=utf8mb4_unicode_ci
 
-  nodeSelector:
-    kubernetes.io/hostname: esxi-2cu-8g-05
+  # NOTE: removed stale `nodeSelector: kubernetes.io/hostname: esxi-2cu-8g-05`
+  # — that node does not exist in this cluster (nodes: ctrl-01-esxi,
+  # worker-01-esxi, worker-02-esxi), which would leave the pod unschedulable.
 
   metrics:
     enabled: true
