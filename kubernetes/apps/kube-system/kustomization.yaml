@@ -12,6 +12,4 @@ resources:
   - ./coredns/ks.yaml
   - ./metrics-server/ks.yaml
   - ./reloader/ks.yaml
-  # spegel needs >1 node to bootstrap its P2P routing table; disabled while
-  # single-node. Re-enable once a second node is added.
-  # - ./spegel/ks.yaml
+  - ./spegel/ks.yaml
