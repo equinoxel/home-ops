@@ -223,18 +223,9 @@ spec:
     - datasourceName: prometheus
       inputName: DS_PROMETHEUS
   url: https://grafana.com/api/dashboards/23233/revisions/6/download
----
-# yaml-language-server: $schema=https://schemas.tholinka.dev/grafana.integreatly.org/grafanadashboard_v1beta1.json
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDashboard
-metadata:
-  name: node-exporter-full
-spec:
-  allowCrossNamespaceImport: true
-  instanceSelector:
-    matchLabels:
-      dashboards: grafana
-  datasources:
-    - datasourceName: prometheus
-      inputName: DS_PROMETHEUS
-  url: https://grafana.com/api/dashboards/1860/revisions/45/download
+# NOTE: node-exporter-full (grafana.com id 1860) is intentionally NOT defined
+# here. It is owned by the standalone node-exporter app
+# (apps/observability/node-exporter/app/grafanadashboard.yaml). Defining it in
+# both places creates a duplicate GrafanaDashboard/node-exporter-full with a
+# different (immutable) spec.instanceSelector, which blocks this whole
+# Kustomization from applying.
