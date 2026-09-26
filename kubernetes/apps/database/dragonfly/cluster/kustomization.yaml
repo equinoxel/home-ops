@@ -10,3 +10,4 @@ resources:
   - ./networkpolicy.yaml
   - ./podmonitor.yaml
   - ./resourceset.yaml
+  - ./resourcesetinputprovider.yaml
