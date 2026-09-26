@@ -1,16 +1,24 @@
 # Agent Instructions
 
-This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
+This project uses **GitHub Issues** for issue tracking, managed via the `gh` CLI.
 
 ## Quick Reference
 
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-bd sync               # Sync with git
+gh issue list                                   # Find open work
+gh issue list --label "priority/low"            # Filter by label
+gh issue view <number>                          # View issue details
+gh issue create --title "..." --body "..." \
+  --label "area/kubernetes"                      # File new work
+gh issue comment <number> --body "..."          # Add progress notes
+gh issue close <number>                          # Complete work
 ```
+
+### Labels
+
+- Area: `area/kubernetes`, `area/talos`, `area/docs`, `area/scripts`, etc.
+- Priority: `priority/low` (add higher-priority labels as needed).
+- Apply at least one `area/*` label, plus a priority label when relevant.
 
 ## Landing the Plane (Session Completion)
 
@@ -18,13 +26,12 @@ bd sync               # Sync with git
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **File issues for remaining work** - Create GitHub issues (`gh issue create`) for anything that needs follow-up. Label appropriately (`area/*`, `priority/*`).
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
+3. **Update issue status** - Close finished issues (`gh issue close`), comment progress on in-progress ones
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -37,4 +44,3 @@ bd sync               # Sync with git
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
-
