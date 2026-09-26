@@ -8,6 +8,8 @@ spec:
   dependsOn:
     - name: storage-ready
       namespace: flux-system
+    - name: grafana
+      namespace: observability
   components:
     - ../../../../components/ext-auth
     - ../../../../components/ext-auth/two

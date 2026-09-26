@@ -6,6 +6,9 @@ metadata:
   name: keda
   namespace: &namespace observability
 spec:
+  dependsOn:
+    - name: grafana
+      namespace: observability
   path: ./kubernetes/apps/observability/keda/app
   sourceRef:
     kind: GitRepository

@@ -10,6 +10,8 @@ spec:
   dependsOn:
     - name: keda
       namespace: observability
+    - name: grafana
+      namespace: observability
   path: ./kubernetes/apps/storage-system/volsync/app
   prune: true
   sourceRef:

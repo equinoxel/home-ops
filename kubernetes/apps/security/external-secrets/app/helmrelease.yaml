@@ -43,7 +43,9 @@ spec:
       enabled: true
       interval: 1m
     grafanaDashboard:
-      enabled: true
+      # Dashboard CR lives in observability/monitor-core (url-sourced) to keep
+      # external-secrets decoupled from the grafana-operator.
+      enabled: false
     grafana:
       enabled: true
     reportsController:

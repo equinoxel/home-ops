@@ -12,6 +12,8 @@ spec:
   dependsOn:
     - name: crds-ready
       namespace: flux-system
+    - name: grafana
+      namespace: observability
   sourceRef:
     kind: GitRepository
     name: flux-system

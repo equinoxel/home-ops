@@ -30,7 +30,9 @@ spec:
     # NOTE: devices might need to be set if you have more than one active NIC on your hosts
     # devices: eno+ eth+
     dashboards:
-      enabled: true
+      # Dashboard CRs live in observability/monitor-core (url-sourced) to keep
+      # cilium decoupled from the grafana-operator. No chart-generated ConfigMap.
+      enabled: false
     endpointRoutes:
       enabled: true
     envoy:
@@ -57,7 +59,8 @@ spec:
       enabled: true
     operator:
       dashboards:
-        enabled: true
+        # Dashboard CR lives in observability/monitor-core (url-sourced).
+        enabled: false
       prometheus:
         enabled: true
         serviceMonitor:

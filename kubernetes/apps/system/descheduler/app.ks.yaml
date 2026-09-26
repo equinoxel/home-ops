@@ -7,6 +7,9 @@ metadata:
   namespace: &namespace system
 spec:
   interval: 1h
+  dependsOn:
+    - name: grafana
+      namespace: observability
   path: ./kubernetes/apps/system/descheduler/app
   prune: true
   sourceRef:

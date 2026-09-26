@@ -7,6 +7,9 @@ metadata:
   namespace: &namespace observability
 spec:
   interval: 1h
+  dependsOn:
+    - name: grafana
+      namespace: observability
   path: ./kubernetes/apps/observability/smartctl-exporter/app
   prune: true
   sourceRef:

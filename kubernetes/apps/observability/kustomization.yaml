@@ -8,6 +8,7 @@ components:
   - ../../components/common
 resources:
   - ./grafana
+  - ./monitor-core
   ## - ./kube-prometheus-stack
   - ./prometheus-adapter
   - ./prometheus-operator-crds

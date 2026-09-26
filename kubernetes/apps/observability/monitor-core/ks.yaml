@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: monitor-core
+  namespace: &namespace observability
+spec:
+  interval: 1h
+  # Dashboards for core/foundational apps (cilium, flux, cert-manager,
+  # external-secrets) live here instead of in those apps so the core apps stay
+  # decoupled from the grafana-operator. Gating e.g. cilium on grafana would
+  # deadlock bootstrap; keeping the GrafanaDashboard CRs here lets this
+  # Kustomization depend on grafana while the core apps reconcile independently.
+  dependsOn:
+    - name: grafana
+      namespace: observability
+  path: ./kubernetes/apps/observability/monitor-core/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace

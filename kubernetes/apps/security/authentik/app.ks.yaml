@@ -24,3 +24,5 @@ spec:
       namespace: database
     - name: openebs
       namespace: storage-system
+    - name: grafana
+      namespace: observability

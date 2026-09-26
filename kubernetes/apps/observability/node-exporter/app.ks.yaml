@@ -6,6 +6,9 @@ metadata:
   name: node-exporter
 spec:
   interval: 1h
+  dependsOn:
+    - name: grafana
+      namespace: observability
   path: ./kubernetes/apps/observability/node-exporter/app
   prune: true
   sourceRef:

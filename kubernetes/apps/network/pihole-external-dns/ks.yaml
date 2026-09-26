@@ -12,6 +12,8 @@ spec:
     - ../../../../components/scaler/statefulset
   dependsOn:
     - name: pihole
+    - name: grafana
+      namespace: observability
   path: ./kubernetes/apps/network/pihole-external-dns/app
   prune: true
   postBuild:

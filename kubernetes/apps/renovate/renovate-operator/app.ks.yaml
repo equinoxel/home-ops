@@ -8,6 +8,9 @@ metadata:
 spec:
   interval: 1h
   targetNamespace: *namespace
+  dependsOn:
+    - name: grafana
+      namespace: observability
   postBuild:
     substitute:
       APP: *app

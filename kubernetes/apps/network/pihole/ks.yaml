@@ -17,4 +17,6 @@ spec:
   dependsOn:
     - name: storage-ready
       namespace: flux-system
+    - name: grafana
+      namespace: observability
   wait: true
