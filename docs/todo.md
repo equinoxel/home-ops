@@ -112,3 +112,24 @@ Action items identified from operational issues encountered during setup and day
 - [ ] Document the test procedure: create namespace, trigger ReplicationDestination, verify data, clean up
 - [ ] Track restore test results (date, app, success/failure, notes)
 - [ ] Consider automating the test with a CronJob or Flux RunnerJob
+
+---
+
+## Backup Encryption at Rest (RustFS SSE)
+
+**Purpose:** After migrating the S3 backend from Garage to RustFS, barman-cloud SSE-S3 (`AES256`) writes were rejected because RustFS requires a configured KMS backend. SSE was disabled to unblock postgres backups, so CNPG backups now sit unencrypted at rest (still bzip2-compressed) in `s3://database/`.
+
+- [ ] Configure RustFS KMS (local backend) on the TrueNAS RustFS app: set `RUSTFS_KMS_ENABLE=true`, `RUSTFS_KMS_BACKEND=local`, `RUSTFS_KMS_KEY_DIR` (persistent), `RUSTFS_KMS_LOCAL_MASTER_KEY` (base64 32-byte, backed up), then create the default KMS key
+- [ ] Re-add `encryption: AES256` to `wal` and `data` in `kubernetes/apps/database/cnpg/cluster/objectstore.yaml`
+- [ ] Verify WAL archiving + a base backup still succeed after re-enabling SSE
+- [ ] Back up the RustFS master key material (loss makes all encrypted backups unreadable)
+
+---
+
+## KEDA Scaler Prometheus Endpoint
+
+**Purpose:** The shared KEDA prometheus-scaler pointed `serverAddress` at `prometheus-operated.observability:9090`, a kube-prometheus-stack service that doesn't exist in this cluster (it runs the VictoriaMetrics stack). Scalers using it (e.g. `silent-kopia`) reported `Ready=False` — triggers not working. Fixed by defaulting to the VM query API (`vmsingle-victoria-metrics.observability:8428`), overridable via `SCALER_PROM_ADDRESS`.
+
+- [x] Point the KEDA prometheus-scaler `serverAddress` at the VictoriaMetrics query endpoint
+- [ ] Verify the `silent-kopia` ScaledObject reports `READY=True` once blackbox-exporter is producing the NFS probe metric
+- [ ] Update the stale `prometheus-operated:9090` reference in `kubernetes/apps/rook-ceph/rook-ceph/cluster/helmrelease.yaml` (`prometheusEndpoint`) to the VM endpoint as well
