@@ -16,6 +16,13 @@
 #
 # Keep this list in sync with the DNS host records you configure in
 # Pi-hole / AdGuard Home. See README.md for the suggested hostnames.
+#
+# NOTE: This ConfigMap should no longer be needed once Pi-hole or AdGuard Home
+# is installed together with external-dns. At that point DNS records are created
+# dynamically from `external-dns.alpha.kubernetes.io/hostname` annotations, so
+# the manual host-record mirroring goes away and each app can carry its own
+# static LB IP inline. See README.md ("Retiring cluster-settings") for the
+# migration steps to remove this component.
 apiVersion: v1
 kind: ConfigMap
 metadata:
