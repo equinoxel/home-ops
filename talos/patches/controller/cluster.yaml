@@ -58,7 +58,7 @@ cluster:
       auto-compaction-retention: "1" # Compact every 1 hour to keep DB small
       auto-compaction-mode: periodic
     advertisedSubnets:
-      - 10.0.0.0/24
+      - 192.168.2.0/24
   proxy:
     disabled: true
   scheduler:

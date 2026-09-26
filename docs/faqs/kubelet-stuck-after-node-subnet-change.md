@@ -2,7 +2,7 @@
 
 ## Problem
 
-After moving `blade-01` from `10.0.0.0/24` to `10.0.50.0/24`, the node gets stuck in Talos "booting" stage. Kubelet never transitions from `Initialized` to `Running`, and the node shows `NotReady` in Kubernetes. All workload pods remain `Pending` since blade-01 is the only worker node (control plane nodes have `NoSchedule` taints).
+After moving `blade-01` from `192.168.2.0/24` to `10.0.50.0/24`, the node gets stuck in Talos "booting" stage. Kubelet never transitions from `Initialized` to `Running`, and the node shows `NotReady` in Kubernetes. All workload pods remain `Pending` since blade-01 is the only worker node (control plane nodes have `NoSchedule` taints).
 
 Talos dmesg shows:
 
@@ -10,7 +10,7 @@ Talos dmesg shows:
 no suitable node IP found, please make sure .machine.kubelet.nodeIP filters and pod/service subnets are set up correctly
 ```
 
-The root cause is `machine.kubelet.nodeIP.validSubnets` in `talos/patches/global/machine-kubelet.yaml` — it only listed `10.0.0.0/24`, so kubelet couldn't find a matching IP on the new subnet and refused to start.
+The root cause is `machine.kubelet.nodeIP.validSubnets` in `talos/patches/global/machine-kubelet.yaml` — it only listed `192.168.2.0/24`, so kubelet couldn't find a matching IP on the new subnet and refused to start.
 
 ## Resolution
 
@@ -20,7 +20,7 @@ The root cause is `machine.kubelet.nodeIP.validSubnets` in `talos/patches/global
      kubelet:
        nodeIP:
          validSubnets:
-           - 10.0.0.0/24
+           - 192.168.2.0/24
            - 10.0.50.0/24
    ```
 
@@ -30,7 +30,7 @@ The root cause is `machine.kubelet.nodeIP.validSubnets` in `talos/patches/global
      kubelet:
        nodeIP:
          validSubnets:
-           - 10.0.0.0/24
+           - 192.168.2.0/24
            - 10.0.50.0/24'
    ```
 

@@ -1,0 +1,38 @@
+---
+# Non-secret, cluster-wide network aliases.
+#
+# These map a stable "service name" to the static LoadBalancer / VIP address it
+# is pinned to (via lbipam.cilium.io/ips or the Talos API VIP). They are plain
+# text on purpose: none of this is sensitive, and keeping it in a ConfigMap lets
+# Flux substitute the values into manifests via postBuild.substituteFrom.
+#
+# Consume in a Flux Kustomization with:
+#   postBuild:
+#     substituteFrom:
+#       - name: cluster-settings
+#         kind: ConfigMap
+#
+# and reference a value as ${SVC_ENVOY_INTERNAL_IP} etc.
+#
+# Keep this list in sync with the DNS host records you configure in
+# Pi-hole / AdGuard Home. See README.md for the suggested hostnames.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-settings
+data:
+  # Kubernetes API server VIP (shared control-plane VIP, Talos endpoint).
+  SVC_KUBE_APISERVER_IP: "192.168.2.155"
+
+  # k8s-gateway — in-cluster DNS resolver for *.laurivan.com records.
+  SVC_K8S_GATEWAY_IP: "192.168.2.156"
+
+  # Envoy Gateway load-balancer IPs.
+  SVC_ENVOY_INTERNAL_IP: "192.168.2.157"      # *.laurivan.com (internal)
+  SVC_ENVOY_EXTERNAL_IP: "192.168.2.158"      # *.laurivan.com (external / tunnel origin)
+  SVC_ENVOY_INTERNAL_ROOT_IP: "192.168.2.159" # laurivan.com apex (internal)
+
+  # Standalone service load balancers.
+  SVC_GO2RTC_IP: "192.168.2.157"              # go2rtc-streams.laurivan.com (shares .157 w/ envoy-internal, distinct ports)
+  SVC_VERNEMQ_IP: "192.168.2.154"             # mqtt.laurivan.com
+  SVC_UNIFI_STUN_IP: "192.168.2.41"           # unifi STUN

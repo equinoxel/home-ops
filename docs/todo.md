@@ -46,7 +46,7 @@ Action items identified from operational issues encountered during setup and day
   - `soft` — return errors instead of hanging on NFS timeout
   - `timeo=30` — 3-second timeout
   - `retrans=3` — retry 3 times before failing
-- [ ] Test pod startup behavior when the NAS (`10.0.0.14`) is unreachable
+- [ ] Test pod startup behavior when the NAS (`192.168.2.14`) is unreachable
 - [ ] Consider adding a liveness probe or startup probe that validates NFS mount availability
 
 ---

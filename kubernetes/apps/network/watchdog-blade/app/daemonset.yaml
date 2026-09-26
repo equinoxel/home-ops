@@ -35,7 +35,7 @@ spec:
             - |
               apk add --no-cache iproute2 > /dev/null 2>&1
 
-              GATEWAY="10.0.0.1"
+              GATEWAY="192.168.2.1"
               IFACE="end0"
               CHECK_INTERVAL=10
               FAIL_THRESHOLD=3

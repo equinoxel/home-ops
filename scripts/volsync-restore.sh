@@ -81,7 +81,7 @@ log "Launching temporary Kopia pod to query snapshots..."
 # Build volume/mount spec based on type
 if [[ "${TYPE}" == "nfs" ]]; then
     VOLUMES_JSON='[
-        {"name":"repo","nfs":{"server":"10.0.0.14","path":"/mnt/Main/backup/VolsyncKopia"}},
+        {"name":"repo","nfs":{"server":"192.168.2.14","path":"/mnt/Main/backup/VolsyncKopia"}},
         {"name":"tmp","emptyDir":{}}
     ]'
     VOLUME_MOUNTS_JSON='[
@@ -335,7 +335,7 @@ RESTORE_POD="volsync-direct-restore-${APP}-$(date +%s)"
 # Build volume/mount spec — includes the app PVC as the restore target
 if [[ "${TYPE}" == "nfs" ]]; then
     RESTORE_VOLUMES_JSON='[
-        {"name":"repo","nfs":{"server":"10.0.0.14","path":"/mnt/Main/backup/VolsyncKopia"}},
+        {"name":"repo","nfs":{"server":"192.168.2.14","path":"/mnt/Main/backup/VolsyncKopia"}},
         {"name":"data","persistentVolumeClaim":{"claimName":"'"${APP}"'"}},
         {"name":"tmp","emptyDir":{}}
     ]'

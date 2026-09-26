@@ -17,6 +17,9 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 5Gi
+    substituteFrom:
+      - name: cluster-settings
+        kind: ConfigMap
   prune: true
   sourceRef:
     kind: GitRepository

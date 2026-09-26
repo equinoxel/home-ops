@@ -5,6 +5,7 @@ namespace: network
 
 components:
   - ../../components/sops
+  - ../../components/network-aliases
   - ../../components/common
   - ../../components/repos/app-template
 resources:

@@ -21,4 +21,7 @@ spec:
     substitute:
       APP: *app
       SECRET_DOMAIN: laurivan.com
+    substituteFrom:
+      - name: cluster-settings
+        kind: ConfigMap
   wait: true

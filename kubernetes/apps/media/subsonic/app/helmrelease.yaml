@@ -89,14 +89,14 @@ spec:
           - path: /data
       music:
         type: nfs
-        server: 10.0.0.14
+        server: 192.168.2.14
         path: /mnt/Main/shares/audio/music
         globalMounts:
           - path: /music
             readOnly: true
       podcasts:
         type: nfs
-        server: 10.0.0.14
+        server: 192.168.2.14
         path: /mnt/Main/shares/audio/podcasts
         globalMounts:
           - path: /podcasts
@@ -104,7 +104,7 @@ spec:
 
       playlists:
         type: nfs
-        server: 10.0.0.14
+        server: 192.168.2.14
         path: /mnt/Main/shares/audio/playlists
         globalMounts:
           - path: /playlists

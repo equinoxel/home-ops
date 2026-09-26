@@ -18,7 +18,7 @@ This directory contains the networking infrastructure for the Kubernetes cluster
 
 | Subnet | VLAN | Purpose | Gateway |
 |--------|------|---------|---------|
-| `10.0.0.0/24` | Native | Management / Control plane nodes + Cilium LB pool | `10.0.0.1` |
+| `192.168.2.0/24` | Native | Management / Control plane nodes + Cilium LB pool | `192.168.2.1` |
 | `10.0.20.0/24` | 20 | IoT devices | `10.0.20.1` |
 | `10.0.30.0/24` | 30 | NoT (Network of Things) | `10.0.30.1` |
 | `10.0.50.0/24` | 50 | Cloud / Worker nodes (blades) | `10.0.50.1` |
@@ -27,15 +27,15 @@ This directory contains the networking infrastructure for the Kubernetes cluster
 
 ## Cilium LoadBalancer IPs
 
-Allocated from the `10.0.0.0/24` pool via `CiliumLoadBalancerIPPool`, announced with L2 (ARP) from control plane nodes.
+Allocated from the `192.168.2.0/24` pool via `CiliumLoadBalancerIPPool`, announced with L2 (ARP) from control plane nodes.
 
 | IP | Service |
 |----|---------|
-| `10.0.0.155` | Talos API VIP (not Cilium-managed) |
-| `10.0.0.156` | k8s-gateway (DNS) |
-| `10.0.0.157` | Envoy Internal Gateway (`*.laurivan.com`) |
-| `10.0.0.158` | Envoy External Gateway (`*.laurivan.com`) |
-| `10.0.0.159` | Envoy Internal Root Gateway (`laurivan.com`) |
+| `192.168.2.155` | Talos API VIP (not Cilium-managed) |
+| `192.168.2.156` | k8s-gateway (DNS) |
+| `192.168.2.157` | Envoy Internal Gateway (`*.laurivan.com`) |
+| `192.168.2.158` | Envoy External Gateway (`*.laurivan.com`) |
+| `192.168.2.159` | Envoy Internal Root Gateway (`laurivan.com`) |
 
 ## Multus Networks (NetworkAttachmentDefinitions)
 
@@ -49,8 +49,8 @@ Multus provides secondary interfaces to pods via macvlan on VLAN-tagged bonds. E
 
 ## Ingress Flow
 
-- **Internal**: Client → DNS (`k8s-gateway` @ `10.0.0.156`) → Envoy Internal (`10.0.0.157`) → HTTPRoute → Pod
-- **External**: Client → Cloudflare → Tunnel → Envoy External (`10.0.0.158`) → HTTPRoute → Pod
+- **Internal**: Client → DNS (`k8s-gateway` @ `192.168.2.156`) → Envoy Internal (`192.168.2.157`) → HTTPRoute → Pod
+- **External**: Client → Cloudflare → Tunnel → Envoy External (`192.168.2.158`) → HTTPRoute → Pod
 
 ## Architecture Diagram
 
@@ -63,7 +63,7 @@ graph TB
     subgraph "Physical Network"
         Router[Router / Gateway]
         subgraph "VLAN Trunks"
-            NATIVE["Native VLAN<br/>10.0.0.0/24"]
+            NATIVE["Native VLAN<br/>192.168.2.0/24"]
             VLAN20["VLAN 20 (IoT)<br/>10.0.20.0/24"]
             VLAN30["VLAN 30 (NoT)<br/>10.0.30.0/24"]
             VLAN50["VLAN 50 (Cloud)<br/>10.0.50.0/24"]
@@ -77,10 +77,10 @@ graph TB
         end
 
         subgraph "Cilium LB (L2 Announced)"
-            KGW["k8s-gateway<br/>10.0.0.156:53"]
-            EI["Envoy Internal<br/>10.0.0.157"]
-            EE["Envoy External<br/>10.0.0.158"]
-            EIR["Envoy Internal Root<br/>10.0.0.159"]
+            KGW["k8s-gateway<br/>192.168.2.156:53"]
+            EI["Envoy Internal<br/>192.168.2.157"]
+            EE["Envoy External<br/>192.168.2.158"]
+            EIR["Envoy Internal Root<br/>192.168.2.159"]
         end
 
         subgraph "Multus macvlan Networks"
@@ -176,9 +176,9 @@ In `talconfig.yaml`, add the second interface to the node's `networkInterfaces`.
         hardwareAddr: "34:97:87:58:7b:10"
       dhcp: false
       addresses:
-        - "10.0.0.123/24"
+        - "192.168.2.123/24"
       routes:
-        - gateway: "10.0.0.1"
+        - gateway: "192.168.2.1"
           network: 0.0.0.0/0
       mtu: 1500
     # VLAN trunk interface (new vNIC)
@@ -201,11 +201,11 @@ In `talconfig.yaml`, add the second interface to the node's `networkInterfaces`.
 task talos:generate-config
 
 # Apply to the node
-talosctl apply-config --nodes 10.0.0.123 --file talos/clusterconfig/kubernetes-esxi-2cu-8g-04.yaml
+talosctl apply-config --nodes 192.168.2.123 --file talos/clusterconfig/kubernetes-esxi-2cu-8g-04.yaml
 
 # Verify VLAN interfaces are up
 TALOSCONFIG=/home/laur/dev/talos/home-ops/talos/clusterconfig/talosconfig \
-  talosctl get links --nodes 10.0.0.123 | grep bond0
+  talosctl get links --nodes 192.168.2.123 | grep bond0
 ```
 
 You should see `bond0`, `bond0.20`, `bond0.30`, and `bond0.50` all in `up` state.

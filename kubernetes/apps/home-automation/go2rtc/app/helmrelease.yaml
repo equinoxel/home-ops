@@ -76,7 +76,7 @@ spec:
         externalTrafficPolicy: Local
         annotations:
           external-dns.alpha.kubernetes.io/hostname: go2rtc-streams.laurivan.com.
-          lbipam.cilium.io/ips: 10.0.0.157
+          lbipam.cilium.io/ips: "${SVC_GO2RTC_IP}"
         ports:
           http:
             primary: true

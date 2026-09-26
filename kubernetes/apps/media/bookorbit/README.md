@@ -36,7 +36,7 @@ graph TD
     end
 
     subgraph NFS
-        NFS_BOOKS[10.0.0.14<br/>/mnt/Main/shares/books]
+        NFS_BOOKS[192.168.2.14<br/>/mnt/Main/shares/books]
     end
 
     subgraph external
@@ -102,7 +102,7 @@ Create a Bitwarden item named `bookorbit` with the following fields:
 | Volume | Type | Path | Size |
 |--------|------|------|------|
 | `data` | PVC (openebs-hostpath) | `/data` | 1Gi |
-| `books` | NFS (`10.0.0.14`) | `/books` | `/mnt/Main/shares/books` |
+| `books` | NFS (`192.168.2.14`) | `/books` | `/mnt/Main/shares/books` |
 | `postgres-certs` | Secret | `/var/run/secrets/postgresql` | — |
 
 ### Database

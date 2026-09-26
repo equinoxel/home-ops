@@ -26,7 +26,7 @@ nodes:
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/43a1a6104d8dcd6547983f4ed13abb6f5e8a1b2fdad796c69e7db6e95d122884
+    talosImageURL: factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba
     controlPlane: true
     networkInterfaces:
       - deviceSelector:
@@ -51,8 +51,8 @@ nodes:
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/43a1a6104d8dcd6547983f4ed13abb6f5e8a1b2fdad796c69e7db6e95d122884
-    controlPlane: true
+    talosImageURL: factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba
+    controlPlane: false
     networkInterfaces:
       - deviceSelector:
           hardwareAddr: "84:97:87:58:ab:00"
@@ -63,9 +63,8 @@ nodes:
           - gateway: "192.168.2.1"
             network: 0.0.0.0/0
         mtu: 1500
-        vip:
-          ip: "192.168.2.155"
     patches:
+      - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/fast-disk.yaml"
 
 
@@ -73,7 +72,7 @@ nodes:
 patches:
   - "@./patches/global/machine-files.yaml"
   - "@./patches/global/machine-kubelet.yaml"
-  - "@./patches/global/machine-network.yaml"
+  # - "@./patches/global/machine-network.yaml"
   - "@./patches/global/machine-sysctls.yaml"
   # - "@./patches/global/machine-hugepages.yaml"
   # - "@./patches/global/machine-time.yaml" # Talos v1.12+ uses TimeSyncConfig; defaults to time.cloudflare.com

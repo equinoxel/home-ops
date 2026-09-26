@@ -16,14 +16,14 @@ graph TD
 
     subgraph LAN
         Win[Windows / LAN Client]
-        PH[Pi-hole\n10.0.0.156 → k8s-gateway]
+        PH[Pi-hole\n192.168.2.156 → k8s-gateway]
     end
 
     subgraph Kubernetes - network namespace
-        EXT[envoy-external\nLB: 10.0.0.158]
-        INT[envoy-internal\nLB: 10.0.0.157]
+        EXT[envoy-external\nLB: 192.168.2.158]
+        INT[envoy-internal\nLB: 192.168.2.157]
         EXTDNS[cloudflare-dns\nexternal-dns\n--gateway-name=envoy-external]
-        K8SGW[k8s-gateway\nCoreDNS plugin\n10.0.0.156:53\nwatches HTTPRoutes]
+        K8SGW[k8s-gateway\nCoreDNS plugin\n192.168.2.156:53\nwatches HTTPRoutes]
     end
 
     CF -->|CNAME: external.laurivan.com| EXT
@@ -39,7 +39,7 @@ graph TD
 | Gateway | DNS mechanism | Accessible from |
 |---|---|---|
 | `envoy-external` | `cloudflare-dns` (external-dns) pushes records to Cloudflare | Internet + LAN |
-| `envoy-internal` | `k8s-gateway` (CoreDNS) serves DNS at `10.0.0.156` | LAN only (via Pi-hole conditional forwarding) |
+| `envoy-internal` | `k8s-gateway` (CoreDNS) serves DNS at `192.168.2.156` | LAN only (via Pi-hole conditional forwarding) |
 
 > **Key insight**: `cloudflare-dns` runs with `--gateway-name=envoy-external`, so it **only** creates Cloudflare DNS records for routes attached to `envoy-external`. Routes on `envoy-internal` are handled exclusively by `k8s-gateway` — no Cloudflare involvement.
 
@@ -66,7 +66,7 @@ When this happens, `k8s-gateway` falls back to only watching `Service` resources
 kubectl logs -n network -l app.kubernetes.io/name=k8s-gateway | grep -E "HTTPRoute|error"
 
 # Test DNS resolution directly against k8s-gateway
-dig +short myservice.laurivan.com @10.0.0.156
+dig +short myservice.laurivan.com @192.168.2.156
 ```
 
 If `dig` returns empty and logs show the HTTPRoute controller error, proceed to the fix.
@@ -93,8 +93,8 @@ kubectl logs -n network -l app.kubernetes.io/name=k8s-gateway | grep "controller
 Verify DNS resolves:
 
 ```bash
-dig +short myservice.laurivan.com @10.0.0.156
-# Should return 10.0.0.157 (envoy-internal LB IP)
+dig +short myservice.laurivan.com @192.168.2.156
+# Should return 192.168.2.157 (envoy-internal LB IP)
 ```
 
 ---
@@ -115,7 +115,7 @@ kubectl get httproute -A
 kubectl describe httproute <name> -n <namespace>
 
 # Does DNS resolve?
-dig +short <hostname>.laurivan.com @10.0.0.156
+dig +short <hostname>.laurivan.com @192.168.2.156
 
 # Are the pods healthy?
 kubectl get pods -n <namespace>
@@ -129,7 +129,7 @@ If the HTTPRoute exists and is `Accepted` but DNS doesn't resolve, restart `k8s-
 
 ## Issue 3: Pi-hole Conditional Forwarding Not Configured
 
-For LAN clients to resolve internal hostnames, Pi-hole must forward `laurivan.com` queries to `k8s-gateway` at `10.0.0.156`.
+For LAN clients to resolve internal hostnames, Pi-hole must forward `laurivan.com` queries to `k8s-gateway` at `192.168.2.156`.
 
 ### Setup
 
@@ -137,8 +137,8 @@ In Pi-hole → **Settings → DNS → Conditional Forwarding**:
 
 | Field | Value |
 |---|---|
-| Local network CIDR | `10.0.0.0/24` |
-| Router / DNS IP | `10.0.0.156` |
+| Local network CIDR | `192.168.2.0/24` |
+| Router / DNS IP | `192.168.2.156` |
 | Local domain name | `laurivan.com` |
 
 > Without this, LAN clients will resolve `*.laurivan.com` via public Cloudflare DNS, which has no records for `envoy-internal` services.
@@ -147,10 +147,10 @@ In Pi-hole → **Settings → DNS → Conditional Forwarding**:
 
 ## Diagnosing "Destination Host Unreachable" from a LAN Client
 
-When you `ping` an internal service VIP (e.g. `10.0.0.157`), you may see:
+When you `ping` an internal service VIP (e.g. `192.168.2.157`), you may see:
 
 ```
-Reply from 10.0.0.147: Destination host unreachable.
+Reply from 192.168.2.147: Destination host unreachable.
 ```
 
 **This is normal and not an error.** Here's why:
@@ -158,21 +158,21 @@ Reply from 10.0.0.147: Destination host unreachable.
 ```mermaid
 sequenceDiagram
     participant Win as Windows Client
-    participant Node as esxi-2cu-8g-03 (10.0.0.147)<br/>holds L2 ARP lease for 10.0.0.157
-    participant Envoy as Envoy Proxy (VIP: 10.0.0.157)
+    participant Node as esxi-2cu-8g-03 (192.168.2.147)<br/>holds L2 ARP lease for 192.168.2.157
+    participant Envoy as Envoy Proxy (VIP: 192.168.2.157)
 
-    Win->>Node: ICMP Echo Request → 10.0.0.157
-    Note over Node: ARP resolves 10.0.0.157 to Node's MAC<br/>(Cilium L2 announcement)
+    Win->>Node: ICMP Echo Request → 192.168.2.157
+    Note over Node: ARP resolves 192.168.2.157 to Node's MAC<br/>(Cilium L2 announcement)
     Node->>Envoy: forwards packet
     Note over Envoy: Envoy only handles TCP 80/443<br/>ICMP is not forwarded
     Node-->>Win: ICMP "Destination Host Unreachable"
 
-    Win->>Node: TCP SYN → 10.0.0.157:443
+    Win->>Node: TCP SYN → 192.168.2.157:443
     Node->>Envoy: proxies connection
     Envoy-->>Win: TLS handshake + HTTP response ✅
 ```
 
-- `10.0.0.147` is the **cluster node** (`esxi-2cu-8g-03`) holding the Cilium L2 ARP announcement lease for `10.0.0.157` — it is not a router.
+- `192.168.2.147` is the **cluster node** (`esxi-2cu-8g-03`) holding the Cilium L2 ARP announcement lease for `192.168.2.157` — it is not a router.
 - Envoy Gateway only listens on TCP 80/443. ICMP ping packets are not handled, so the node's kernel returns "host unreachable".
 - **Use `curl` instead of `ping` to verify connectivity:**
 
@@ -181,7 +181,7 @@ sequenceDiagram
 curl -sk -o /dev/null -w "%{http_code}" https://myservice.laurivan.com
 
 # Or directly by IP with a Host header
-curl -sk -o /dev/null -w "%{http_code}" https://10.0.0.157 -H "Host: myservice.laurivan.com"
+curl -sk -o /dev/null -w "%{http_code}" https://192.168.2.157 -H "Host: myservice.laurivan.com"
 ```
 
 ---
@@ -215,7 +215,7 @@ postBuild:
       kind: Secret
 ```
 
-3. After Flux reconciles, `k8s-gateway` will automatically pick up the new HTTPRoute and start serving DNS for `myservice.laurivan.com` → `10.0.0.157`.
+3. After Flux reconciles, `k8s-gateway` will automatically pick up the new HTTPRoute and start serving DNS for `myservice.laurivan.com` → `192.168.2.157`.
 
 4. No `DNSEndpoint` CRD or Cloudflare changes are needed — `k8s-gateway` handles it.
 
@@ -233,7 +233,7 @@ kubectl get pods -n <namespace>
 kubectl get httproute -n <namespace> -o yaml | grep -A5 "status:"
 
 # 3. Does k8s-gateway resolve the hostname?
-dig +short <hostname>.laurivan.com @10.0.0.156
+dig +short <hostname>.laurivan.com @192.168.2.156
 
 # 4. Is the k8s-gateway HTTPRoute controller active?
 kubectl logs -n network -l app.kubernetes.io/name=k8s-gateway | grep -E "HTTPRoute|error|NXDOMAIN"

@@ -2,20 +2,20 @@
 
 ## Problem
 
-LoadBalancer services with IPs in `10.0.0.0/24` are unreachable when the pods backing them run on worker nodes in `10.0.50.0/24`.
+LoadBalancer services with IPs in `192.168.2.0/24` are unreachable when the pods backing them run on worker nodes in `10.0.50.0/24`.
 
-Cilium L2 announcements work by sending ARP replies for the LoadBalancer IP from the node running the service's backing pods. ARP is a Layer 2 protocol — it only works within the same broadcast domain (subnet). A node on `10.0.50.0/24` cannot ARP for an IP in `10.0.0.0/24` because they are on different VLANs.
+Cilium L2 announcements work by sending ARP replies for the LoadBalancer IP from the node running the service's backing pods. ARP is a Layer 2 protocol — it only works within the same broadcast domain (subnet). A node on `10.0.50.0/24` cannot ARP for an IP in `192.168.2.0/24` because they are on different VLANs.
 
 In this cluster:
-- Control plane nodes (`esxi-2cu-8g-*`) are on `10.0.0.0/24` with `NoSchedule` taints
+- Control plane nodes (`esxi-2cu-8g-*`) are on `192.168.2.0/24` with `NoSchedule` taints
 - Worker nodes (`blade-*`) are on `10.0.50.0/24`
-- LoadBalancer IPs (envoy-external, envoy-internal, k8s-gateway) are in `10.0.0.0/24`
+- LoadBalancer IPs (envoy-external, envoy-internal, k8s-gateway) are in `192.168.2.0/24`
 
-Since no workload pods run on the control plane nodes, no node on `10.0.0.0/24` can announce the LB IPs via ARP.
+Since no workload pods run on the control plane nodes, no node on `192.168.2.0/24` can announce the LB IPs via ARP.
 
 ## Solution
 
-Add tolerations for the `node-role.kubernetes.io/control-plane` taint to the specific services that need LB IPs on `10.0.0.0/24`. This allows only those pods to schedule on control plane nodes while all other workloads remain on workers.
+Add tolerations for the `node-role.kubernetes.io/control-plane` taint to the specific services that need LB IPs on `192.168.2.0/24`. This allows only those pods to schedule on control plane nodes while all other workloads remain on workers.
 
 ### Envoy Gateway
 

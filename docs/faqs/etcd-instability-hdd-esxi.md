@@ -19,8 +19,8 @@ controllers (CNPG, openebs, volsync) crash with `leader election lost` or
 - Talos dmesg shows VIP migrating between nodes:
   ```
   etcd session closed
-  removing shared IP ... ip: 10.0.0.155
-  enabled shared IP ... ip: 10.0.0.155   # on a different node
+  removing shared IP ... ip: 192.168.2.155
+  enabled shared IP ... ip: 192.168.2.155   # on a different node
   ```
 
 ### Root Cause
@@ -35,9 +35,9 @@ When etcd's fsync stalls long enough, it misses its internal heartbeat deadline,
 causing:
 
 1. etcd health check fails (`context deadline exceeded`)
-2. The node holding the VIP (`10.0.0.155`) drops its etcd lease
+2. The node holding the VIP (`192.168.2.155`) drops its etcd lease
 3. The VIP migrates to another node via gratuitous ARP
-4. During the ~30–60s ARP propagation window, `10.0.0.155:6443` is unreachable
+4. During the ~30–60s ARP propagation window, `192.168.2.155:6443` is unreachable
 5. All controllers using leader election lose their leases and crash-restart
 
 The problem is compounded by `esxi-2cu-8g-01` running 52 pods (vs 15–17 on the
@@ -112,9 +112,9 @@ machine:
 
 ```sh
 task talos:generate-config
-task talos:apply-node IP=10.0.0.145 MODE=auto
-task talos:apply-node IP=10.0.0.146 MODE=auto
-task talos:apply-node IP=10.0.0.147 MODE=auto
+task talos:apply-node IP=192.168.2.145 MODE=auto
+task talos:apply-node IP=192.168.2.146 MODE=auto
+task talos:apply-node IP=192.168.2.147 MODE=auto
 ```
 
 ---
@@ -153,9 +153,9 @@ ssh root@<esxi-host> "mkdir -p \
 
 ```sh
 export TALOSCONFIG="talos/clusterconfig/talosconfig"
-talosctl -n 10.0.0.146 shutdown
-talosctl -n 10.0.0.147 shutdown
-talosctl -n 10.0.0.145 shutdown
+talosctl -n 192.168.2.146 shutdown
+talosctl -n 192.168.2.147 shutdown
+talosctl -n 192.168.2.145 shutdown
 ```
 
 Wait for all VMs to power off before proceeding.
@@ -211,7 +211,7 @@ next, to avoid etcd quorum issues during startup.
 
 ```sh
 export TALOSCONFIG="talos/clusterconfig/talosconfig"
-talosctl -n 10.0.0.145 etcd status
+talosctl -n 192.168.2.145 etcd status
 kubectl get nodes
 flux get ks -A
 ```

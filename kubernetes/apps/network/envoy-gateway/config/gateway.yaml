@@ -23,7 +23,7 @@ spec:
   gatewayClassName: envoy
   infrastructure:
     annotations:
-      lbipam.cilium.io/ips: "10.0.0.159"
+      lbipam.cilium.io/ips: "${SVC_ENVOY_INTERNAL_ROOT_IP}"
       gatus.home-operations.com/endpoint: |-
         group: internal
         guarded: true
@@ -74,7 +74,7 @@ spec:
   infrastructure:
     annotations:
       external-dns.alpha.kubernetes.io/hostname: *hostname
-      lbipam.cilium.io/ips: "10.0.0.157"
+      lbipam.cilium.io/ips: "${SVC_ENVOY_INTERNAL_IP}"
   listeners:
     - name: http
       protocol: HTTP
@@ -113,7 +113,7 @@ spec:
   infrastructure:
     annotations:
       external-dns.alpha.kubernetes.io/hostname: *hostname
-      lbipam.cilium.io/ips: "10.0.0.158"
+      lbipam.cilium.io/ips: "${SVC_ENVOY_EXTERNAL_IP}"
   listeners:
     - name: http
       protocol: HTTP
