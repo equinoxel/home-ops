@@ -7,8 +7,8 @@ components:
   - ../../components/common
   - ../../components/network-aliases
   - ../../components/repos/app-template
-resources: []
-  #- ./cnpg
-  #- ./vernemq
-  #- ./dragonfly
-  #- ./mariadb-operator
+resources:
+  - ./cnpg
+  - ./vernemq
+  - ./dragonfly
+  - ./mariadb-operator
