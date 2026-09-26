@@ -19,19 +19,27 @@ releases:
     values: ['./templates/values.yaml.gotmpl']
     needs: ['kube-system/cilium']
 
-  - name: spegel
-    namespace: kube-system
-    chart: oci://ghcr.io/spegel-org/helm-charts/spegel
-    version: 0.7.1
-    values: ['./templates/values.yaml.gotmpl']
-    needs: ['kube-system/coredns']
+  # spegel is a peer-to-peer image mirror; it needs >1 node to bootstrap its
+  # P2P routing table ("routing table is empty after bootstrapping"). Disabled
+  # while the cluster is single-node. Re-enable (and restore the needs chain
+  # below to depend on kube-system/spegel) once a second node is added.
+  # - name: spegel
+  #   namespace: kube-system
+  #   chart: oci://ghcr.io/spegel-org/helm-charts/spegel
+  #   version: 0.7.1
+  #   values: ['./templates/values.yaml.gotmpl']
+  #   needs: ['kube-system/coredns']
 
+  # cert-manager runs in the "security" namespace in this repo (see
+  # kubernetes/apps/security/cert-manager). The namespace here doubles as the
+  # apps-dir used by templates/values.yaml.gotmpl to locate the HelmRelease
+  # values, so it must be "security", not "cert-manager".
   - name: cert-manager
-    namespace: cert-manager
+    namespace: security
     chart: oci://quay.io/jetstack/charts/cert-manager
     version: v1.20.2
     values: ['./templates/values.yaml.gotmpl']
-    needs: ['kube-system/spegel']
+    needs: ['kube-system/coredns']
 
   - name: flux-operator
     namespace: flux-system

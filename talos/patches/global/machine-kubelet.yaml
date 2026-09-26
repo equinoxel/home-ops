@@ -2,14 +2,17 @@ machine:
   kubelet:
     extraConfig:
       serializeImagePulls: false
+      # Reservations sized for a small (2 vCPU) node. The Talos/Kubernetes
+      # defaults (500m+500m CPU) reserve half of a 2-core box, starving app
+      # scheduling. Bump these back up on larger nodes.
       kubeReserved:
-        cpu: 500m
-        memory: 500Mi
+        cpu: 100m
+        memory: 256Mi
       systemReserved:
-        cpu: 500m
-        memory: 500Mi
+        cpu: 100m
+        memory: 256Mi
       evictionHard:
-        memory.available: 500Mi
+        memory.available: 100Mi
     nodeIP:
       validSubnets:
         - 192.168.2.0/24

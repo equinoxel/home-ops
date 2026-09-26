@@ -66,6 +66,26 @@ nodes:
     patches:
       - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/fast-disk.yaml"
+  - hostname: "worker-02-esxi"
+    ipAddress: "192.168.2.16"
+    installDisk: "/dev/sda"
+    machineSpec:
+      secureboot: false
+    talosImageURL: factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba
+    controlPlane: false
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "84:97:87:58:ab:01"
+        dhcp: false
+        addresses:
+          - "192.168.2.16/24"
+        routes:
+          - gateway: "192.168.2.1"
+            network: 0.0.0.0/0
+        mtu: 1500
+    patches:
+      - "@./patches/intel/machine-install.yaml"
+      - "@./patches/worker/fast-disk.yaml"
 
 
 # Global patches

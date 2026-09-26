@@ -6,17 +6,17 @@ namespace: observability
 
 components:
   - ../../components/common
-resources: []
-  #- ./grafana
+resources:
+  - ./grafana
   ## - ./kube-prometheus-stack
-  #- ./prometheus-adapter
-  #- ./prometheus-operator-crds
-  #- ./keda
-  #- ./victoria-metrics
-  #- ./victoria-logs
-  #- ./node-exporter
-  #- ./silence-operator
-  #- ./smartctl-exporter
+  - ./prometheus-adapter
+  - ./prometheus-operator-crds
+  - ./keda
+  - ./victoria-metrics
+  - ./victoria-logs
+  - ./node-exporter
+  - ./silence-operator
+  - ./smartctl-exporter
 
   # - ./unpoller - enable vack when we have the unifi controller set up.
   # Disable headlamp because it's installed as a desktop app

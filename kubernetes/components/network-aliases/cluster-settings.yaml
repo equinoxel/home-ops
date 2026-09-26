@@ -42,4 +42,4 @@ data:
   # Standalone service load balancers.
   SVC_GO2RTC_IP: "192.168.2.157"              # go2rtc-streams.laurivan.com (shares .157 w/ envoy-internal, distinct ports)
   SVC_VERNEMQ_IP: "192.168.2.154"             # mqtt.laurivan.com
-  SVC_UNIFI_STUN_IP: "192.168.2.41"           # unifi STUN
+  SVC_UNIFI_STUN_IP: "192.168.2.41"           # unifi STU
