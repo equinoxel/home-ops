@@ -26,20 +26,21 @@ spec:
       envFrom:
         - secretRef:
             name: &secret authentik-secret
-      # verify-ca (not verify-full): encrypt + verify the server cert against the
-      # CA, but skip hostname verification (postgres is reached via a stable
-      # in-cluster service DNS name). file:// cert paths work for both the
-      # Python server and the Rust worker on 2026.8.x (path handling bug
-      # goauthentik/authentik#22589 fixed after 2026.5.0).
+      # verify-ca: encrypt + verify the server cert against the CA, skip hostname
+      # verification (postgres reached via a stable in-cluster service DNS name).
+      # SSL* values are BARE FILE PATHS (per authentik docs: "Path to the ...
+      # file"). Do NOT use the file:// prefix here — authentik's config loader
+      # treats file://<x> as "read file <x> and use its contents as the value",
+      # which would pass the PEM *content* where libpq expects a path.
       env:
         - name: AUTHENTIK_POSTGRESQL__SSLMODE
           value: verify-ca
         - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
-          value: file:///var/run/secrets/postgresql/ca.crt
+          value: /var/run/secrets/postgresql/ca.crt
         - name: AUTHENTIK_POSTGRESQL__SSLCERT
-          value: file:///var/run/secrets/postgresql/tls.crt
+          value: /var/run/secrets/postgresql/tls.crt
         - name: AUTHENTIK_POSTGRESQL__SSLKEY
-          value: file:///var/run/secrets/postgresql/tls.key
+          value: /var/run/secrets/postgresql/tls.key
       volumeMounts:
         - name: postgres-certs
           mountPath: /var/run/secrets/postgresql
