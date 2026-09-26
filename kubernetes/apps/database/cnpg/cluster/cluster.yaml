@@ -56,8 +56,10 @@ spec:
         barmanObjectName: *name
         serverName: *name
   bootstrap:
-    recovery:
-      source: source
+    # TEMPORARY: S3 barman backup was lost, so bootstrap a fresh empty cluster.
+    # After the first successful backup lands in s3://database/, revert this to
+    # `recovery: { source: source }` so future rebuilds restore from S3.
+    initdb: {}
   externalClusters:
     - name: source
       plugin:
