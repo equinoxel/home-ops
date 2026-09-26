@@ -74,7 +74,7 @@ spec:
       downloads:
         type: nfs
         path: /mnt/Main/shares
-        server: 192.168.2.14
+        server: 192.168.2.44
         globalMounts:
           - path: /data/nas-media/Downloads/qbittorrent
             subPath: Downloads/qbittorrent

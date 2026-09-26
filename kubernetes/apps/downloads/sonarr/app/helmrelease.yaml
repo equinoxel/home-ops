@@ -89,14 +89,14 @@ spec:
           - path: /config/MediaCover
       media:
         type: nfs
-        server: 192.168.2.14
+        server: 192.168.2.44
         path: /mnt/Main/shares/video
         globalMounts:
           - path: /media
       downloads:
         type: nfs
         path: /mnt/Main/shares/Downloads/qbittorrent
-        server: 192.168.2.14
+        server: 192.168.2.44
         globalMounts:
           - path: /qbittorrent
       tmp:

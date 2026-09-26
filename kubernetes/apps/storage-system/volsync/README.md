@@ -66,8 +66,8 @@ Used by: S3 `ReplicationSource`, `kopia-s3` UI, S3 maintenance.
 ```json
 {
   "KOPIA_PASSWORD": "<strong-passphrase>",
-  "AWS_S3_ENDPOINT": "http://192.168.2.14:30186",
-  "REPOSITORY_TEMPLATE": "s3://volsync@192.168.2.14:30188/<bucket-name>",
+  "AWS_S3_ENDPOINT": "http://192.168.2.44:30186",
+  "REPOSITORY_TEMPLATE": "s3://volsync@192.168.2.44:30188/<bucket-name>",
   "AWS_ACCESS_KEY_ID": "<garage-access-key-id>",
   "AWS_SECRET_ACCESS_KEY": "<garage-secret-access-key>"
 }
@@ -81,7 +81,7 @@ Used by: `kopia-s3` UI only (builds the `repository.config` file).
 {
   "KOPIA_PASSWORD": "<strong-passphrase>",
   "BUCKET": "<bucket-name>",
-  "S3_ENDPOINT": "http://192.168.2.14:30188",
+  "S3_ENDPOINT": "http://192.168.2.44:30188",
   "AWS_ACCESS_KEY_ID": "<garage-access-key-id>",
   "AWS_SECRET_ACCESS_KEY": "<garage-secret-access-key>"
 }

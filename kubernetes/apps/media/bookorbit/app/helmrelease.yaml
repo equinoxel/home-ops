@@ -88,7 +88,7 @@ spec:
           - path: /data
       books:
         type: nfs
-        server: 192.168.2.14
+        server: 192.168.2.44
         path: /mnt/Main/shares/books
         globalMounts:
           - path: /books
