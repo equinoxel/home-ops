@@ -8,7 +8,10 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/triggers/0/metadata/query
-        value: max_over_time(probe_success{instance="192.168.2.14:2049"}[1m])
+        # Matches the blackbox NFS probe, which relabels its instance to
+        # nas.servers.internal (see apps/observability/blackbox-exporter probes.yaml).
+        # DNS-based and node-agnostic — don't hardcode a node IP/VIP here.
+        value: max_over_time(probe_success{instance="nas.servers.internal"}[1m])
     target: &target
       group: keda.sh
       kind: ScaledObject
