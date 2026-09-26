@@ -73,6 +73,17 @@ spec:
         serviceMonitor:
           enabled: true
     worker:
+      # The Rust worker (2026.5) treats AUTHENTIK_POSTGRESQL__SSL* values as
+      # inline PEM unless prefixed with file:// — a bare path yields
+      # "no keys found pem file". The Python server wants the bare path, so
+      # override just the worker here. See goauthentik/authentik#22589.
+      env:
+        - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
+          value: file:///var/run/secrets/postgresql/ca.crt
+        - name: AUTHENTIK_POSTGRESQL__SSLCERT
+          value: file:///var/run/secrets/postgresql/tls.crt
+        - name: AUTHENTIK_POSTGRESQL__SSLKEY
+          value: file:///var/run/secrets/postgresql/tls.key
       autoscaling: *autoscaling
       resources:
         requests:
