@@ -26,15 +26,15 @@ spec:
       envFrom:
         - secretRef:
             name: &secret authentik-secret
+      # NOTE: SSL cert *paths* are set per-controller (server vs worker), not
+      # here, because the chart concatenates global.env with <controller>.env —
+      # setting them in both places produces duplicate env keys that SSA rejects.
+      # The Python server wants bare paths; the Rust worker (2026.5) needs
+      # file:// paths or it errors "no keys found pem file"
+      # (goauthentik/authentik#22589).
       env:
         - name: AUTHENTIK_POSTGRESQL__SSLMODE
           value: verify-full
-        - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
-          value: /var/run/secrets/postgresql/ca.crt
-        - name: AUTHENTIK_POSTGRESQL__SSLCERT
-          value: /var/run/secrets/postgresql/tls.crt
-        - name: AUTHENTIK_POSTGRESQL__SSLKEY
-          value: /var/run/secrets/postgresql/tls.key
       volumeMounts:
         - name: postgres-certs
           mountPath: /var/run/secrets/postgresql
@@ -52,6 +52,14 @@ spec:
         port: 587
         use_tls: true
     server:
+      # Python server: bare cert paths.
+      env:
+        - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
+          value: /var/run/secrets/postgresql/ca.crt
+        - name: AUTHENTIK_POSTGRESQL__SSLCERT
+          value: /var/run/secrets/postgresql/tls.crt
+        - name: AUTHENTIK_POSTGRESQL__SSLKEY
+          value: /var/run/secrets/postgresql/tls.key
       autoscaling: &autoscaling
         enabled: true
         minReplicas: 1
