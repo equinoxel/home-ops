@@ -6,6 +6,14 @@ metadata:
   name: laurivan-com
 spec:
   secretName: 'laurivan-com-tls'
+  # Match the ECDSA key of the cert seeded from Bitwarden (import/externalsecret).
+  # Without this, cert-manager defaults to RSA, sees a key-algorithm mismatch
+  # against the seeded EC key (SecretMismatch), and refuses to renew — leaving
+  # the wildcard cert expired and every *.laurivan.com app behind a 502.
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+    rotationPolicy: Always
   issuerRef:
     name: letsencrypt
     kind: ClusterIssuer
