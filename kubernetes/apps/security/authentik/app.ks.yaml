@@ -9,6 +9,16 @@ spec:
   interval: 1h
   components:
     - ../../../../components/cnpg/app
+    # Dragonfly (Redis) access for authentik's cache / task broker / channels /
+    # sessions. Without it authentik falls back to the Postgres DatabaseCache,
+    # which makes logins sluggish.
+    #   - manual: registers the `authentik` Dragonfly ACL user (RSIP) + rediss:// secret
+    #   - helm-tunnel: injects the dragonfly-tunnel sidecar + client cert so
+    #     authentik reaches Dragonfly at localhost:6379 over mTLS via dfguard.
+    # authentik uses its own Helm chart (not app-template), so we compose the
+    # plain helm-tunnel post-renderer with manual rather than app-template-tunnel.
+    - ../../../../components/dragonfly/manual
+    - ../../../../components/dragonfly/helm-tunnel
   path: ./kubernetes/apps/security/authentik/app
   postBuild:
     substitute:
@@ -21,6 +31,8 @@ spec:
   targetNamespace: *namespace
   dependsOn:
     - name: postgres-cluster
+      namespace: database
+    - name: dragonfly-cluster
       namespace: database
     - name: openebs
       namespace: storage-system

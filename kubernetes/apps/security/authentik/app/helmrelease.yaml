@@ -33,6 +33,15 @@ spec:
       # treats file://<x> as "read file <x> and use its contents as the value",
       # which would pass the PEM *content* where libpq expects a path.
       env:
+        # Cache / task-broker / channels / sessions backend. Without a Redis
+        # host authentik silently falls back to the Postgres DatabaseCache
+        # (django_postgres_cache) + django-channels-postgres, which routes every
+        # flow/policy/session cache hit through Postgres and makes logins
+        # sluggish. Point authentik at localhost:6379, which the injected
+        # dragonfly-tunnel sidecar (components/dragonfly/helm-tunnel) forwards to
+        # dfguard -> Dragonfly over mTLS.
+        - name: AUTHENTIK_REDIS__HOST
+          value: localhost
         - name: AUTHENTIK_POSTGRESQL__SSLMODE
           value: verify-ca
         - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
