@@ -7,13 +7,17 @@ metadata:
   namespace: &namespace database
 spec:
   interval: 1h
+  components:
+    # Emits a separate `vernemq-observability` Flux Kustomization that owns the
+    # Grafana dashboard and carries `dependsOn: grafana`. Keeps this app
+    # Kustomization independent of Grafana, so the workload reconciles even when
+    # Grafana is down or a dashboard is stuck (e.g. cold rebuild).
+    - ../../../../components/observability
   path: ./kubernetes/apps/database/vernemq/app
   prune: true
   dependsOn:
     - name: crds-ready
       namespace: flux-system
-    - name: grafana
-      namespace: observability
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -22,6 +26,8 @@ spec:
   postBuild:
     substitute:
       APP: *app
+      APP_NAMESPACE: *namespace
+      OBSERVABILITY_PATH: ./kubernetes/apps/database/vernemq/observability
       SECRET_DOMAIN: laurivan.com
     substituteFrom:
       - name: cluster-settings
