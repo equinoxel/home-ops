@@ -5,4 +5,5 @@ kind: Kustomization
 resources:
   - ./crds.ks.yaml
   - ./app.ks.yaml
+  - ./backup.ks.yaml
   - ./cluster.ks.yaml

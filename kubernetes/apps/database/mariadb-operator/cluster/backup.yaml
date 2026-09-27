@@ -1,0 +1,35 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/k8s.mariadb.com/backup_v1alpha1.json
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Backup
+metadata:
+  name: mariadb-backup
+spec:
+  mariaDbRef:
+    name: mariadb
+  # Daily logical backup (mariadb-dump), mirroring the CNPG ScheduledBackup.
+  schedule:
+    cron: '@daily'
+    suspend: false
+  # 30 day retention, matching the CNPG ObjectStore retentionPolicy (30d).
+  maxRetention: 720h
+  # bzip2 to match the CNPG Barman Cloud compression choice.
+  compression: bzip2
+  storage:
+    s3:
+      # Reuses the shared Postgres/RustFS bucket; backups land under the
+      # "mariadb/" prefix (a trailing slash is added by the operator), keeping
+      # them separate from the Postgres WAL/base backups in the same bucket.
+      bucket: ${S3_MARIADB_BUCKET}
+      prefix: mariadb
+      # Endpoint must be scheme-less; the ExternalSecret strips https:// from
+      # the shared S3_POSTGRES_STORAGE value.
+      endpoint: ${S3_MARIADB_ENDPOINT}
+      tls:
+        enabled: true
+      accessKeyIdSecretKeyRef:
+        name: &secret mariadb-backup-secret
+        key: AWS_ACCESS_KEY_ID
+      secretAccessKeySecretKeyRef:
+        name: *secret
+        key: AWS_SECRET_ACCESS_KEY

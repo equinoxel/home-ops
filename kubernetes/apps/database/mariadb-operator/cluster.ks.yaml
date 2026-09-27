@@ -17,6 +17,15 @@ spec:
   dependsOn:
     - name: mariadb-operator
       namespace: *namespace
+    - name: mariadb-backup-secret
+      namespace: *namespace
+  postBuild:
+    substituteFrom:
+      # Provides S3_MARIADB_ENDPOINT and S3_MARIADB_BUCKET for backup.yaml.
+      # Created by the mariadb-backup-secret Kustomization (dependsOn above).
+      - kind: Secret
+        name: mariadb-backup-secret
+        optional: false
   healthChecks:
     - apiVersion: k8s.mariadb.com/v1alpha1
       kind: MariaDB
