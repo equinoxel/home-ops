@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Close home-ops-553 when MariaDB backups merge to main",
+      "trigger": "SessionStart",
+      "action": {
+        "type": "command",
+        "command": "set -e; cd \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)\"; ISSUE=home-ops-553; FEAT=8e812b3; command -v bd >/dev/null 2>&1 || exit 0; git fetch origin main --quiet 2>/dev/null || exit 0; if ! git merge-base --is-ancestor \"$FEAT\" origin/main 2>/dev/null; then exit 0; fi; STATUS=$(bd show \"$ISSUE\" --json 2>/dev/null | python3 -c \"import sys,json;d=json.load(sys.stdin);print((d[0] if isinstance(d,list) else d).get('status',''))\" 2>/dev/null || echo \"\"); if [ \"$STATUS\" = \"closed\" ]; then exit 0; fi; bd close \"$ISSUE\" 2>/dev/null && echo \"Closed $ISSUE: MariaDB S3 backups commit $FEAT is now merged into origin/main.\"",
+        "timeout": 60
+      }
+    }
+  ]
+}
