@@ -107,6 +107,28 @@ spec:
         enabled: true
         serviceMonitor:
           enabled: true
+      # The server health endpoint (/-/health/live/) runs through the same sync
+      # Django path as normal requests, so under load it can spike well past the
+      # chart's default 3s probe timeout (a no-op call already measured ~1s). The
+      # default liveness probe (timeoutSeconds 3, failureThreshold 3, period 10)
+      # then kills the pod on ~30s of transient latency, which shows up as
+      # "Liveness probe failed: context deadline exceeded" restarts. Loosen the
+      # timeouts (mirroring the worker block) so a slow beat doesn't restart a
+      # pod that is still serving. Liveness is what drives the restart; startup
+      # and readiness get matching headroom so boot 500s / slow readiness don't
+      # flap the pod out of the Service either.
+      startupProbe:
+        timeoutSeconds: 20
+        failureThreshold: 60
+        periodSeconds: 10
+      livenessProbe:
+        timeoutSeconds: 20
+        failureThreshold: 6
+        periodSeconds: 30
+      readinessProbe:
+        timeoutSeconds: 20
+        failureThreshold: 6
+        periodSeconds: 30
     worker:
       # Task processor — not affected by the web sync-serialization issue, keep
       # pinned to a single replica.
