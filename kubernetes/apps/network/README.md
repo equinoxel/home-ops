@@ -36,6 +36,7 @@ Allocated from the `192.168.2.0/24` pool via `CiliumLoadBalancerIPPool`, announc
 | `192.168.2.157` | Envoy Internal Gateway (`*.laurivan.com`) |
 | `192.168.2.158` | Envoy External Gateway (`*.laurivan.com`) |
 | `192.168.2.159` | Envoy Internal Root Gateway (`laurivan.com`) |
+| `192.168.2.160` | Pi-hole DNS (`53/udp`, `53/tcp`); admin at `pihole.laurivan.com` |
 
 ## Multus Networks (NetworkAttachmentDefinitions)
 

@@ -82,7 +82,7 @@ echo "Updating pihole.toml"
 pihole-FTL --config misc.etc_dnsmasq_d true
 pihole-FTL --config dns.blockESNI false
 pihole-FTL --config dns.domain.name internal
-pihole-FTL --config webserver.domain "pihole.tholinka.dev"
+pihole-FTL --config webserver.domain "pihole.laurivan.com"
 pihole-FTL --config dns.revServers '[
 	"true,192.168.5.0/24,192.168.20.1,computers.local",
 	"true,192.168.20.0/24,192.168.20.1,servers.local",
@@ -91,9 +91,9 @@ pihole-FTL --config dns.revServers '[
 	"true,192.168.40.0/24,192.168.20.1,guests.local"
 	]'
 pihole-FTL --config dns.reply.host.force4 true
-pihole-FTL --config dns.reply.host.IPv4 192.168.21.6
+pihole-FTL --config dns.reply.host.IPv4 192.168.2.160
 pihole-FTL --config dns.reply.blocking.force4 true
-pihole-FTL --config dns.reply.blocking.IPv4 192.168.21.6
+pihole-FTL --config dns.reply.blocking.IPv4 192.168.2.160
 pihole-FTL --config misc.nice -999
 pihole-FTL --config misc.check.load false
 pihole-FTL --config dns.ignoreLocalhost true

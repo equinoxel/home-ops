@@ -176,11 +176,11 @@ spec:
         forceRename: *app
         controller: *app
         type: LoadBalancer
-        ipFamilies: [IPv4, IPv6]
-        ipFamilyPolicy: PreferDualStack
+        ipFamilies: [IPv4]
+        ipFamilyPolicy: SingleStack
         externalTrafficPolicy: Local
         annotations:
-          lbipam.cilium.io/ips: 192.168.21.6, fd83:43a4:6dab:21::6
+          lbipam.cilium.io/ips: 192.168.2.160
         ports:
           dns-udp:
             port: 53
@@ -215,7 +215,7 @@ spec:
     route:
       app:
         hostnames:
-          - '{{ .Release.Name }}.tholinka.dev'
+          - '{{ .Release.Name }}.laurivan.com'
         parentRefs:
           - name: envoy-internal
             namespace: network
