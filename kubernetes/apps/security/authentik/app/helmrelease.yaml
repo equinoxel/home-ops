@@ -43,6 +43,17 @@ spec:
           value: '300'
         - name: AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS
           value: 'true'
+        # Django views/middleware run sync under ASGI, and asgiref routes
+        # thread-sensitive sync work onto a SINGLE thread per gunicorn worker
+        # (ThreadPoolExecutor(max_workers=1)). So effective request parallelism
+        # equals the worker count, not web.threads. With 2 workers the server
+        # serialized at ~2 concurrent requests (profiled with py-spy: event loop
+        # stuck in asgiref sync_to_async waiting on the single sync thread doing
+        # psycopg calls). Raise workers so logins (many sequential sub-requests)
+        # don't queue. Keep memory limit ahead of worker count (each worker is a
+        # full python process ~300Mi).
+        - name: AUTHENTIK_WEB__WORKERS
+          value: '4'
         - name: AUTHENTIK_POSTGRESQL__SSLMODE
           value: verify-ca
         - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
@@ -80,10 +91,14 @@ spec:
             stabilizationWindowSeconds: 300
       resources:
         requests:
-          cpu: 50m
-          memory: 256Mi
+          # 50m was far below actual usage (~230m under light load), starving
+          # the pod of CPU share under node contention. 4 web workers need
+          # headroom; each worker is a full python process (~300Mi), so raise
+          # the memory limit above the previous 878Mi/1Gi ceiling to avoid OOM.
+          cpu: 250m
+          memory: 512Mi
         limits:
-          memory: 1Gi
+          memory: 2Gi
       metrics:
         enabled: true
         serviceMonitor:
