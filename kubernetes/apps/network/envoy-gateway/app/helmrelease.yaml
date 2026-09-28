@@ -17,6 +17,9 @@ spec:
       imageRegistry: mirror.gcr.io
     config:
       envoyGateway:
+        # Required to route HTTPRoutes to off-cluster endpoints (ip:port) via the Backend CRD
+        extensionApis:
+          enableBackend: true
         provider:
           type: Kubernetes
           kubernetes:

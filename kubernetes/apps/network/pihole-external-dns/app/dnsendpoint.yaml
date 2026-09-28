@@ -1,0 +1,22 @@
+---
+# Direct-IP DNS records for out-of-cluster hosts reached by NON-HTTP protocols
+# (NFS, SMB/Samba, etc). These must resolve straight to the appliance IP — NOT to
+# the Envoy gateway — because Envoy only reverse-proxies HTTP(S).
+#
+# HTTP services on the same box (UI, RustFS) are handled separately as reverse-proxy
+# routes on envoy-internal (see envoy-gateway/config/external-routes.yaml). Keep the
+# proxied web hostname (nas.laurivan.com) distinct from this direct-IP name so the
+# two don't collide.
+#
+# Published into Pi-hole by pihole-external-dns via its `crd` source.
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: external-hosts
+spec:
+  endpoints:
+    # TrueNAS box direct IP — used for NFS mounts and SMB/Samba shares,
+    # e.g. mount //truenas.laurivan.com/share or an NFS export.
+    - dnsName: "truenas.${SECRET_DOMAIN}"
+      recordType: A
+      targets: ["192.168.2.44"]

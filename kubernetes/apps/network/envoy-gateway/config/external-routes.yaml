@@ -1,0 +1,102 @@
+---
+# Reverse-proxy routes for HTTP services that live OUTSIDE the cluster (NAS,
+# appliances, object storage, etc). Each service is a Backend (the real ip:port)
+# plus an HTTPRoute (the alias -> that Backend) attached to the internal gateway.
+#
+# Because the HTTPRoutes sit on envoy-internal, pihole-external-dns publishes the
+# hostnames to Pi-hole automatically (no DNSEndpoint needed) and Envoy terminates
+# TLS with the *.laurivan.com wildcard cert.
+#
+# NOTE: Only HTTP(S) services belong here. NFS/SMB are not HTTP and must not be
+# proxied — they get a direct-IP DNS record instead (see pihole-external-dns).
+#
+# Requires EnvoyGateway.spec.extensionApis.enableBackend: true (set in the operator HelmRelease).
+
+# ---------------------------------------------------------------------------
+# TrueNAS web UI  ->  http://192.168.2.44:80
+# ---------------------------------------------------------------------------
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: nas
+spec:
+  endpoints:
+    - ip:
+        address: 192.168.2.44
+        port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: nas
+spec:
+  hostnames: ["nas.${SECRET_DOMAIN}"]
+  parentRefs:
+    - name: envoy-internal
+      namespace: network
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: nas
+          port: 80
+
+# ---------------------------------------------------------------------------
+# RustFS web console  ->  http://192.168.2.44:30293
+# ---------------------------------------------------------------------------
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: rustfs
+spec:
+  endpoints:
+    - ip:
+        address: 192.168.2.44
+        port: 30293
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: rustfs
+spec:
+  hostnames: ["rustfs.${SECRET_DOMAIN}"]
+  parentRefs:
+    - name: envoy-internal
+      namespace: network
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: rustfs
+          port: 30293
+
+# ---------------------------------------------------------------------------
+# RustFS S3 API  ->  http://192.168.2.44:30292   (served at hostname root)
+# ---------------------------------------------------------------------------
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: s3
+spec:
+  endpoints:
+    - ip:
+        address: 192.168.2.44
+        port: 30292
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: s3
+spec:
+  hostnames: ["s3.${SECRET_DOMAIN}"]
+  parentRefs:
+    - name: envoy-internal
+      namespace: network
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: s3
+          port: 30292
