@@ -7,9 +7,12 @@ metadata:
 spec:
   mariaDbRef:
     name: mariadb
-  # Daily logical backup (mariadb-dump), mirroring the CNPG ScheduledBackup.
+  # Daily logical backup (mariadb-dump). mariadb-operator's cron parser rejects
+  # descriptor shorthands like "@daily" (unlike CNPG), so use an explicit
+  # expression. 03:00 daily — offset from the CNPG Postgres backup (midnight)
+  # to avoid both hitting the shared S3 bucket at once.
   schedule:
-    cron: '@daily'
+    cron: '0 3 * * *'
     suspend: false
   # 30 day retention, matching the CNPG ObjectStore retentionPolicy (30d).
   maxRetention: 720h
