@@ -8,7 +8,8 @@ components:
   - ../../components/common
   - ../../components/sops
   - ../../components/repos/app-template
-resources: []
+resources:
+  - ./papra
   #- ./bookorbit
   # - ./grimmory
   #- ./mealie
