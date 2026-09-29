@@ -43,6 +43,49 @@ tasks:
       - test -f {{.ROOT_DIR}}/.sops.yaml
       - test -f {{.SCRIPTS_DIR}}/bootstrap-apps.sh
       - test -f {{.SOPS_AGE_KEY_FILE}}
+
+  list-ip:
+    desc: List all known cluster IP addresses and what lives at each (nodes, API/VIP, gateways, service LBs, appliances)
+    dir: "{{.ROOT_DIR}}"
+    silent: true
+    cmds:
+      - |
+        printf '%-18s  %-22s  %s\n' "IP ADDRESS" "WHAT" "SOURCE / NOTES"
+        printf '%-18s  %-22s  %s\n' "------------------" "----------------------" "------------------------------"
+
+        # --- Control-plane VIP / API endpoints (kubectl + talosctl) ---
+        VIP=$(grep -E '^endpoint:' {{.TALOS_DIR}}/talconfig.yaml | sed -E 's#.*//([0-9.]+):.*#\1#')
+        printf '%-18s  %-22s  %s\n' "$VIP" "kubectl / talosctl" "control-plane VIP (Talos endpoint, k8s API :6443)"
+
+        # --- Talos nodes (talosctl per-node) ---
+        awk '
+          /^[[:space:]]*- hostname:/ { gsub(/"/,"",$3); host=$3 }
+          /^[[:space:]]*ipAddress:/  { gsub(/"/,"",$2); printf "%-18s  %-22s  %s\n", $2, "talosctl node", host }
+        ' {{.TALOS_DIR}}/talconfig.yaml
+
+        # --- Live LoadBalancer service IPs from the cluster (authoritative) ---
+        if [ -f {{.KUBECONFIG}} ]; then
+          kubectl get svc -A -o jsonpath='{range .items[?(@.status.loadBalancer.ingress)]}{.status.loadBalancer.ingress[0].ip}{"\t"}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' 2>/dev/null \
+            | sort -t. -k4 -n \
+            | while IFS="$(printf '\t')" read -r ip svc; do
+                printf '%-18s  %-22s  %s\n' "$ip" "service LB" "$svc"
+              done
+        fi
+
+        # --- Curated named aliases (cluster-settings ConfigMap: appliances, gateways, etc.) ---
+        echo ""
+        echo "Named aliases (kubernetes/components/network-aliases/cluster-settings.yaml):"
+        awk '
+          /^[[:space:]]*SVC_[A-Z0-9_]+:/ {
+            key=$1; sub(/:$/,"",key);
+            ip=$2; gsub(/"/,"",ip);
+            note=""; if (match($0, /#.*/)) note=substr($0, RSTART+2);
+            printf "  %-18s  %-28s %s\n", ip, key, note
+          }
+        ' {{.KUBERNETES_DIR}}/components/network-aliases/cluster-settings.yaml
+    preconditions:
+      - test -f {{.TALOS_DIR}}/talconfig.yaml
+      - test -f {{.KUBERNETES_DIR}}/components/network-aliases/cluster-settings.yaml
   scan:
     desc: List machines on your 192.168.x.x subnets [CIDR=192.168.0.0/16] (use SUDO=1 for OS detection)
     dir: "{{.ROOT_DIR}}"
