@@ -15,6 +15,11 @@ spec:
     substituteFrom:
       - name: cluster-settings
         kind: ConfigMap
+      # external-routes.yaml uses ${SECRET_DOMAIN}, which lives in the SOPS
+      # cluster-secrets Secret (not the cluster-settings ConfigMap). Without
+      # this the hostname rendered as "nas." and the HTTPRoute was rejected.
+      - name: cluster-secrets
+        kind: Secret
   prune: true
   sourceRef:
     kind: GitRepository
