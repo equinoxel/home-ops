@@ -28,7 +28,7 @@ spec:
             env:
               TZ: Europe/Bucharest
               PORT: &port 1221
-              APP_BASE_URL: https://papra.laurivan.com
+              APP_BASE_URL: https://docs.laurivan.com
               AUTH_IS_REGISTRATION_ENABLED: "false"
               # Document storage: S3 (RustFS). The SQLite database still lives on
               # the PVC at /app/app-data/db; only document blobs go to S3.
@@ -44,7 +44,7 @@ spec:
               AI_IS_ENABLED: "false"
               AUTO_TAGGING_ENABLED: "true"
               # Model nomenclature is <adapter>://<model>, e.g. ollama://qwen3:8b.
-              AI_DEFAULT_MODEL: ollama://qwen3:8b
+              #AI_DEFAULT_MODEL: ollama://qwen3:8b
             envFrom:
               - secretRef:
                   name: *app
