@@ -30,6 +30,21 @@ spec:
               PORT: &port 1221
               APP_BASE_URL: https://papra.laurivan.com
               AUTH_IS_REGISTRATION_ENABLED: "false"
+              # Document storage: S3 (RustFS). The SQLite database still lives on
+              # the PVC at /app/app-data/db; only document blobs go to S3.
+              DOCUMENT_STORAGE_DRIVER: s3
+              DOCUMENT_STORAGE_S3_REGION: auto
+              # RustFS is path-style (endpoint/bucket/key), not virtual-host, so
+              # this must be true or uploads 404.
+              DOCUMENT_STORAGE_S3_FORCE_PATH_STYLE: "true"
+              # Endpoint, bucket, and credentials come from the papra secret
+              # (see externalsecret.yaml).
+              # AI features (Ollama). Disabled until an Ollama endpoint exists.
+              # Flip AI_IS_ENABLED to "true" and set OLLAMA_BASE_URL below.
+              AI_IS_ENABLED: "false"
+              AUTO_TAGGING_ENABLED: "true"
+              # Model nomenclature is <adapter>://<model>, e.g. ollama://qwen3:8b.
+              AI_DEFAULT_MODEL: ollama://qwen3:8b
             envFrom:
               - secretRef:
                   name: *app

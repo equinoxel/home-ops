@@ -16,7 +16,9 @@ spec:
   postBuild:
     substitute:
       APP: *app
-      VOLSYNC_CAPACITY: 20Gi
+      # Documents live in S3 (RustFS); the PVC only holds the SQLite database,
+      # so a few Gi is plenty. Raise if the DB grows.
+      VOLSYNC_CAPACITY: 5Gi
   prune: true
   sourceRef:
     kind: GitRepository
