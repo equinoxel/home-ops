@@ -40,11 +40,17 @@ spec:
               # Endpoint, bucket, and credentials come from the papra secret
               # (see externalsecret.yaml).
               # AI features (Ollama). Disabled until an Ollama endpoint exists.
-              # Flip AI_IS_ENABLED to "true" and set OLLAMA_BASE_URL below.
+              # To enable: flip AI_IS_ENABLED to "true", uncomment AI_DEFAULT_MODEL,
+              # and point OLLAMA_BASE_URL at a real endpoint (keep the /v1 suffix).
               AI_IS_ENABLED: "false"
               AUTO_TAGGING_ENABLED: "true"
               # Model nomenclature is <adapter>://<model>, e.g. ollama://qwen3:8b.
               #AI_DEFAULT_MODEL: ollama://qwen3:8b
+              # Ollama ignores auth, so "ollama" is the conventional no-auth key.
+              # These are plain placeholders (not secrets); set a real base URL
+              # before enabling AI.
+              OLLAMA_API_KEY: ollama
+              OLLAMA_BASE_URL: http://ollama.ollama.svc.cluster.local:11434/v1
             envFrom:
               - secretRef:
                   name: *app

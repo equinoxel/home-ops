@@ -15,35 +15,30 @@
 
 Documents go to RustFS over the S3 driver (`DOCUMENT_STORAGE_DRIVER: s3`); only the SQLite database stays on disk under `/app/app-data/db`. The `volsync` component provisions a PVC named `papra` for that database and backs it up on the standard local and S3 Kopia schedules. Because documents no longer sit on the PVC, `VOLSYNC_CAPACITY` is `5Gi`.
 
-S3 settings live in `app/helmrelease.yaml` (driver, region `auto`, and `DOCUMENT_STORAGE_S3_FORCE_PATH_STYLE: "true"`, which RustFS requires) and `app/externalsecret.yaml` (endpoint, bucket, credentials). The bucket is `papra`. Credentials and endpoint are the shared RustFS values reused from the Bitwarden `cloudnative_pg` item, the same ones Postgres and MariaDB back up with.
+S3 settings live in `app/helmrelease.yaml` (driver, region `auto`, and `DOCUMENT_STORAGE_S3_FORCE_PATH_STYLE: "true"`, which RustFS requires) and `app/externalsecret.yaml` (endpoint, bucket, credentials). Documents land in the existing `documents` bucket. Credentials and endpoint are the shared RustFS values reused from the Bitwarden `cloudnative_pg` item, the same ones Postgres and MariaDB back up with.
 
-Prerequisite: the `papra` bucket must exist in RustFS before Papra starts writing. Papra's S3 driver does not create it. Create it once with `mc`, using the shared RustFS credentials:
+The `documents` bucket already exists in RustFS, so no bucket creation is needed. Papra's S3 driver writes under that bucket; it does not create buckets itself.
 
-```bash
-mc alias set rustfs http://192.168.2.44:30292 <access-key> <secret-key>
-mc mb --ignore-existing rustfs/papra
-```
-
-Backups are now split: the SQLite database is covered by VolSync on the PVC, and document blobs live in the RustFS `papra` bucket (back that bucket up on the RustFS side if you want document redundancy).
+Backups are now split: the SQLite database is covered by VolSync on the PVC, and document blobs live in the RustFS `documents` bucket (back that bucket up on the RustFS side if you want document redundancy).
 
 ## Secret
 
 Papra reads several values from Bitwarden through the `bitwarden` `ClusterSecretStore`. Two Bitwarden items are involved:
 
-- `papra` (matching `dataFrom.extract.key` in `externalsecret.yaml`): the auth secret, the Authentik OIDC client credentials, and the Ollama fields.
+- `papra` (matching `dataFrom.extract.key` in `externalsecret.yaml`): the auth secret and the Authentik OIDC client credentials.
 - `cloudnative_pg` (already present, reused): the shared RustFS S3 access key, secret key, and endpoint.
 
-Generate `AUTH_SECRET` with `openssl rand -hex 48` (at least 32 characters). Get `PAPRA_OIDC_CLIENT_ID` and `PAPRA_OIDC_CLIENT_SECRET` from the Authentik provider you create in the SSO section below. The Ollama fields are placeholders until you enable AI (see the AI section). Drop this JSON into the `papra` item's field set:
+Generate `AUTH_SECRET` with `openssl rand -hex 48` (at least 32 characters). Get `PAPRA_OIDC_CLIENT_ID` and `PAPRA_OIDC_CLIENT_SECRET` from the Authentik provider you create in the SSO section below. Drop this JSON into the `papra` item's field set:
 
 ```json
 {
   "AUTH_SECRET": "<openssl rand -hex 48>",
   "PAPRA_OIDC_CLIENT_ID": "<authentik client id>",
-  "PAPRA_OIDC_CLIENT_SECRET": "<authentik client secret>",
-  "OLLAMA_API_KEY": "ollama",
-  "OLLAMA_BASE_URL": "http://<ollama-host>:11434/v1"
+  "PAPRA_OIDC_CLIENT_SECRET": "<authentik client secret>"
 }
 ```
+
+The Ollama settings are plain placeholders in `app/helmrelease.yaml`, not Bitwarden fields, so they are not part of this JSON.
 
 The ExternalSecret assembles these into the `papra` Kubernetes secret, including the `AUTH_PROVIDERS_CUSTOMS` JSON that wires up the Authentik login button and the S3 credentials. Rotating any value: update it in Bitwarden, let the ExternalSecret refresh, and the stakater reloader annotation restarts the pod so the new value takes effect.
 
@@ -103,14 +98,14 @@ What is already set in `app/helmrelease.yaml`:
 - `AUTO_TAGGING_ENABLED: "true"` (the auto-tag feature; still gated by the master switch).
 - `AI_DEFAULT_MODEL: ollama://qwen3:8b` (model nomenclature is `<adapter>://<model>`).
 
-The Ollama connection settings come from the `papra` secret via `app/externalsecret.yaml`:
+The Ollama connection settings are plain env values in `app/helmrelease.yaml` (not secrets, so they are not in Bitwarden):
 
 - `OLLAMA_API_KEY`: Ollama ignores auth, so the literal `ollama` is a fine placeholder.
-- `OLLAMA_BASE_URL`: must point at the Ollama endpoint and keep the `/v1` suffix, e.g. `http://ollama.<namespace>.svc.cluster.local:11434/v1`.
+- `OLLAMA_BASE_URL`: must point at the Ollama endpoint and keep the `/v1` suffix. The placeholder is `http://ollama.ollama.svc.cluster.local:11434/v1`.
 
 To turn it on once an Ollama instance exists:
 
-1. Set `OLLAMA_BASE_URL` (and pull the model, e.g. `ollama pull qwen3:8b`) in the `papra` Bitwarden item.
-2. Flip `AI_IS_ENABLED` to `"true"` in `app/helmrelease.yaml`.
+1. Set `OLLAMA_BASE_URL` in `app/helmrelease.yaml` to the real endpoint (and pull the model, e.g. `ollama pull qwen3:8b`).
+2. Flip `AI_IS_ENABLED` to `"true"` and uncomment `AI_DEFAULT_MODEL` in `app/helmrelease.yaml`.
 3. Adjust `AI_DEFAULT_MODEL` if you run a different model. Per-feature overrides exist too (`AUTO_TAGGING_MODEL` takes precedence over `AI_DEFAULT_MODEL`).
 4. Reconcile. Auto-tagging also has to be enabled per organization in Papra's settings.
