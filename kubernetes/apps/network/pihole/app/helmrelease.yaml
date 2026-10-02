@@ -156,7 +156,7 @@ spec:
             # neither; keep only container-valid fields here.
             securityContext:
               allowPrivilegeEscalation: false
-              readOnlyRootFileSystem: true
+              readOnlyRootFilesystem: true
               capabilities: { drop: ['ALL'] }
               runAsNonRoot: true
               runAsUser: 1000
