@@ -146,10 +146,12 @@ spec:
     persistence:
       config:
         existingClaim: "{{ .Release.Name }}"
+        # Mount the PVC directly at /etc/pihole. subPath is avoided because the
+        # openebs-hostpath volume root is owned by GID 0 while the pod runs as
+        # 1000, so the kubelet cannot create subPath subdirectories (that was
+        # the "failed to create subPath directory" error). This image only needs
+        # /etc/pihole; the old /final path was for the removed init container.
         advancedMounts:
           pihole:
             app:
               - path: /etc/pihole
-                subPath: pihole
-              - path: /final
-                subPath: init
