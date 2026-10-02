@@ -58,7 +58,7 @@ spec:
         statefulset:
           volumeClaimTemplates:
             - name: config
-              storageClass: ceph-block
+              storageClass: openebs-hostpath
               accessMode: ReadWriteOnce
               size: 2Gi
               advancedMounts:
