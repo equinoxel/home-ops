@@ -9,7 +9,7 @@ spec:
   path: ./kubernetes/apps/default/pihole/app
   dependsOn:
     - name: volsync
-      namespace: volsync-system
+      namespace: storage-system
   components:
     - ../../../../components/volsync
   postBuild:
