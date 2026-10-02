@@ -44,6 +44,10 @@ spec:
               # and point OLLAMA_BASE_URL at a real endpoint (keep the /v1 suffix).
               AI_IS_ENABLED: "false"
               AUTO_TAGGING_ENABLED: "true"
+              # Max tags per organization (server-wide; applies to every org).
+              # Default is 200. Raised for the Paperless import, which brings in
+              # ~300 tags plus document types and per-user owner tags.
+              MAX_TAGS_PER_ORGANIZATION: "1000"
               # Model nomenclature is <adapter>://<model>, e.g. ollama://qwen3:8b.
               #AI_DEFAULT_MODEL: ollama://qwen3:8b
               # Ollama ignores auth, so "ollama" is the conventional no-auth key.
@@ -80,9 +84,13 @@ spec:
             resources:
               requests:
                 cpu: 10m
-                memory: 128Mi
+                memory: 256Mi
+              # Papra buffers uploads and runs content extraction + auto-tagging
+              # in-process; bulk imports spike memory well past the ~285Mi idle
+              # footprint. 512Mi OOM-killed the pod during a migration run, so
+              # give it real headroom.
               limits:
-                memory: 512Mi
+                memory: 1Gi
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
