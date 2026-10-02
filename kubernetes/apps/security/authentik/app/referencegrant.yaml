@@ -14,6 +14,8 @@ spec:
     - <<: *policy
       namespace: default
     - <<: *policy
+      namespace: development
+    - <<: *policy
       namespace: downloads
     - <<: *policy
       namespace: flux-system

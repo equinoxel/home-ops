@@ -12,6 +12,9 @@ spec:
     - ../../../../components/anubis
     - ../../../../components/dragonfly/app-template-tunnel
     - ../../../../components/volsync
+    # Authentik forward-auth: redirects unauthenticated requests to Authentik.
+    # Targets the HTTPRoute named ${APP} (forgejo) on envoy-external.
+    - ../../../../components/ext-auth
   dependsOn:
     - name: dragonfly-cluster
       namespace: database
