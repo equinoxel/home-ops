@@ -3,11 +3,16 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: pihole
+  name: &app pihole
   namespace: &namespace network
 spec:
   interval: 1h
   targetNamespace: *namespace
+  components:
+    # Emits a separate `pihole-observability` Flux Kustomization that owns the
+    # Grafana dashboard and carries `dependsOn: grafana`. Keeps DNS independent
+    # of Grafana, so pihole reconciles even when Grafana is down or starved.
+    - ../../../../components/observability
   path: ./kubernetes/apps/network/pihole/app
   prune: true
   sourceRef:
@@ -17,6 +22,9 @@ spec:
   dependsOn:
     - name: storage-ready
       namespace: flux-system
-    - name: grafana
-      namespace: observability
+  postBuild:
+    substitute:
+      APP: *app
+      APP_NAMESPACE: *namespace
+      OBSERVABILITY_PATH: ./kubernetes/apps/network/pihole/observability
   wait: true
