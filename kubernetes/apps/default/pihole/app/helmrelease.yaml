@@ -100,7 +100,7 @@ spec:
         type: LoadBalancer
         annotations:
           external-dns.alpha.kubernetes.io/hostname: "pihole-dns.${SECRET_DOMAIN}"
-          lbipam.cilium.io/ips: 192.168.30.53
+          lbipam.cilium.io/ips: 192.168.2.160
         primary: true
         ports:
           http:
