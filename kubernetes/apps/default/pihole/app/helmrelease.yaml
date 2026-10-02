@@ -1,0 +1,155 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: pihole
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: pihole
+  interval: 1h
+  values:
+    controllers:
+      pihole:
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          securityContext:
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+        containers:
+          app:
+            image:
+              repository: ghcr.io/sujiba/pihole-unbound-hyperlocal
+              tag: 2026.09.0
+            env:
+              FTLCONF_dns_listeningMode: all
+              FTLCONF_dns_dnssec: 'false'
+              FTLCONF_dns_upstreams: 192.168.2.1
+              FTLCONF_webserver_interface_boxed: false
+              FTLCONF_webserver_interface_theme: default-auto
+              FTLCONF_webserver_port: &pihole-port 80
+              FTLCONF_webserver_api_password: &pihole-password
+                valueFrom:
+                  secretKeyRef:
+                    name: pihole-secret
+                    key: password
+            # probes:
+            #   liveness: &pihole-probes
+            #     enabled: true
+            #     custom: true
+            #     spec:
+            #       exec:
+            #         command:
+            #           - /usr/bin/nslookup
+            #           - pihole
+            #           - '127.0.0.1'
+            #   startup: *pihole-probes
+            #   readiness: *pihole-probes
+            securityContext:
+              allowPrivilegeEscalation: false
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 512Mi
+          exporter: &exporter
+            image:
+              repository: docker.io/ekofr/pihole-exporter
+              tag: v1.2.0
+            env: &exporterEnv
+              PIHOLE_HOSTNAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+              PIHOLE_PORT: *pihole-port
+              PIHOLE_PASSWORD: *pihole-password
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 32Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ['ALL'] }
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+            probes:
+              liveness: &exporter-probes
+                enabled: true
+                custom: true
+                spec:
+                  failureThreshold: 5
+                  initialDelaySeconds: 20
+                  periodSeconds: 20
+                  successThreshold: 1
+                  httpGet:
+                    path: /metrics
+                    port: &exporter-port 9617
+                  timeoutSeconds: 10
+              readiness: *exporter-probes
+
+    service:
+      app:
+        forceRename: "{{ .Release.Name }}"
+        type: LoadBalancer
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: "pihole-dns.${SECRET_DOMAIN}"
+          lbipam.cilium.io/ips: 192.168.30.53
+        primary: true
+        ports:
+          http:
+            primary: true
+            port: *pihole-port
+          dns-udp:
+            port: 53
+            protocol: UDP
+          dns-tcp:
+            port: 53
+            protocol: TCP
+          prometheus:
+            port: *exporter-port
+            protocol: HTTP
+
+    serviceMonitor:
+      app:
+        forceRename: "{{ .Release.Name }}"
+        service:
+          identifier: app
+        endpoints:
+          - port: prometheus # exporter-port's name
+            scheme: http
+            path: /metrics
+            interval: 1m
+            scrapeTimeout: 1m
+
+    route:
+      app:
+        annotations:
+          gatus.home-operations.com/endpoint: |-
+            conditions: ["[STATUS] == 403"]
+        forceRename: "{{ .Release.Name }}"
+        hostnames:
+          - "pihole.${SECRET_DOMAIN}"
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *pihole-port
+    persistence:
+      config:
+        existingClaim: "{{ .Release.Name }}"
+        advancedMounts:
+          pihole:
+            app:
+              - path: /etc/pihole
+                subPath: pihole
+              - path: /final
+                subPath: init
