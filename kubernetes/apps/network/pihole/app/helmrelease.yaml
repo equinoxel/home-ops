@@ -150,6 +150,10 @@ spec:
                     port: &exporter-port 9617
                   timeoutSeconds: 10
               readiness: *exporter-probes
+            # fsGroup/fsGroupChangePolicy are pod-level fields and the
+            # app-template v5 schema rejects them on a container securityContext.
+            # The exporter has a read-only root and no mounts, so it needs
+            # neither; keep only container-valid fields here.
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFileSystem: true
@@ -157,8 +161,6 @@ spec:
               runAsNonRoot: true
               runAsUser: 1000
               runAsGroup: 1000
-              fsGroup: 1000
-              fsGroupChangePolicy: OnRootMismatch
 
       nas-exporter: # also setup exporter for nas' pihole instance
         containers:
