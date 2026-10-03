@@ -244,7 +244,8 @@ class HttpClient:
             # Drop None values so optional params stay optional.
             clean = {k: v for k, v in query.items() if v is not None}
             if clean:
-                url = f"{url}?{urlencode(clean)}"
+                delimiter = "&" if "?" in url else "?"
+                url = f"{url}{delimiter}{urlencode(clean)}"
 
         body = data
         headers = {"Authorization": f"{self.auth_scheme} {self.token}"}
@@ -320,11 +321,14 @@ class PaperlessClient:
     def __init__(self, http: HttpClient) -> None:
         self.http = http
 
-    def _paginate(self, path: str) -> Iterator[dict[str, Any]]:
+    def _paginate(self, path: str, query: dict[str, Any] | None = None) -> Iterator[dict[str, Any]]:
         """Yield every result across all pages of a list endpoint."""
         page = 1
+        base_query = dict(query) if query else {}
         while True:
-            data = self.http.get_json(path, query={"page": page, "page_size": 100})
+            params = {"page": page, "page_size": 100}
+            params.update(base_query)
+            data = self.http.get_json(path, query=params)
             results = data.get("results", []) if isinstance(data, dict) else []
             yield from results
             if not isinstance(data, dict) or not data.get("next"):
@@ -369,7 +373,7 @@ class PaperlessClient:
 
     def documents(self) -> Iterator[PaperlessDocument]:
         """Yield every document (metadata only), oldest first for stable runs."""
-        for item in self._paginate("api/documents/?ordering=added"):
+        for item in self._paginate("api/documents/", query={"ordering": "added"}):
             yield PaperlessDocument(
                 id=item["id"],
                 title=item.get("title") or f"document-{item['id']}",
