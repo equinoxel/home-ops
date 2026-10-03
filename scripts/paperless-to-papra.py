@@ -898,16 +898,38 @@ def run(config: Config) -> int:
     scanned = 0
     for doc in paperless.documents():
         scanned += 1
+        desc = f"#{doc.id} {doc.title!r}"
+        if doc.original_file_name and doc.original_file_name != doc.title:
+            desc += f" ({doc.original_file_name})"
+        if doc.created:
+            date_str = doc.created.split("T")[0] if "T" in doc.created else doc.created
+            desc += f" [{date_str}]"
+        log(f"  [{scanned}] Scanning {desc} ...")
+
         file_bytes = paperless.download_original(doc.id)
         digest = sha256_bytes(file_bytes)
+        if len(file_bytes) < 1024:
+            size_str = f"{len(file_bytes)} B"
+        elif len(file_bytes) < 1024 * 1024:
+            size_str = f"{len(file_bytes) / 1024:.1f} KB"
+        else:
+            size_str = f"{len(file_bytes) / (1024 * 1024):.1f} MB"
+
         if state.is_uploaded(digest):
+            log(f"       -> downloaded {size_str}, sha256={digest[:12]}… (already uploaded, skipping)")
             continue
+
         pending.append((doc, file_bytes, digest))
+        log(f"       -> downloaded {size_str}, sha256={digest[:12]}… (pending upload {len(pending)}/{config.max_records})")
         if len(pending) >= config.max_records:
+            log(f"  Reached limit of {config.max_records} pending document(s); stopping scan.")
             break
 
     if not pending:
-        log(f"Nothing to do: scanned {scanned} document(s), all already uploaded.")
+        if scanned == 0:
+            log("No documents found in Paperless.")
+        else:
+            log(f"Nothing to do: scanned {scanned} document(s), all already uploaded.")
         return 0
 
     log(f"Scanned {scanned} document(s); uploading up to {len(pending)} new one(s).")
