@@ -311,6 +311,7 @@ class PaperlessDocument:
     document_type_id: int | None
     correspondent_id: int | None
     owner_id: int | None
+    created: str | None  # Paperless document date (ISO 8601), used as Papra documentDate.
 
 
 class PaperlessClient:
@@ -377,6 +378,8 @@ class PaperlessClient:
                 document_type_id=item.get("document_type"),
                 correspondent_id=item.get("correspondent"),
                 owner_id=item.get("owner"),
+                # Paperless exposes the document date as "created" (ISO 8601).
+                created=item.get("created"),
             )
 
     def download_original(self, document_id: int) -> bytes:
@@ -495,6 +498,18 @@ class PapraClient:
 
     # -- documents --------------------------------------------------------- #
 
+    def set_document_date(self, document_id: str, iso_date: str) -> None:
+        """Set a document's date via PATCH.
+
+        Papra's upload endpoint ignores dates, so the Paperless ``created`` date
+        is applied afterwards. The ``documentDate`` field accepts an ISO 8601
+        string (the server coerces it to a Date).
+        """
+        self.http.request(
+            "PATCH", self._org_path(f"documents/{document_id}"),
+            json_body={"documentDate": iso_date},
+        )
+
     def upload_document(self, filename: str, file_bytes: bytes) -> tuple[str | None, bool]:
         """Upload a document.
 
@@ -516,6 +531,38 @@ class PapraClient:
         if resp.status == HTTP_CONFLICT:
             return None, False
         return resp.json()["document"]["id"], True
+
+    def iter_documents(self) -> Iterator[dict[str, Any]]:
+        """Yield every (non-deleted) document in the organisation, paginated."""
+        page_index = 0
+        page_size = 100
+        while True:
+            data = self.http.get_json(
+                self._org_path("documents"),
+                query={"pageIndex": page_index, "pageSize": page_size},
+            )
+            docs = data.get("documents", []) if isinstance(data, dict) else []
+            if not docs:
+                return
+            yield from docs
+            if len(docs) < page_size:
+                return
+            page_index += 1
+
+    def count_documents(self) -> int:
+        """Return the total number of (non-deleted) documents in the org."""
+        data = self.http.get_json(self._org_path("documents"),
+                                  query={"pageIndex": 0, "pageSize": 1})
+        if isinstance(data, dict) and "documentsCount" in data:
+            return int(data["documentsCount"])
+        return 0
+
+    def delete_document(self, document_id: str) -> None:
+        """Delete a document by id (Papra returns 204)."""
+        self.http.request(
+            "DELETE", self._org_path(f"documents/{document_id}"),
+            allow_status=(404,),
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -550,6 +597,10 @@ class MigrationState:
             "at": int(time.time()),
         }
 
+    def clear(self) -> None:
+        """Forget all recorded uploads (used after a purge)."""
+        self.uploaded.clear()
+
     def save(self) -> None:
         tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         tmp.write_text(json.dumps({"uploaded": self.uploaded}, indent=2), encoding="utf-8")
@@ -575,6 +626,8 @@ class Config:
     tag_color: str
     state_file: Path
     dry_run: bool
+    purge: bool
+    assume_yes: bool
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -676,10 +729,12 @@ def resolve_config(args: argparse.Namespace) -> Config:
     state_raw = pick(args.state_file, "MIGRATION_STATE_FILE",
                      str(env_file.with_name("paperless-to-papra.state.json")))
 
-    missing = [name for name, value in {
-        "PAPRA_URL": papra_url, "PAPRA_KEY": papra_key,
-        "PAPERLESS_URL": paperless_url, "PAPERLESS_KEY": paperless_key,
-    }.items() if not value]
+    # A purge only talks to Papra, so Paperless credentials are not required.
+    required = {"PAPRA_URL": papra_url, "PAPRA_KEY": papra_key}
+    if not args.purge_org:
+        required["PAPERLESS_URL"] = paperless_url
+        required["PAPERLESS_KEY"] = paperless_key
+    missing = [name for name, value in required.items() if not value]
     if missing:
         raise SystemExit(
             f"Missing required configuration: {', '.join(missing)}.\n"
@@ -708,19 +763,86 @@ def resolve_config(args: argparse.Namespace) -> Config:
         tag_color=tag_color,
         state_file=Path(state_raw).expanduser(),
         dry_run=args.dry_run,
+        purge=args.purge_org,
+        assume_yes=args.yes,
     )
 
 
+def purge_organization(papra: PapraClient, state: MigrationState,
+                       config: Config) -> int:
+    """Delete every document in the target organisation.
+
+    This is destructive and irreversible-ish: Papra moves deleted documents to
+    the trash, from which its own retention task eventually hard-deletes them.
+    After purging, the local dedup state is cleared so a later migration run
+    re-uploads from scratch.
+    """
+    total = papra.count_documents()
+    if total == 0:
+        log(f"Organisation {config.organization!r} already has no documents.")
+        if state.uploaded:
+            state.clear()
+            state.save()
+        return 0
+
+    log(f"About to DELETE all {total} document(s) in Papra organisation "
+        f"{config.organization!r} (id {papra.organization_id}).")
+
+    if config.dry_run:
+        log("[dry-run] No documents were deleted.")
+        return 0
+
+    if not config.assume_yes:
+        # Require an explicit, typed confirmation for a destructive bulk delete.
+        prompt = (f"Type the organisation name {config.organization!r} to confirm "
+                  f"deletion of {total} document(s): ")
+        try:
+            answer = input(prompt).strip()
+        except EOFError:
+            answer = ""
+        if answer != config.organization:
+            log("Confirmation did not match; aborting. Nothing was deleted.")
+            return 1
+
+    # Collect ids first so pagination is not disturbed by concurrent deletes.
+    doc_ids = [d["id"] for d in papra.iter_documents()]
+    bar = ProgressBar(total=len(doc_ids), prefix="Deleting")
+    deleted = failed = 0
+    try:
+        for doc_id in doc_ids:
+            try:
+                papra.delete_document(doc_id)
+                deleted += 1
+                bar.update(suffix=f"ok {doc_id}")
+            except Exception as exc:  # noqa: BLE001 - report and continue
+                failed += 1
+                bar.update(suffix=f"FAIL {doc_id}")
+                log(f"\n  Failed to delete {doc_id}: {exc}")
+    finally:
+        bar.close()
+
+    # Deleted documents can no longer collide on content, so forget the state.
+    state.clear()
+    state.save()
+
+    log(f"Purge done. deleted={deleted} failed={failed}")
+    return 1 if failed else 0
+
+
 def run(config: Config) -> int:
-    """Execute the migration. Returns a process exit code."""
-    paperless = PaperlessClient(
-        HttpClient(config.paperless_url, config.paperless_key, auth_scheme="Token"))
+    """Execute the migration (or a purge). Returns a process exit code."""
     papra = PapraClient(
         HttpClient(config.papra_url, config.papra_key, auth_scheme="Bearer"))
     state = MigrationState.load(config.state_file)
 
     log(f"Resolving Papra organisation {config.organization!r} ...")
     papra.resolve_organization(config.organization)
+
+    if config.purge:
+        return purge_organization(papra, state, config)
+
+    paperless = PaperlessClient(
+        HttpClient(config.paperless_url, config.paperless_key, auth_scheme="Token"))
 
     log("Reading Paperless metadata (tags, document types, correspondents, users) ...")
     pl_tags = paperless.tags()
@@ -850,6 +972,11 @@ def run(config: Config) -> int:
                     if option_id:
                         papra.set_document_property(papra_id, recipient_prop_id, option_id)
 
+                # Carry over the Paperless document date (Papra ignores it on
+                # upload, so it is set explicitly here).
+                if doc.created:
+                    papra.set_document_date(papra_id, doc.created)
+
                 state.mark(digest, doc.id, papra_id)
                 uploaded += 1
                 bar.update(suffix=f"ok #{doc.id}")
@@ -914,6 +1041,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  ./paperless-to-papra.py --max-records 50\n"
             "  ./paperless-to-papra.py --dry-run\n"
             "  ./paperless-to-papra.py --env-file /tmp/papra.env --organization Inbox\n"
+            "  ./paperless-to-papra.py --purge-org --organization Inbox        # delete all docs (prompts)\n"
+            "  ./paperless-to-papra.py --purge-org --organization Inbox --yes  # delete all docs (no prompt)\n"
         ),
     )
     parser.add_argument("--env-file", default=str(DEFAULT_ENV_FILE),
@@ -936,7 +1065,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state-file",
                         help="Override MIGRATION_STATE_FILE (local dedup state path).")
     parser.add_argument("--dry-run", action="store_true",
-                        help="Report what would happen without creating or uploading anything.")
+                        help="Report what would happen without creating, uploading or deleting anything.")
+    parser.add_argument("--purge-org", action="store_true",
+                        help="DESTRUCTIVE: delete ALL documents in the target organisation "
+                             "(instead of migrating), then clear the local dedup state. "
+                             "Requires typing the org name to confirm, or --yes.")
+    parser.add_argument("--yes", action="store_true",
+                        help="Skip the interactive confirmation prompt for --purge-org.")
     return parser
 
 
