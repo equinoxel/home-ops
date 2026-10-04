@@ -66,6 +66,9 @@ from urllib.parse import urlencode, urljoin
 #: Default path of the env file holding working variables.
 DEFAULT_ENV_FILE = Path(__file__).resolve().parent / ".local-papra.env"
 
+#: Default path of the JSON migration cache.
+DEFAULT_CACHE_FILE = Path("/tmp/papra-migration-cache.json")
+
 #: Default Papra organisation to upload into.
 DEFAULT_ORGANIZATION = "Inbox"
 
@@ -95,6 +98,17 @@ HTTP_TIMEOUT = 120
 def log(message: str) -> None:
     """Write a status line to stderr (keeps stdout clean for data)."""
     print(message, file=sys.stderr, flush=True)
+
+
+def format_bytes(num_bytes: int | None) -> str:
+    """Format a byte count into a human-readable string (B, KB, MB)."""
+    if num_bytes is None:
+        return "unknown size"
+    if num_bytes < 1024:
+        return f"{num_bytes} B"
+    if num_bytes < 1024 * 1024:
+        return f"{num_bytes / 1024:.1f} KB"
+    return f"{num_bytes / (1024 * 1024):.1f} MB"
 
 
 def load_env_file(path: Path) -> dict[str, str]:
@@ -313,6 +327,7 @@ class PaperlessDocument:
     correspondent_id: int | None
     owner_id: int | None
     created: str | None  # Paperless document date (ISO 8601), used as Papra documentDate.
+    modified: str | None = None  # Paperless modification date (ISO 8601).
 
 
 class PaperlessClient:
@@ -384,6 +399,7 @@ class PaperlessClient:
                 owner_id=item.get("owner"),
                 # Paperless exposes the document date as "created" (ISO 8601).
                 created=item.get("created"),
+                modified=item.get("modified"),
             )
 
     def download_original(self, document_id: int) -> bytes:
@@ -611,6 +627,102 @@ class MigrationState:
         tmp.replace(self.path)
 
 
+@dataclass
+class MigrationCache:
+    """Tracks cached Paperless document payloads, hashes and upload statuses.
+
+    Avoids re-downloading files across migration runs by caching SHA-256 digests,
+    file sizes, and Papra upload status keyed by Paperless document ID.
+    Persisted at /tmp/papra-migration-cache.json by default.
+    """
+
+    path: Path
+    documents: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    @classmethod
+    def load(cls, path: Path) -> "MigrationCache":
+        if path.is_file():
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                docs = raw.get("documents", {}) if isinstance(raw, dict) else {}
+                return cls(path=path, documents=docs)
+            except Exception as exc:
+                log(f"  Warning: failed to load cache from {path} ({exc}); starting fresh.")
+                return cls(path=path)
+        return cls(path=path)
+
+    def seed_from_state(self, state: "MigrationState") -> int:
+        """Import known uploaded documents from state into cache if not present."""
+        added = 0
+        for digest, item in state.uploaded.items():
+            pid = item.get("paperlessId")
+            if pid is not None:
+                spid = str(pid)
+                if spid not in self.documents:
+                    self.documents[spid] = {
+                        "paperless_id": int(pid),
+                        "title": f"document-{pid}",
+                        "file_name": None,
+                        "file_size": None,
+                        "sha256": digest,
+                        "status": "uploaded" if item.get("papraDocumentId") else "duplicate",
+                        "papra_id": item.get("papraDocumentId"),
+                        "paperless_modified": None,
+                        "cached_at": item.get("at", int(time.time())),
+                    }
+                    added += 1
+        return added
+
+    def get(self, doc_id: int) -> dict[str, Any] | None:
+        return self.documents.get(str(doc_id))
+
+    def put(self, doc_id: int, *,
+            title: str,
+            file_name: str | None,
+            file_size: int | None,
+            sha256: str,
+            status: str,
+            papra_id: str | None = None,
+            paperless_modified: str | None = None) -> None:
+        self.documents[str(doc_id)] = {
+            "paperless_id": doc_id,
+            "title": title,
+            "file_name": file_name,
+            "file_size": file_size,
+            "sha256": sha256,
+            "status": status,
+            "papra_id": papra_id,
+            "paperless_modified": paperless_modified,
+            "cached_at": int(time.time()),
+        }
+
+    def update_status(self, doc_id: int, status: str, papra_id: str | None = None) -> None:
+        key = str(doc_id)
+        if key in self.documents:
+            self.documents[key]["status"] = status
+            if papra_id is not None:
+                self.documents[key]["papra_id"] = papra_id
+            self.documents[key]["cached_at"] = int(time.time())
+
+    def reset_for_purge(self) -> None:
+        """Reset all uploaded/duplicate statuses to pending after a purge."""
+        for item in self.documents.values():
+            if item.get("status") in ("uploaded", "duplicate"):
+                item["status"] = "pending"
+                item["papra_id"] = None
+                item["cached_at"] = int(time.time())
+
+    def save(self) -> None:
+        tmp = self.path.with_suffix(self.path.suffix + f".tmp.{uuid.uuid4().hex[:6]}")
+        payload = {
+            "version": 1,
+            "updated_at": int(time.time()),
+            "documents": self.documents,
+        }
+        tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        tmp.replace(self.path)
+
+
 # --------------------------------------------------------------------------- #
 # Migration orchestration
 # --------------------------------------------------------------------------- #
@@ -629,9 +741,12 @@ class Config:
     recipient_property: str
     tag_color: str
     state_file: Path
+    cache_file: Path
     dry_run: bool
     purge: bool
     assume_yes: bool
+    no_cache: bool = False
+    refresh_cache: bool = False
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -732,6 +847,8 @@ def resolve_config(args: argparse.Namespace) -> Config:
                      "UPLOAD_DELAY_SECONDS", "2")
     state_raw = pick(args.state_file, "MIGRATION_STATE_FILE",
                      str(env_file.with_name("paperless-to-papra.state.json")))
+    cache_raw = pick(args.cache_file, "MIGRATION_CACHE_FILE",
+                     str(DEFAULT_CACHE_FILE))
 
     # A purge only talks to Papra, so Paperless credentials are not required.
     required = {"PAPRA_URL": papra_url, "PAPRA_KEY": papra_key}
@@ -766,14 +883,17 @@ def resolve_config(args: argparse.Namespace) -> Config:
         recipient_property=recipient_property,
         tag_color=tag_color,
         state_file=Path(state_raw).expanduser(),
+        cache_file=Path(cache_raw).expanduser(),
         dry_run=args.dry_run,
         purge=args.purge_org,
         assume_yes=args.yes,
+        no_cache=args.no_cache,
+        refresh_cache=args.refresh_cache,
     )
 
 
 def purge_organization(papra: PapraClient, state: MigrationState,
-                       config: Config) -> int:
+                       cache: MigrationCache, config: Config) -> int:
     """Delete every document in the target organisation.
 
     This is destructive and irreversible-ish: Papra moves deleted documents to
@@ -787,6 +907,9 @@ def purge_organization(papra: PapraClient, state: MigrationState,
         if state.uploaded:
             state.clear()
             state.save()
+        if not config.no_cache:
+            cache.reset_for_purge()
+            cache.save()
         return 0
 
     log(f"About to DELETE all {total} document(s) in Papra organisation "
@@ -828,6 +951,9 @@ def purge_organization(papra: PapraClient, state: MigrationState,
     # Deleted documents can no longer collide on content, so forget the state.
     state.clear()
     state.save()
+    if not config.no_cache:
+        cache.reset_for_purge()
+        cache.save()
 
     log(f"Purge done. deleted={deleted} failed={failed}")
     return 1 if failed else 0
@@ -838,12 +964,19 @@ def run(config: Config) -> int:
     papra = PapraClient(
         HttpClient(config.papra_url, config.papra_key, auth_scheme="Bearer"))
     state = MigrationState.load(config.state_file)
+    cache = MigrationCache.load(config.cache_file)
+
+    if not config.no_cache and state.uploaded:
+        seeded = cache.seed_from_state(state)
+        if seeded > 0:
+            log(f"Seeded cache with {seeded} pre-existing document(s) from state file.")
+            cache.save()
 
     log(f"Resolving Papra organisation {config.organization!r} ...")
     papra.resolve_organization(config.organization)
 
     if config.purge:
-        return purge_organization(papra, state, config)
+        return purge_organization(papra, state, cache, config)
 
     paperless = PaperlessClient(
         HttpClient(config.paperless_url, config.paperless_key, auth_scheme="Token"))
@@ -910,18 +1043,56 @@ def run(config: Config) -> int:
             desc += f" [{date_str}]"
         log(f"  [{scanned}] Scanning {desc} ...")
 
+        cached_entry = None if (config.no_cache or config.refresh_cache) else cache.get(doc.id)
+
+        # Check if modified timestamp in Paperless is newer than cached_at
+        if cached_entry and doc.modified and cached_entry.get("paperless_modified"):
+            if doc.modified > cached_entry["paperless_modified"]:
+                log(f"       -> document modified in Paperless ({doc.modified} > {cached_entry['paperless_modified']}); refreshing cache")
+                cached_entry = None
+
+        if cached_entry and cached_entry.get("status") in ("uploaded", "duplicate"):
+            if cached_entry.get("file_name") is None:
+                cached_entry["file_name"] = doc.original_file_name or f"{doc.title}.bin"
+                cached_entry["title"] = doc.title
+                if doc.modified:
+                    cached_entry["paperless_modified"] = doc.modified
+            size_str = format_bytes(cached_entry.get("file_size"))
+            digest = cached_entry.get("sha256", "")
+            log(f"       -> [cache hit] {size_str}, sha256={digest[:12]}… (already uploaded, skipping)")
+            continue
+
         file_bytes = paperless.download_original(doc.id)
         digest = sha256_bytes(file_bytes)
-        if len(file_bytes) < 1024:
-            size_str = f"{len(file_bytes)} B"
-        elif len(file_bytes) < 1024 * 1024:
-            size_str = f"{len(file_bytes) / 1024:.1f} KB"
-        else:
-            size_str = f"{len(file_bytes) / (1024 * 1024):.1f} MB"
+        size_str = format_bytes(len(file_bytes))
+        filename = doc.original_file_name or f"{doc.title}.bin"
 
         if state.is_uploaded(digest):
+            if not config.no_cache:
+                cache.put(
+                    doc.id,
+                    title=doc.title,
+                    file_name=filename,
+                    file_size=len(file_bytes),
+                    sha256=digest,
+                    status="uploaded",
+                    paperless_modified=doc.modified,
+                )
+                cache.save()
             log(f"       -> downloaded {size_str}, sha256={digest[:12]}… (already uploaded, skipping)")
             continue
+
+        if not config.no_cache:
+            cache.put(
+                doc.id,
+                title=doc.title,
+                file_name=filename,
+                file_size=len(file_bytes),
+                sha256=digest,
+                status="pending",
+                paperless_modified=doc.modified,
+            )
+            cache.save()
 
         pending.append((doc, file_bytes, digest))
         log(f"       -> downloaded {size_str}, sha256={digest[:12]}… (pending upload {len(pending)}/{config.max_records})")
@@ -974,6 +1145,8 @@ def run(config: Config) -> int:
                     # Papra already had identical content; record so we skip it
                     # next time without re-downloading.
                     state.mark(digest, doc.id, papra_id)
+                    if not config.no_cache:
+                        cache.update_status(doc.id, status="duplicate", papra_id=None)
                     skipped += 1
                     bar.update(suffix=f"skip #{doc.id} (duplicate)")
                     continue
@@ -1004,15 +1177,21 @@ def run(config: Config) -> int:
                     papra.set_document_date(papra_id, doc.created)
 
                 state.mark(digest, doc.id, papra_id)
+                if not config.no_cache:
+                    cache.update_status(doc.id, status="uploaded", papra_id=papra_id)
                 uploaded += 1
                 bar.update(suffix=f"ok #{doc.id}")
             except Exception as exc:  # noqa: BLE001 - report and continue the batch
                 failed += 1
+                if not config.no_cache:
+                    cache.update_status(doc.id, status="failed")
                 bar.update(suffix=f"FAIL #{doc.id}")
                 log(f"\n  Failed on Paperless #{doc.id} ({doc.title!r}): {exc}")
             finally:
                 # Persist after every document so an interruption loses nothing.
                 state.save()
+                if not config.no_cache:
+                    cache.save()
 
             # Throttle so Papra's in-process content extraction / auto-tagging
             # does not pile up and spike memory (a tight memory limit can
@@ -1022,6 +1201,8 @@ def run(config: Config) -> int:
     finally:
         bar.close()
         state.save()
+        if not config.no_cache:
+            cache.save()
 
     log(f"Done. uploaded={uploaded} skipped={skipped} failed={failed}")
     return 1 if failed else 0
@@ -1061,7 +1242,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  PAPRA_ORGANIZATION        Target organisation name (default: Inbox)\n"
             "  PAPRA_RECIPIENT_PROPERTY  Custom property name for recipients (default: Recipient)\n"
             "  PAPRA_TAG_COLOR           Hex colour for created tags (default: #6b7280)\n"
-            "  MIGRATION_STATE_FILE      Path to the local dedup state JSON\n\n"
+            "  MIGRATION_STATE_FILE      Path to the local dedup state JSON\n"
+            "  MIGRATION_CACHE_FILE      Path to the local migration cache JSON\n\n"
             "Examples:\n"
             "  ./paperless-to-papra.py\n"
             "  ./paperless-to-papra.py --max-records 50\n"
@@ -1090,6 +1272,12 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Override PAPRA_TAG_COLOR (hex colour for created tags).")
     parser.add_argument("--state-file",
                         help="Override MIGRATION_STATE_FILE (local dedup state path).")
+    parser.add_argument("--cache-file",
+                        help=f"Path to the JSON migration cache (default: {DEFAULT_CACHE_FILE}).")
+    parser.add_argument("--refresh-cache", action="store_true",
+                        help="Force re-downloading files and recalculating hashes, updating the cache.")
+    parser.add_argument("--no-cache", action="store_true",
+                        help="Bypass cache lookup and caching entirely.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Report what would happen without creating, uploading or deleting anything.")
     parser.add_argument("--purge-org", action="store_true",
