@@ -816,6 +816,40 @@ def ensure_recipient_property(papra: PapraClient, prop_name: str,
     return definition["id"], option_map
 
 
+@dataclass
+class FailedDocument:
+    """Details of a document that failed during migration."""
+
+    id: int
+    name: str
+    extension: str
+    reason: str
+
+
+def print_report(uploaded: int, skipped: int, failed_docs: list[FailedDocument]) -> None:
+    """Print a structured migration summary and list any failed documents."""
+    total = uploaded + skipped + len(failed_docs)
+    log("\n" + "=" * 70)
+    log("MIGRATION REPORT")
+    log("=" * 70)
+    log(f"  Updated / Uploaded:  {uploaded}")
+    log(f"  Skipped (duplicate): {skipped}")
+    log(f"  Failed:              {len(failed_docs)}")
+    log(f"  Total processed:     {total}")
+
+    if failed_docs:
+        log("-" * 70)
+        log(f"Failed Documents ({len(failed_docs)}):")
+        for doc in failed_docs:
+            log(f"  * ID:        {doc.id}")
+            log(f"    Name:      {doc.name}")
+            log(f"    Extension: {doc.extension}")
+            log(f"    Reason:    {doc.reason}")
+    else:
+        log("  Status: All attempted documents processed successfully.")
+    log("=" * 70)
+
+
 def resolve_config(args: argparse.Namespace) -> Config:
     """Merge env file, process env and CLI flags into a Config.
 
@@ -1032,6 +1066,7 @@ def run(config: Config) -> int:
     # Select the next batch of not-yet-uploaded documents.
     log("Scanning Paperless documents for pending uploads ...")
     pending: list[tuple[PaperlessDocument, bytes, str]] = []
+    failed_docs: list[FailedDocument] = []
     scanned = 0
     for doc in paperless.documents():
         scanned += 1
@@ -1062,10 +1097,25 @@ def run(config: Config) -> int:
             log(f"       -> [cache hit] {size_str}, sha256={digest[:12]}… (already uploaded, skipping)")
             continue
 
-        file_bytes = paperless.download_original(doc.id)
+        filename = doc.original_file_name or f"{doc.title}.bin"
+        try:
+            file_bytes = paperless.download_original(doc.id)
+        except Exception as exc:
+            ext = Path(filename).suffix.lstrip(".") or "none"
+            failed_docs.append(FailedDocument(
+                id=doc.id,
+                name=doc.title,
+                extension=ext,
+                reason=f"Download failed: {exc}",
+            ))
+            if not config.no_cache:
+                cache.update_status(doc.id, status="failed")
+                cache.save()
+            log(f"       -> download failed: {exc}, skipping")
+            continue
+
         digest = sha256_bytes(file_bytes)
         size_str = format_bytes(len(file_bytes))
-        filename = doc.original_file_name or f"{doc.title}.bin"
 
         if state.is_uploaded(digest):
             if not config.no_cache:
@@ -1101,10 +1151,14 @@ def run(config: Config) -> int:
             break
 
     if not pending:
+        if failed_docs:
+            print_report(uploaded=0, skipped=scanned - len(failed_docs), failed_docs=failed_docs)
+            return 1
         if scanned == 0:
             log("No documents found in Paperless.")
         else:
             log(f"Nothing to do: scanned {scanned} document(s), all already uploaded.")
+            print_report(uploaded=0, skipped=scanned, failed_docs=[])
         return 0
 
     log(f"Scanned {scanned} document(s); uploading up to {len(pending)} new one(s).")
@@ -1112,6 +1166,9 @@ def run(config: Config) -> int:
     if config.dry_run:
         for doc, _, digest in pending:
             log(f"[dry-run] Would upload #{doc.id} {doc.title!r} (sha256={digest[:12]}…)")
+        if failed_docs:
+            print_report(uploaded=0, skipped=scanned - len(pending) - len(failed_docs), failed_docs=failed_docs)
+            return 1
         return 0
 
     def tag_id_for(name: str) -> str | None:
@@ -1183,6 +1240,13 @@ def run(config: Config) -> int:
                 bar.update(suffix=f"ok #{doc.id}")
             except Exception as exc:  # noqa: BLE001 - report and continue the batch
                 failed += 1
+                ext = Path(filename).suffix.lstrip(".") or "none"
+                failed_docs.append(FailedDocument(
+                    id=doc.id,
+                    name=doc.title,
+                    extension=ext,
+                    reason=str(exc),
+                ))
                 if not config.no_cache:
                     cache.update_status(doc.id, status="failed")
                 bar.update(suffix=f"FAIL #{doc.id}")
@@ -1204,8 +1268,8 @@ def run(config: Config) -> int:
         if not config.no_cache:
             cache.save()
 
-    log(f"Done. uploaded={uploaded} skipped={skipped} failed={failed}")
-    return 1 if failed else 0
+    print_report(uploaded=uploaded, skipped=skipped, failed_docs=failed_docs)
+    return 1 if failed_docs else 0
 
 
 # --------------------------------------------------------------------------- #
