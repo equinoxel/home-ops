@@ -49,6 +49,7 @@ import io
 import json
 import mimetypes
 import os
+import re
 import sys
 import time
 import uuid
@@ -57,7 +58,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 from urllib import error as urllib_error
 from urllib import request as urllib_request
-from urllib.parse import urlencode, urljoin
+from urllib.parse import unquote as urllib_unquote, urlencode, urljoin
 
 # --------------------------------------------------------------------------- #
 # Constants
@@ -328,6 +329,76 @@ class PaperlessDocument:
     owner_id: int | None
     created: str | None  # Paperless document date (ISO 8601), used as Papra documentDate.
     modified: str | None = None  # Paperless modification date (ISO 8601).
+    archived_file_name: str | None = None
+
+
+def extract_header_filename(content_disposition: str | None) -> str | None:
+    """Extract filename from Content-Disposition header (RFC 5987 / 6266)."""
+    if not content_disposition:
+        return None
+    # 1. Look for RFC 5987 / 6266 filename*=utf-8''... (case-insensitive)
+    m = re.search(r"filename\*\s*=\s*(?:[uU][tT][fF]-8'')?([^;]+)", content_disposition)
+    if m:
+        raw = m.group(1).strip().strip("\"'")
+        decoded = urllib_unquote(raw)
+        if decoded:
+            return decoded
+    # 2. Look for regular filename="..."
+    m = re.search(r'filename\s*=\s*"?([^";]+)"?', content_disposition)
+    if m:
+        raw = m.group(1).strip().strip("\"'")
+        if raw.startswith("b'") and raw.endswith("'"):
+            raw = raw[2:-1]
+        if raw:
+            return raw
+    return None
+
+
+def resolve_filename(
+    doc: PaperlessDocument,
+    header_filename: str | None = None,
+    content_type: str | None = None,
+) -> str:
+    """Determine best filename for a document, strictly avoiding '.bin' fallbacks."""
+    # 1. Prefer original_file_name if explicitly provided by Paperless
+    if doc.original_file_name and doc.original_file_name.strip():
+        name = doc.original_file_name.strip()
+        if not name.lower().endswith(".bin"):
+            return name
+
+    # 2. Prefer header_filename from Content-Disposition if present
+    if header_filename and header_filename.strip():
+        name = header_filename.strip()
+        if not name.lower().endswith(".bin"):
+            return name
+
+    # 3. Prefer archived_file_name if present
+    if doc.archived_file_name and doc.archived_file_name.strip():
+        name = doc.archived_file_name.strip()
+        if not name.lower().endswith(".bin"):
+            return name
+
+    # 4. Infer extension from Content-Type or title
+    title = (doc.title or f"document-{doc.id}").strip()
+    if title.lower().endswith(".bin"):
+        title = title[:-4].strip() or f"document-{doc.id}"
+
+    # If title already has an extension (like .pdf, .jpg, etc.), use it
+    suffix = Path(title).suffix.lower()
+    if suffix and suffix != ".bin":
+        return title
+
+    ext = ""
+    if content_type:
+        mime = content_type.split(";")[0].strip().lower()
+        ext = mimetypes.guess_extension(mime) or ""
+        if ext == ".jpe":
+            ext = ".jpg"
+
+    if not ext or ext.lower() == ".bin":
+        ext = ".pdf"
+
+    return f"{title}{ext}"
 
 
 class PaperlessClient:
@@ -393,6 +464,7 @@ class PaperlessClient:
                 id=item["id"],
                 title=item.get("title") or f"document-{item['id']}",
                 original_file_name=item.get("original_file_name"),
+                archived_file_name=item.get("archived_file_name"),
                 tag_ids=item.get("tags") or [],
                 document_type_id=item.get("document_type"),
                 correspondent_id=item.get("correspondent"),
@@ -402,16 +474,23 @@ class PaperlessClient:
                 modified=item.get("modified"),
             )
 
-    def download_original(self, document_id: int) -> bytes:
+    def download_original(self, document_id: int) -> tuple[bytes, str | None, str | None]:
         """Download the *original* file bytes for a document.
 
         ``original=true`` ensures we fetch the exact bytes Paperless ingested,
         which keeps the SHA-256 stable across runs.
+        Returns ``(file_bytes, header_filename, content_type)``.
         """
-        return self.http.get_bytes(
+        resp = self.http.request(
+            "GET",
             f"api/documents/{document_id}/download/",
             query={"original": "true"},
         )
+        lower_headers = {k.lower(): v for k, v in resp.headers.items()}
+        disposition = lower_headers.get("content-disposition")
+        content_type = lower_headers.get("content-type")
+        header_filename = extract_header_filename(disposition)
+        return resp.body, header_filename, content_type
 
 
 # --------------------------------------------------------------------------- #
@@ -742,6 +821,7 @@ class Config:
     tag_color: str
     state_file: Path
     cache_file: Path
+    report_file: Path
     dry_run: bool
     purge: bool
     assume_yes: bool
@@ -816,6 +896,54 @@ def ensure_recipient_property(papra: PapraClient, prop_name: str,
     return definition["id"], option_map
 
 
+SIZE_BUCKETS = [
+    "< 100 KB",
+    "100 KB - 1 MB",
+    "1 MB - 5 MB",
+    "5 MB - 25 MB",
+    "> 25 MB",
+    "Unknown size",
+]
+
+
+def size_bucket(size_bytes: int | None) -> str:
+    """Return standard size bucket label for a given byte count."""
+    if size_bytes is None:
+        return "Unknown size"
+    if size_bytes < 100 * 1024:
+        return "< 100 KB"
+    if size_bytes < 1024 * 1024:
+        return "100 KB - 1 MB"
+    if size_bytes < 5 * 1024 * 1024:
+        return "1 MB - 5 MB"
+    if size_bytes < 25 * 1024 * 1024:
+        return "5 MB - 25 MB"
+    return "> 25 MB"
+
+
+def extract_doc_tags(doc: PaperlessDocument, pl_tags: dict[int, str], pl_doc_types: dict[int, str]) -> list[str]:
+    """Extract all classification tags (Paperless tags + document type) for reporting."""
+    tags = [pl_tags[t] for t in doc.tag_ids if t in pl_tags]
+    if doc.document_type_id in pl_doc_types:
+        dt = pl_doc_types[doc.document_type_id]
+        if dt not in tags:
+            tags.append(dt)
+    return tags
+
+
+@dataclass
+class ProcessedDoc:
+    """Statistics entry for a document processed during the migration run."""
+
+    id: int
+    name: str
+    filename: str
+    extension: str
+    size_bytes: int | None
+    tags: list[str]
+    status: str  # "uploaded", "skipped", "failed"
+
+
 @dataclass
 class FailedDocument:
     """Details of a document that failed during migration."""
@@ -826,28 +954,167 @@ class FailedDocument:
     reason: str
 
 
-def print_report(uploaded: int, skipped: int, failed_docs: list[FailedDocument]) -> None:
-    """Print a structured migration summary and list any failed documents."""
-    total = uploaded + skipped + len(failed_docs)
-    log("\n" + "=" * 70)
-    log("MIGRATION REPORT")
-    log("=" * 70)
-    log(f"  Updated / Uploaded:  {uploaded}")
-    log(f"  Skipped (duplicate): {skipped}")
-    log(f"  Failed:              {len(failed_docs)}")
-    log(f"  Total processed:     {total}")
+def format_report_text(
+    uploaded: int,
+    skipped: int,
+    failed_docs: list[FailedDocument],
+    processed_docs: list[ProcessedDoc],
+) -> str:
+    """Format human-readable migration summary with breakdown statistics."""
+    total = len(processed_docs) or (uploaded + skipped + len(failed_docs))
 
-    if failed_docs:
-        log("-" * 70)
-        log(f"Failed Documents ({len(failed_docs)}):")
-        for doc in failed_docs:
-            log(f"  * ID:        {doc.id}")
-            log(f"    Name:      {doc.name}")
-            log(f"    Extension: {doc.extension}")
-            log(f"    Reason:    {doc.reason}")
+    # Extension breakdown
+    by_ext: dict[str, int] = {}
+    for d in processed_docs:
+        ext_key = f".{d.extension}" if d.extension and d.extension != "none" else "(no extension)"
+        by_ext[ext_key] = by_ext.get(ext_key, 0) + 1
+    sorted_ext = sorted(by_ext.items(), key=lambda item: (-item[1], item[0]))
+
+    # Size range breakdown
+    by_size: dict[str, int] = {b: 0 for b in SIZE_BUCKETS}
+    for d in processed_docs:
+        b = size_bucket(d.size_bytes)
+        by_size[b] = by_size.get(b, 0) + 1
+
+    # Tag breakdown
+    by_tag: dict[str, int] = {}
+    for d in processed_docs:
+        if not d.tags:
+            by_tag["(untagged)"] = by_tag.get("(untagged)", 0) + 1
+        else:
+            for t in d.tags:
+                by_tag[t] = by_tag.get(t, 0) + 1
+    sorted_tags = sorted(by_tag.items(), key=lambda item: (-item[1], item[0]))
+
+    lines: list[str] = []
+    lines.append("=" * 70)
+    lines.append("MIGRATION REPORT")
+    lines.append("=" * 70)
+    lines.append(f"  Updated / Uploaded:  {uploaded}")
+    lines.append(f"  Skipped (duplicate): {skipped}")
+    lines.append(f"  Failed:              {len(failed_docs)}")
+    lines.append(f"  Total processed:     {total}")
+    lines.append("")
+    lines.append("-" * 70)
+    lines.append("Statistics by Extension:")
+    if sorted_ext:
+        for ext, count in sorted_ext:
+            lines.append(f"  {ext.ljust(20)} {count}")
     else:
-        log("  Status: All attempted documents processed successfully.")
-    log("=" * 70)
+        lines.append("  (none)")
+    lines.append("")
+    lines.append("-" * 70)
+    lines.append("Statistics by Size Range:")
+    for b in SIZE_BUCKETS:
+        count = by_size.get(b, 0)
+        if b != "Unknown size" or count > 0:
+            lines.append(f"  {b.ljust(20)} {count}")
+    lines.append("")
+    lines.append("-" * 70)
+    lines.append(f"Statistics by Tag ({len(by_tag)} unique):")
+    if sorted_tags:
+        for tag, count in sorted_tags:
+            lines.append(f"  {tag.ljust(30)} {count}")
+    else:
+        lines.append("  (none)")
+    lines.append("")
+    lines.append("-" * 70)
+    if failed_docs:
+        lines.append(f"Failed Documents ({len(failed_docs)}):")
+        for fdoc in failed_docs:
+            lines.append(f"  * ID:        {fdoc.id}")
+            lines.append(f"    Name:      {fdoc.name}")
+            lines.append(f"    Extension: {fdoc.extension}")
+            lines.append(f"    Reason:    {fdoc.reason}")
+    else:
+        lines.append("Failed Documents (0):")
+        lines.append("  Status: All attempted documents processed successfully.")
+    lines.append("=" * 70)
+    return "\n".join(lines)
+
+
+def format_report_json(
+    uploaded: int,
+    skipped: int,
+    failed_docs: list[FailedDocument],
+    processed_docs: list[ProcessedDoc],
+) -> dict[str, Any]:
+    """Format structured migration report as JSON dictionary."""
+    total = len(processed_docs) or (uploaded + skipped + len(failed_docs))
+
+    by_ext: dict[str, int] = {}
+    for d in processed_docs:
+        ext_key = d.extension if d.extension and d.extension != "none" else "unknown"
+        by_ext[ext_key] = by_ext.get(ext_key, 0) + 1
+    sorted_ext = dict(sorted(by_ext.items(), key=lambda item: (-item[1], item[0])))
+
+    by_size: dict[str, int] = {b: 0 for b in SIZE_BUCKETS}
+    for d in processed_docs:
+        b = size_bucket(d.size_bytes)
+        by_size[b] = by_size.get(b, 0) + 1
+    if by_size.get("Unknown size") == 0:
+        by_size.pop("Unknown size", None)
+
+    by_tag: dict[str, int] = {}
+    for d in processed_docs:
+        if not d.tags:
+            by_tag["(untagged)"] = by_tag.get("(untagged)", 0) + 1
+        else:
+            for t in d.tags:
+                by_tag[t] = by_tag.get(t, 0) + 1
+    sorted_tags = dict(sorted(by_tag.items(), key=lambda item: (-item[1], item[0])))
+
+    return {
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "summary": {
+            "uploaded": uploaded,
+            "skipped": skipped,
+            "failed": len(failed_docs),
+            "total": total,
+        },
+        "statistics": {
+            "by_extension": sorted_ext,
+            "by_size_range": by_size,
+            "by_tag": sorted_tags,
+        },
+        "failed_documents": [
+            {
+                "id": fdoc.id,
+                "name": fdoc.name,
+                "extension": fdoc.extension,
+                "reason": fdoc.reason,
+            }
+            for fdoc in failed_docs
+        ],
+    }
+
+
+def write_and_print_report(
+    uploaded: int,
+    skipped: int,
+    failed_docs: list[FailedDocument],
+    processed_docs: list[ProcessedDoc],
+    report_file: Path,
+) -> None:
+    """Print the migration report to stderr and save both TXT and JSON versions."""
+    text_report = format_report_text(uploaded, skipped, failed_docs, processed_docs)
+    json_report = format_report_json(uploaded, skipped, failed_docs, processed_docs)
+
+    log("\n" + text_report)
+
+    try:
+        report_file.parent.mkdir(parents=True, exist_ok=True)
+        report_file.write_text(text_report + "\n", encoding="utf-8")
+        log(f"Report saved to: {report_file}")
+    except Exception as exc:
+        log(f"Warning: could not write text report to {report_file}: {exc}")
+
+    json_file = report_file.with_suffix(".json")
+    try:
+        json_file.write_text(json.dumps(json_report, indent=2) + "\n", encoding="utf-8")
+        log(f"JSON report saved to: {json_file}")
+    except Exception as exc:
+        log(f"Warning: could not write JSON report to {json_file}: {exc}")
 
 
 def resolve_config(args: argparse.Namespace) -> Config:
@@ -883,6 +1150,8 @@ def resolve_config(args: argparse.Namespace) -> Config:
                      str(env_file.with_name("paperless-to-papra.state.json")))
     cache_raw = pick(args.cache_file, "MIGRATION_CACHE_FILE",
                      str(DEFAULT_CACHE_FILE))
+    report_raw = pick(args.report_file, "MIGRATION_REPORT_FILE",
+                      str(Path(cache_raw).with_name("papra-migration-report.txt")))
 
     # A purge only talks to Papra, so Paperless credentials are not required.
     required = {"PAPRA_URL": papra_url, "PAPRA_KEY": papra_key}
@@ -918,6 +1187,7 @@ def resolve_config(args: argparse.Namespace) -> Config:
         tag_color=tag_color,
         state_file=Path(state_raw).expanduser(),
         cache_file=Path(cache_raw).expanduser(),
+        report_file=Path(report_raw).expanduser(),
         dry_run=args.dry_run,
         purge=args.purge_org,
         assume_yes=args.yes,
@@ -1065,14 +1335,17 @@ def run(config: Config) -> int:
 
     # Select the next batch of not-yet-uploaded documents.
     log("Scanning Paperless documents for pending uploads ...")
-    pending: list[tuple[PaperlessDocument, bytes, str]] = []
+    pending: list[tuple[PaperlessDocument, bytes, str, str]] = []
     failed_docs: list[FailedDocument] = []
+    processed_docs: list[ProcessedDoc] = []
     scanned = 0
     for doc in paperless.documents():
         scanned += 1
+        tags = extract_doc_tags(doc, pl_tags, pl_doc_types)
+        filename = resolve_filename(doc)
         desc = f"#{doc.id} {doc.title!r}"
-        if doc.original_file_name and doc.original_file_name != doc.title:
-            desc += f" ({doc.original_file_name})"
+        if filename != doc.title:
+            desc += f" ({filename})"
         if doc.created:
             date_str = doc.created.split("T")[0] if "T" in doc.created else doc.created
             desc += f" [{date_str}]"
@@ -1087,26 +1360,50 @@ def run(config: Config) -> int:
                 cached_entry = None
 
         if cached_entry and cached_entry.get("status") in ("uploaded", "duplicate"):
-            if cached_entry.get("file_name") is None:
-                cached_entry["file_name"] = doc.original_file_name or f"{doc.title}.bin"
+            cached_fn = cached_entry.get("file_name")
+            if not cached_fn or cached_fn.lower().endswith(".bin"):
+                cached_entry["file_name"] = filename
                 cached_entry["title"] = doc.title
                 if doc.modified:
                     cached_entry["paperless_modified"] = doc.modified
+                if not config.no_cache:
+                    cache.save()
+            else:
+                filename = cached_fn
             size_str = format_bytes(cached_entry.get("file_size"))
             digest = cached_entry.get("sha256", "")
             log(f"       -> [cache hit] {size_str}, sha256={digest[:12]}… (already uploaded, skipping)")
+            ext = Path(filename).suffix.lower().lstrip(".") or "pdf"
+            processed_docs.append(ProcessedDoc(
+                id=doc.id,
+                name=doc.title,
+                filename=filename,
+                extension=ext,
+                size_bytes=cached_entry.get("file_size"),
+                tags=tags,
+                status="skipped",
+            ))
             continue
 
-        filename = doc.original_file_name or f"{doc.title}.bin"
         try:
-            file_bytes = paperless.download_original(doc.id)
+            file_bytes, header_fn, content_type = paperless.download_original(doc.id)
+            filename = resolve_filename(doc, header_filename=header_fn, content_type=content_type)
         except Exception as exc:
-            ext = Path(filename).suffix.lstrip(".") or "none"
+            ext = Path(filename).suffix.lower().lstrip(".") or "pdf"
             failed_docs.append(FailedDocument(
                 id=doc.id,
                 name=doc.title,
                 extension=ext,
                 reason=f"Download failed: {exc}",
+            ))
+            processed_docs.append(ProcessedDoc(
+                id=doc.id,
+                name=doc.title,
+                filename=filename,
+                extension=ext,
+                size_bytes=None,
+                tags=tags,
+                status="failed",
             ))
             if not config.no_cache:
                 cache.update_status(doc.id, status="failed")
@@ -1116,6 +1413,7 @@ def run(config: Config) -> int:
 
         digest = sha256_bytes(file_bytes)
         size_str = format_bytes(len(file_bytes))
+        ext = Path(filename).suffix.lower().lstrip(".") or "pdf"
 
         if state.is_uploaded(digest):
             if not config.no_cache:
@@ -1129,6 +1427,15 @@ def run(config: Config) -> int:
                     paperless_modified=doc.modified,
                 )
                 cache.save()
+            processed_docs.append(ProcessedDoc(
+                id=doc.id,
+                name=doc.title,
+                filename=filename,
+                extension=ext,
+                size_bytes=len(file_bytes),
+                tags=tags,
+                status="skipped",
+            ))
             log(f"       -> downloaded {size_str}, sha256={digest[:12]}… (already uploaded, skipping)")
             continue
 
@@ -1144,32 +1451,50 @@ def run(config: Config) -> int:
             )
             cache.save()
 
-        pending.append((doc, file_bytes, digest))
+        pending.append((doc, file_bytes, digest, filename))
         log(f"       -> downloaded {size_str}, sha256={digest[:12]}… (pending upload {len(pending)}/{config.max_records})")
         if len(pending) >= config.max_records:
             log(f"  Reached limit of {config.max_records} pending document(s); stopping scan.")
             break
 
     if not pending:
-        if failed_docs:
-            print_report(uploaded=0, skipped=scanned - len(failed_docs), failed_docs=failed_docs)
-            return 1
         if scanned == 0:
             log("No documents found in Paperless.")
-        else:
+        elif not failed_docs:
             log(f"Nothing to do: scanned {scanned} document(s), all already uploaded.")
-            print_report(uploaded=0, skipped=scanned, failed_docs=[])
-        return 0
+        write_and_print_report(
+            uploaded=sum(1 for d in processed_docs if d.status == "uploaded"),
+            skipped=sum(1 for d in processed_docs if d.status == "skipped"),
+            failed_docs=failed_docs,
+            processed_docs=processed_docs,
+            report_file=config.report_file,
+        )
+        return 1 if failed_docs else 0
 
     log(f"Scanned {scanned} document(s); uploading up to {len(pending)} new one(s).")
 
     if config.dry_run:
-        for doc, _, digest in pending:
-            log(f"[dry-run] Would upload #{doc.id} {doc.title!r} (sha256={digest[:12]}…)")
-        if failed_docs:
-            print_report(uploaded=0, skipped=scanned - len(pending) - len(failed_docs), failed_docs=failed_docs)
-            return 1
-        return 0
+        for doc, file_bytes, digest, filename in pending:
+            log(f"[dry-run] Would upload #{doc.id} {doc.title!r} ({filename}, sha256={digest[:12]}…)")
+            tags = extract_doc_tags(doc, pl_tags, pl_doc_types)
+            ext = Path(filename).suffix.lower().lstrip(".") or "pdf"
+            processed_docs.append(ProcessedDoc(
+                id=doc.id,
+                name=doc.title,
+                filename=filename,
+                extension=ext,
+                size_bytes=len(file_bytes),
+                tags=tags,
+                status="uploaded",
+            ))
+        write_and_print_report(
+            uploaded=sum(1 for d in processed_docs if d.status == "uploaded"),
+            skipped=sum(1 for d in processed_docs if d.status == "skipped"),
+            failed_docs=failed_docs,
+            processed_docs=processed_docs,
+            report_file=config.report_file,
+        )
+        return 1 if failed_docs else 0
 
     def tag_id_for(name: str) -> str | None:
         """Return a Papra tag id for ``name``, creating the tag on demand.
@@ -1191,10 +1516,10 @@ def run(config: Config) -> int:
         return tid
 
     bar = ProgressBar(total=len(pending))
-    uploaded = skipped = failed = 0
     try:
-        for doc, file_bytes, digest in pending:
-            filename = doc.original_file_name or f"{doc.title}.bin"
+        for doc, file_bytes, digest, filename in pending:
+            tags = extract_doc_tags(doc, pl_tags, pl_doc_types)
+            ext = Path(filename).suffix.lower().lstrip(".") or "pdf"
             try:
                 papra_id, created = papra.upload_document(filename, file_bytes)
 
@@ -1204,7 +1529,15 @@ def run(config: Config) -> int:
                     state.mark(digest, doc.id, papra_id)
                     if not config.no_cache:
                         cache.update_status(doc.id, status="duplicate", papra_id=None)
-                    skipped += 1
+                    processed_docs.append(ProcessedDoc(
+                        id=doc.id,
+                        name=doc.title,
+                        filename=filename,
+                        extension=ext,
+                        size_bytes=len(file_bytes),
+                        tags=tags,
+                        status="skipped",
+                    ))
                     bar.update(suffix=f"skip #{doc.id} (duplicate)")
                     continue
 
@@ -1236,16 +1569,32 @@ def run(config: Config) -> int:
                 state.mark(digest, doc.id, papra_id)
                 if not config.no_cache:
                     cache.update_status(doc.id, status="uploaded", papra_id=papra_id)
-                uploaded += 1
+                processed_docs.append(ProcessedDoc(
+                    id=doc.id,
+                    name=doc.title,
+                    filename=filename,
+                    extension=ext,
+                    size_bytes=len(file_bytes),
+                    tags=tags,
+                    status="uploaded",
+                ))
                 bar.update(suffix=f"ok #{doc.id}")
             except Exception as exc:  # noqa: BLE001 - report and continue the batch
-                failed += 1
-                ext = Path(filename).suffix.lstrip(".") or "none"
+                ext = Path(filename).suffix.lower().lstrip(".") or "pdf"
                 failed_docs.append(FailedDocument(
                     id=doc.id,
                     name=doc.title,
                     extension=ext,
                     reason=str(exc),
+                ))
+                processed_docs.append(ProcessedDoc(
+                    id=doc.id,
+                    name=doc.title,
+                    filename=filename,
+                    extension=ext,
+                    size_bytes=len(file_bytes),
+                    tags=tags,
+                    status="failed",
                 ))
                 if not config.no_cache:
                     cache.update_status(doc.id, status="failed")
@@ -1268,7 +1617,13 @@ def run(config: Config) -> int:
         if not config.no_cache:
             cache.save()
 
-    print_report(uploaded=uploaded, skipped=skipped, failed_docs=failed_docs)
+    write_and_print_report(
+        uploaded=sum(1 for d in processed_docs if d.status == "uploaded"),
+        skipped=sum(1 for d in processed_docs if d.status == "skipped"),
+        failed_docs=failed_docs,
+        processed_docs=processed_docs,
+        report_file=config.report_file,
+    )
     return 1 if failed_docs else 0
 
 
@@ -1307,7 +1662,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  PAPRA_RECIPIENT_PROPERTY  Custom property name for recipients (default: Recipient)\n"
             "  PAPRA_TAG_COLOR           Hex colour for created tags (default: #6b7280)\n"
             "  MIGRATION_STATE_FILE      Path to the local dedup state JSON\n"
-            "  MIGRATION_CACHE_FILE      Path to the local migration cache JSON\n\n"
+            "  MIGRATION_CACHE_FILE      Path to the local migration cache JSON\n"
+            "  MIGRATION_REPORT_FILE     Path to write the migration report\n\n"
             "Examples:\n"
             "  ./paperless-to-papra.py\n"
             "  ./paperless-to-papra.py --max-records 50\n"
@@ -1338,6 +1694,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Override MIGRATION_STATE_FILE (local dedup state path).")
     parser.add_argument("--cache-file",
                         help=f"Path to the JSON migration cache (default: {DEFAULT_CACHE_FILE}).")
+    parser.add_argument("--report-file",
+                        help="Path to write the migration report (default: papra-migration-report.txt "
+                             "in the cache directory).")
     parser.add_argument("--refresh-cache", action="store_true",
                         help="Force re-downloading files and recalculating hashes, updating the cache.")
     parser.add_argument("--no-cache", action="store_true",
