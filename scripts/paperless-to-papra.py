@@ -50,6 +50,7 @@ import json
 import mimetypes
 import os
 import re
+import socket
 import sys
 import time
 import uuid
@@ -90,6 +91,9 @@ TAG_LIMIT_CODE = "tags.organization_limit_reached"
 
 #: Network timeout (seconds) applied to every HTTP request.
 HTTP_TIMEOUT = 120
+
+#: Default number of retries for transient HTTP / network errors.
+DEFAULT_RETRIES = 5
 
 
 # --------------------------------------------------------------------------- #
@@ -232,7 +236,7 @@ class HttpClient:
     """Thin ``urllib`` wrapper that adds auth, retries and JSON helpers."""
 
     def __init__(self, base_url: str, token: str, *,
-                 auth_scheme: str = "Bearer", retries: int = 3) -> None:
+                 auth_scheme: str = "Bearer", retries: int = DEFAULT_RETRIES) -> None:
         # Guarantee a single trailing slash so urljoin behaves predictably.
         self.base_url = base_url.rstrip("/") + "/"
         self.token = token
@@ -271,7 +275,7 @@ class HttpClient:
             headers["Content-Type"] = content_type
 
         last_error: Exception | None = None
-        for attempt in range(1, self.retries + 1):
+        for attempt in range(self.retries + 1):
             req = urllib_request.Request(url, data=body, headers=headers, method=method)
             try:
                 with urllib_request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
@@ -281,10 +285,15 @@ class HttpClient:
                 payload = exc.read()
                 if status in allow_status:
                     return HttpResponse(status, payload, dict(exc.headers or {}))
-                # Retry transient server/rate-limit errors; fail fast on 4xx.
-                if status in (429, 500, 502, 503, 504) and attempt < self.retries:
-                    wait = min(2 ** attempt, 30)
-                    log(f"  HTTP {status} on {method} {path}; retrying in {wait}s")
+                # Retry transient server / rate-limit errors (408, 429, 5xx); fail fast on client 4xx.
+                is_retryable = status == 408 or status == 429 or (500 <= status < 600)
+                if is_retryable and attempt < self.retries:
+                    retry_count = attempt + 1
+                    wait = min(2 ** retry_count, 60)
+                    retry_after = exc.headers.get("Retry-After") if exc.headers else None
+                    if retry_after and retry_after.strip().isdigit():
+                        wait = max(wait, int(retry_after.strip()))
+                    log(f"  HTTP {status} on {method} {path}; retrying ({retry_count}/{self.retries}) in {wait}s ...")
                     time.sleep(wait)
                     last_error = exc
                     continue
@@ -292,16 +301,18 @@ class HttpClient:
                 raise RuntimeError(
                     f"HTTP {status} on {method} {url}: {detail}"
                 ) from exc
-            except urllib_error.URLError as exc:
+            except (urllib_error.URLError, TimeoutError, ConnectionResetError, BrokenPipeError, socket.timeout) as exc:
                 last_error = exc
                 if attempt < self.retries:
-                    wait = min(2 ** attempt, 30)
-                    log(f"  Network error on {method} {path} ({exc.reason}); retrying in {wait}s")
+                    retry_count = attempt + 1
+                    wait = min(2 ** retry_count, 60)
+                    reason = getattr(exc, "reason", str(exc))
+                    log(f"  Network error on {method} {path} ({reason}); retrying ({retry_count}/{self.retries}) in {wait}s ...")
                     time.sleep(wait)
                     continue
-                raise RuntimeError(f"Network error on {method} {url}: {exc.reason}") from exc
+                raise RuntimeError(f"Network error on {method} {url}: {exc}") from exc
 
-        raise RuntimeError(f"Request failed after {self.retries} attempts: {last_error}")
+        raise RuntimeError(f"Request failed after {self.retries} retries: {last_error}")
 
     def get_json(self, path: str, query: dict[str, Any] | None = None) -> Any:
         """GET and decode JSON."""
@@ -816,6 +827,7 @@ class Config:
     paperless_key: str
     max_records: int
     upload_delay: float
+    retries: int
     organization: str
     recipient_property: str
     tag_color: str
@@ -1146,6 +1158,8 @@ def resolve_config(args: argparse.Namespace) -> Config:
     tag_color = pick(args.tag_color, "PAPRA_TAG_COLOR", DEFAULT_TAG_COLOR)
     delay_raw = pick(str(args.upload_delay) if args.upload_delay is not None else None,
                      "UPLOAD_DELAY_SECONDS", "2")
+    retries_raw = pick(str(args.retries) if args.retries is not None else None,
+                       "HTTP_RETRIES", str(DEFAULT_RETRIES))
     state_raw = pick(args.state_file, "MIGRATION_STATE_FILE",
                      str(env_file.with_name("paperless-to-papra.state.json")))
     cache_raw = pick(args.cache_file, "MIGRATION_CACHE_FILE",
@@ -1175,6 +1189,11 @@ def resolve_config(args: argparse.Namespace) -> Config:
     except ValueError:
         raise SystemExit(f"UPLOAD_DELAY_SECONDS must be a number, got {delay_raw!r}")
 
+    try:
+        retries = int(str(retries_raw).strip())
+    except ValueError:
+        raise SystemExit(f"HTTP_RETRIES must be an integer, got {retries_raw!r}")
+
     return Config(
         papra_url=papra_url,
         papra_key=papra_key,
@@ -1182,6 +1201,7 @@ def resolve_config(args: argparse.Namespace) -> Config:
         paperless_key=paperless_key,
         max_records=max_records,
         upload_delay=upload_delay,
+        retries=retries,
         organization=organization,
         recipient_property=recipient_property,
         tag_color=tag_color,
@@ -1266,7 +1286,7 @@ def purge_organization(papra: PapraClient, state: MigrationState,
 def run(config: Config) -> int:
     """Execute the migration (or a purge). Returns a process exit code."""
     papra = PapraClient(
-        HttpClient(config.papra_url, config.papra_key, auth_scheme="Bearer"))
+        HttpClient(config.papra_url, config.papra_key, auth_scheme="Bearer", retries=config.retries))
     state = MigrationState.load(config.state_file)
     cache = MigrationCache.load(config.cache_file)
 
@@ -1283,7 +1303,7 @@ def run(config: Config) -> int:
         return purge_organization(papra, state, cache, config)
 
     paperless = PaperlessClient(
-        HttpClient(config.paperless_url, config.paperless_key, auth_scheme="Token"))
+        HttpClient(config.paperless_url, config.paperless_key, auth_scheme="Token", retries=config.retries))
 
     log("Reading Paperless metadata (tags, document types, correspondents, users) ...")
     pl_tags = paperless.tags()
@@ -1658,6 +1678,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  PAPERLESS_KEY             Paperless-ngx API token (required)\n"
             "  MAX_RECORDS               Max new documents to upload per run (default: 10)\n"
             "  UPLOAD_DELAY_SECONDS      Pause between uploads to throttle Papra (default: 2)\n"
+            "  HTTP_RETRIES              Times to retry transient HTTP/network errors (default: 5)\n"
             "  PAPRA_ORGANIZATION        Target organisation name (default: Inbox)\n"
             "  PAPRA_RECIPIENT_PROPERTY  Custom property name for recipients (default: Recipient)\n"
             "  PAPRA_TAG_COLOR           Hex colour for created tags (default: #6b7280)\n"
@@ -1684,6 +1705,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--upload-delay", type=float,
                         help="Override UPLOAD_DELAY_SECONDS (pause between uploads; "
                              "throttles Papra to avoid OOM, default 2).")
+    parser.add_argument("--retries", type=int,
+                        help=f"Override HTTP_RETRIES (times to retry transient errors with progressive times, default {DEFAULT_RETRIES}).")
     parser.add_argument("--organization",
                         help="Override PAPRA_ORGANIZATION (target org name).")
     parser.add_argument("--recipient-property",
