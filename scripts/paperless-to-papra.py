@@ -633,11 +633,19 @@ class PapraClient:
             fields={}, file_field="file", filename=filename,
             file_bytes=file_bytes, content_type=content_type,
         )
-        resp = self.http.request(
-            "POST", self._org_path("documents"),
-            data=body, content_type=header,
-            allow_status=(HTTP_CONFLICT,),
-        )
+        try:
+            resp = self.http.request(
+                "POST", self._org_path("documents"),
+                data=body, content_type=header,
+                allow_status=(HTTP_CONFLICT,),
+            )
+        except RuntimeError as exc:
+            if "Connection reset by peer" in str(exc) or "104" in str(exc):
+                raise RuntimeError(
+                    f"Connection reset by peer during upload of {filename!r} ({format_bytes(len(file_bytes))}). "
+                    f"Papra likely rejected the file as too large (check DOCUMENT_STORAGE_MAX_UPLOAD_SIZE in Papra)."
+                ) from exc
+            raise
         if resp.status == HTTP_CONFLICT:
             return None, False
         return resp.json()["document"]["id"], True

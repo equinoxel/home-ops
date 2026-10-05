@@ -37,6 +37,9 @@ spec:
               # RustFS is path-style (endpoint/bucket/key), not virtual-host, so
               # this must be true or uploads 404.
               DOCUMENT_STORAGE_S3_FORCE_PATH_STYLE: "true"
+              # Allow uploading documents of any size (default is 25MB, which causes
+              # HTTP 413 and connection reset on large scans/catalogues).
+              DOCUMENT_STORAGE_MAX_UPLOAD_SIZE: "0"
               # Endpoint, bucket, and credentials come from the papra secret
               # (see externalsecret.yaml).
               # AI features (Ollama). Disabled until an Ollama endpoint exists.
@@ -78,8 +81,8 @@ spec:
                     path: /api/health
                     port: *port
                   periodSeconds: 30
-                  timeoutSeconds: 5
-                  failureThreshold: 3
+                  timeoutSeconds: 10
+                  failureThreshold: 5
               readiness: *probes
             resources:
               requests:
@@ -87,10 +90,10 @@ spec:
                 memory: 256Mi
               # Papra buffers uploads and runs content extraction + auto-tagging
               # in-process; bulk imports spike memory well past the ~285Mi idle
-              # footprint. 512Mi OOM-killed the pod during a migration run, so
-              # give it real headroom.
+              # footprint. 512Mi and 1Gi OOM-killed the pod during migration runs,
+              # so give it 2Gi headroom.
               limits:
-                memory: 1Gi
+                memory: 2Gi
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
