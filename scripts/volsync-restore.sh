@@ -216,9 +216,11 @@ APP_SNAPSHOTS=$(echo "${SNAPSHOTS}" | \
             (.source.host | contains($source)) or
             (.source.host | contains($app)) or
             (.source.userName | contains($source)) or
-            (.source.userName | contains($app))
+            (.source.userName | contains($app)) or
+            (.source.userName | contains("gitea")) or
+            (.source.host | contains("gitea"))
         )] | sort_by(.startTime) | reverse | .[] |
-        "\(.startTime)  \(.id)  \((.rootEntry.summ.size // 0) | human_size)  \(.source.host):\(.source.path)"
+        "\(.startTime)  \(.id)  \((.rootEntry.summ.size // 0)) bytes (\((.rootEntry.summ.size // 0) | human_size))  \(.source.userName)@\(.source.host):\(.source.path)"
     ' 2>/dev/null || true)
 
 if [[ -z "${APP_SNAPSHOTS}" ]]; then
