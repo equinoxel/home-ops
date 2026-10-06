@@ -40,18 +40,18 @@ flowchart TD
     
     CheckCache -- Yes: Hit --> InspectStatus{Cache status == 'uploaded' or 'duplicate'?}
     InspectStatus -- Yes --> SkipDownload[Skip Download! Mark as already uploaded]
-    InspectStatus -- No: pending/failed --> DownloadNeeded[Download file bytes for upload]
+    InspectStatus -- No --> DownloadNeeded[Download file bytes for upload]
     
     CheckCache -- No: Miss --> DownloadFile[Download original file from Paperless]
     DownloadFile --> CalcHash[Calculate SHA-256 digest]
     CalcHash --> CheckState{Hash in Papra / State?}
     
     CheckState -- Yes --> CacheUploaded[Update Cache: status = 'uploaded']
-    CheckState -- No --> QueuePending[Queue in pending batch for upload]
-    QueuePending --> UploadPapra[Upload to Papra]
+    CheckState -- No --> QueuePending[Queue in pending batch (do NOT cache yet)]
+    QueuePending --> UploadPapra[Upload to Papra + apply tags/properties/date]
     UploadPapra -- Success (201) --> CacheSuccess[Cache: status = 'uploaded', papra_id = ID]
     UploadPapra -- Conflict (409) --> CacheDup[Cache: status = 'duplicate']
-    UploadPapra -- Error --> CacheFail[Cache: status = 'failed']
+    UploadPapra -- Error --> CacheFail[Do not cache! Record failed]
     
     SkipDownload --> NextDoc[Next Document]
     CacheUploaded --> NextDoc
@@ -162,22 +162,27 @@ For each document yielded by `paperless.documents()`:
      - Update cache: `status = "uploaded"`, `sha256 = digest`, `file_size = ...`.
      - Log status and skip.
    - If not uploaded:
-     - Record in cache as `status = "pending"`.
-     - Append `(doc, file_bytes, digest)` to `pending` queue.
+     - Append `(doc, file_bytes, digest, filename)` to in-memory `pending` queue.
+     - **Do NOT populate cache here!** The record has not been uploaded or processed yet.
      - Log download and queue status.
    - If `len(pending) >= config.max_records`: stop scan.
 
 ### Phase 2: Upload Phase
 For each item in `pending`:
-1. Upload file to Papra.
-2. If HTTP 201 Created:
-   - Mark `state.mark(digest, doc.id, papra_id)`.
-   - Update cache: `status = "uploaded"`, `papra_id = papra_id`.
-3. If HTTP 409 Conflict (duplicate):
+1. Upload file to Papra (`papra.upload_document(filename, file_bytes)`).
+2. If HTTP 409 Conflict (duplicate):
    - Mark `state.mark(digest, doc.id, None)`.
-   - Update cache: `status = "duplicate"`.
-4. If Exception:
-   - Update cache: `status = "failed"`.
+   - Update cache: `cache.put(doc.id, ..., status="duplicate")`.
+3. If HTTP 201 Created:
+   - Apply Paperless tags and document type as Papra tags.
+   - Set recipient custom property.
+   - Set document date.
+   - **Only after all processing succeeds**:
+     - Mark `state.mark(digest, doc.id, papra_id)`.
+     - Update cache: `cache.put(doc.id, ..., status="uploaded", papra_id=papra_id)`.
+4. If Exception / failure:
+   - Record in `failed_docs`.
+   - **Do NOT populate cache!** Remove any existing entry via `cache.remove(doc.id)` so failures are retried cleanly on subsequent runs.
 5. Save state and cache atomically to disk.
 
 ---
@@ -197,6 +202,8 @@ When `--purge-org` is invoked:
 |---|---|---|---|
 | `--cache-file PATH` | `MIGRATION_CACHE_FILE` | `/tmp/papra-migration-cache.json` | Path to JSON cache file |
 | `--refresh-cache` | `REFRESH_CACHE` | `false` | Force re-downloading files and recalculating hashes |
+| `--reset-cache` | `RESET_CACHE` | `false` | Reset / clear the JSON migration cache (and state) before running |
+| `--reset-cache-only` | - | `false` | Clear the cache (and state) and exit immediately |
 | `--no-cache` | `NO_CACHE` | `false` | Bypass cache lookup and caching entirely |
 
 ---

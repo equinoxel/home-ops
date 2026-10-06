@@ -802,6 +802,14 @@ class MigrationCache:
                 self.documents[key]["papra_id"] = papra_id
             self.documents[key]["cached_at"] = int(time.time())
 
+    def remove(self, doc_id: int) -> None:
+        """Remove a document from the cache by ID if present."""
+        self.documents.pop(str(doc_id), None)
+
+    def clear(self) -> None:
+        """Clear all cached document entries."""
+        self.documents.clear()
+
     def reset_for_purge(self) -> None:
         """Reset all uploaded/duplicate statuses to pending after a purge."""
         for item in self.documents.values():
@@ -847,6 +855,7 @@ class Config:
     assume_yes: bool
     no_cache: bool = False
     refresh_cache: bool = False
+    reset_cache: bool = False
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -1175,6 +1184,22 @@ def resolve_config(args: argparse.Namespace) -> Config:
     report_raw = pick(args.report_file, "MIGRATION_REPORT_FILE",
                       str(Path(cache_raw).with_name("papra-migration-report.txt")))
 
+    reset_cache = getattr(args, "reset_cache", False) or getattr(args, "reset_cache_only", False) or (os.environ.get("RESET_CACHE", "").lower() in ("1", "true", "yes"))
+    reset_cache_only = getattr(args, "reset_cache_only", False)
+
+    if reset_cache_only:
+        cache_file = Path(cache_raw).expanduser()
+        cache = MigrationCache.load(cache_file)
+        cache.clear()
+        cache.save()
+        state_file = Path(state_raw).expanduser()
+        if state_file.is_file():
+            state = MigrationState.load(state_file)
+            state.clear()
+            state.save()
+        log(f"Migration cache at {cache_file} has been reset.")
+        sys.exit(0)
+
     # A purge only talks to Papra, so Paperless credentials are not required.
     required = {"PAPRA_URL": papra_url, "PAPRA_KEY": papra_key}
     if not args.purge_org:
@@ -1182,6 +1207,18 @@ def resolve_config(args: argparse.Namespace) -> Config:
         required["PAPERLESS_KEY"] = paperless_key
     missing = [name for name, value in required.items() if not value]
     if missing:
+        if reset_cache:
+            cache_file = Path(cache_raw).expanduser()
+            cache = MigrationCache.load(cache_file)
+            cache.clear()
+            cache.save()
+            state_file = Path(state_raw).expanduser()
+            if state_file.is_file():
+                state = MigrationState.load(state_file)
+                state.clear()
+                state.save()
+            log(f"Migration cache at {cache_file} has been reset (credentials not supplied for migration).")
+            sys.exit(0)
         raise SystemExit(
             f"Missing required configuration: {', '.join(missing)}.\n"
             f"Set them in {env_file}, the environment, or via CLI flags."
@@ -1221,6 +1258,7 @@ def resolve_config(args: argparse.Namespace) -> Config:
         assume_yes=args.yes,
         no_cache=args.no_cache,
         refresh_cache=args.refresh_cache,
+        reset_cache=reset_cache,
     )
 
 
@@ -1297,8 +1335,17 @@ def run(config: Config) -> int:
         HttpClient(config.papra_url, config.papra_key, auth_scheme="Bearer", retries=config.retries))
     state = MigrationState.load(config.state_file)
     cache = MigrationCache.load(config.cache_file)
+    if config.reset_cache:
+        log(f"Resetting migration cache ({config.cache_file}) ...")
+        cache.clear()
+        cache.save()
+        if state.path.is_file():
+            log(f"Resetting migration state ({config.state_file}) ...")
+            state.clear()
+            state.save()
+        log("Migration cache and state have been reset.")
 
-    if not config.no_cache and state.uploaded:
+    if not config.no_cache and not config.reset_cache and state.uploaded:
         seeded = cache.seed_from_state(state)
         if seeded > 0:
             log(f"Seeded cache with {seeded} pre-existing document(s) from state file.")
@@ -1434,8 +1481,7 @@ def run(config: Config) -> int:
                 status="failed",
             ))
             if not config.no_cache:
-                cache.update_status(doc.id, status="failed")
-                cache.save()
+                cache.remove(doc.id)
             log(f"       -> download failed: {exc}, skipping")
             continue
 
@@ -1466,18 +1512,6 @@ def run(config: Config) -> int:
             ))
             log(f"       -> downloaded {size_str}, sha256={digest[:12]}… (already uploaded, skipping)")
             continue
-
-        if not config.no_cache:
-            cache.put(
-                doc.id,
-                title=doc.title,
-                file_name=filename,
-                file_size=len(file_bytes),
-                sha256=digest,
-                status="pending",
-                paperless_modified=doc.modified,
-            )
-            cache.save()
 
         pending.append((doc, file_bytes, digest, filename))
         log(f"       -> downloaded {size_str}, sha256={digest[:12]}… (pending upload {len(pending)}/{config.max_records})")
@@ -1556,7 +1590,16 @@ def run(config: Config) -> int:
                     # next time without re-downloading.
                     state.mark(digest, doc.id, papra_id)
                     if not config.no_cache:
-                        cache.update_status(doc.id, status="duplicate", papra_id=None)
+                        cache.put(
+                            doc.id,
+                            title=doc.title,
+                            file_name=filename,
+                            file_size=len(file_bytes),
+                            sha256=digest,
+                            status="duplicate",
+                            papra_id=None,
+                            paperless_modified=doc.modified,
+                        )
                     processed_docs.append(ProcessedDoc(
                         id=doc.id,
                         name=doc.title,
@@ -1596,7 +1639,16 @@ def run(config: Config) -> int:
 
                 state.mark(digest, doc.id, papra_id)
                 if not config.no_cache:
-                    cache.update_status(doc.id, status="uploaded", papra_id=papra_id)
+                    cache.put(
+                        doc.id,
+                        title=doc.title,
+                        file_name=filename,
+                        file_size=len(file_bytes),
+                        sha256=digest,
+                        status="uploaded",
+                        papra_id=papra_id,
+                        paperless_modified=doc.modified,
+                    )
                 processed_docs.append(ProcessedDoc(
                     id=doc.id,
                     name=doc.title,
@@ -1625,7 +1677,7 @@ def run(config: Config) -> int:
                     status="failed",
                 ))
                 if not config.no_cache:
-                    cache.update_status(doc.id, status="failed")
+                    cache.remove(doc.id)
                 bar.update(suffix=f"FAIL #{doc.id}")
                 log(f"\n  Failed on Paperless #{doc.id} ({doc.title!r}): {exc}")
             finally:
@@ -1697,6 +1749,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  ./paperless-to-papra.py\n"
             "  ./paperless-to-papra.py --max-records 50\n"
             "  ./paperless-to-papra.py --dry-run\n"
+            "  ./paperless-to-papra.py --reset-cache-only                      # clear cache and exit\n"
+            "  ./paperless-to-papra.py --reset-cache --max-records 10          # clear cache and migrate 10 docs\n"
             "  ./paperless-to-papra.py --env-file /tmp/papra.env --organization Inbox\n"
             "  ./paperless-to-papra.py --purge-org --organization Inbox        # delete all docs (prompts)\n"
             "  ./paperless-to-papra.py --purge-org --organization Inbox --yes  # delete all docs (no prompt)\n"
@@ -1730,6 +1784,10 @@ def build_parser() -> argparse.ArgumentParser:
                              "in the cache directory).")
     parser.add_argument("--refresh-cache", action="store_true",
                         help="Force re-downloading files and recalculating hashes, updating the cache.")
+    parser.add_argument("--reset-cache", action="store_true",
+                        help="Reset / clear the JSON migration cache (and dedup state) before running.")
+    parser.add_argument("--reset-cache-only", action="store_true",
+                        help="Reset the cache (and state) and exit immediately without performing any migration.")
     parser.add_argument("--no-cache", action="store_true",
                         help="Bypass cache lookup and caching entirely.")
     parser.add_argument("--dry-run", action="store_true",
