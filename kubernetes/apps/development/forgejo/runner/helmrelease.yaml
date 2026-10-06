@@ -131,8 +131,8 @@ spec:
         containers:
           runner:
             image:
-              repository: git.erwanleboucher.dev/eleboucher/runner
-              tag: latest@sha256:96972a9e96630a4d6114fe8afa5dc6fcb352167e44b9b23513bcc490b4ce4abe
+              repository: code.forgejo.org/forgejo/runner
+              tag: 6.2.2
             command:
               - /bin/forgejo-runner
               - daemon
