@@ -106,22 +106,26 @@ All secrets are stored in a single **Bitwarden item** named `forgejo` and synced
 
 ## CI/CD Runner
 
-The runner is deployed as a StatefulSet with a 1Gi persistent volume for registration state. It uses the Kubernetes executor to spawn ephemeral job pods.
+> [!NOTE]
+> **Status:** Inactive (`replicas: 0`). Scaled down because no CI/CD pipelines are currently active.
 
-### Runner Labels
+### Architecture & Current State
 
-| Label | Pod Spec | Description |
-|-------|----------|-------------|
-| `ubuntu-latest` | podspec-default | Ubuntu 24.04 container |
-| `ubuntu-24.04` | podspec-default | Ubuntu 24.04 container |
-| `default` | podspec-default | Ubuntu 24.04 container |
-| `docker` | podspec-dind | Docker-in-Docker (privileged) |
-
-### Runner Resources
-
-- Job pods: 100m CPU request, 256Mi–2Gi memory
-- DinD jobs: additional 4Gi memory limit for the Docker daemon sidecar
-- Runner capacity: 4 concurrent jobs
+1. **Custom `k8spod` Executor Deprecation**:
+   - The initial configuration utilized an unmaintained personal fork (`git.erwanleboucher.dev/eleboucher/runner`) that added a custom `k8spod:` schema to spawn Kubernetes pods per job. That registry is defunct.
+   - The official runner (`code.forgejo.org/forgejo/runner`) does not support the `k8spod:` schema; it expects standard `docker://<image>` or `host` schemas.
+2. **Talos Linux DinD Verification**:
+   - Docker-in-Docker (`docker:dind`) with privileged mode and the `overlay2` storage driver was verified fully functional on the cluster's Talos Linux nodes (kernel 6.18, cgroups v2).
+3. **Re-enabling the Runner**:
+   - To activate the runner when pipelines are needed:
+     1. Generate a new runner registration token:
+        ```bash
+        kubectl --kubeconfig kubeconfig exec -n development deploy/forgejo -c forgejo -- \
+          gitea --config /data/gitea/conf/app.ini --work-path /data actions generate-runner-token
+        ```
+     2. Update the `FORGEJO_RUNNER_TOKEN` field in Bitwarden (item: `forgejo`).
+     3. Deploy the runner with a `docker:dind` sidecar and standard Docker labels (e.g. `ubuntu-latest:docker://node:20-bookworm` or `ghcr.io/catthehacker/ubuntu:act-latest`).
+     4. Set `replicas: 1` in [`kubernetes/apps/development/forgejo/runner/helmrelease.yaml`](file:///home/laur/dev/talos/home-ops/kubernetes/apps/development/forgejo/runner/helmrelease.yaml).
 
 ## Dependencies
 
