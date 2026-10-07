@@ -28,18 +28,13 @@ spec:
               level: info
             runner:
               capacity: 4
+              file: /data/.runner
               labels:
                 - ubuntu-latest:k8spod:/config/podspec-default.yaml
                 - ubuntu-24.04:k8spod:/config/podspec-default.yaml
                 - default:k8spod:/config/podspec-default.yaml
                 - docker:k8spod:/config/podspec-dind.yaml
               timeout: 3h
-            server:
-              connections:
-                forgejo:
-                  url: http://forgejo-http.development.svc.cluster.local:3000
-                  uuid: 63396264-3930-6531-6334-323261373430
-                  token: c9bd90e1c422a740b6fa5448ffd895550ea307a6
           podspec-default.yaml: |-
             containers:
               - env:
@@ -128,6 +123,39 @@ spec:
             runAsUser: 1000
         annotations:
           reloader.stakater.com/auto: "true"
+        initContainers:
+          register-runner:
+            image:
+              repository: code.forgejo.org/forgejo/runner
+              tag: 6.2.2
+            command:
+              - sh
+              - -c
+              - |
+                if [ -f /data/.runner ]; then
+                  echo "Runner already registered, skipping"
+                  exit 0
+                fi
+                echo "Registering runner..."
+                cd /data && forgejo-runner register \
+                  --instance http://forgejo-http.development.svc.cluster.local:3000 \
+                  --token "${RUNNER_TOKEN}" \
+                  --name k8s-runner \
+                  --labels "default:k8spod:/config/podspec-default.yaml,ubuntu-latest:k8spod:/config/podspec-default.yaml,ubuntu-24.04:k8spod:/config/podspec-default.yaml,docker:k8spod:/config/podspec-dind.yaml" \
+                  --config /config/runner.yaml \
+                  --no-interactive
+            env:
+              - name: RUNNER_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    key: token
+                    name: forgejo-runner-secret
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
         containers:
           runner:
             image:
