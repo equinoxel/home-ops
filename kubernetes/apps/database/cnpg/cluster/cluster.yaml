@@ -34,6 +34,7 @@ spec:
       max_connections: "600"
       shared_buffers: 128MB
     pg_hba:
+      - hostnossl all all 10.42.0.0/16      scram-sha-256
       - hostnossl all all 10.69.0.0/16      scram-sha-256
       - hostnossl all all fc69::/16         scram-sha-256
       - hostssl   all all all               cert clientcert=verify-full
@@ -110,6 +111,12 @@ spec:
         login: true
         superuser: false
         disablePassword: false
+
+      - name: sonarqube
+        ensure: present
+        login: true
+        superuser: false
+        disablePassword: true
 
       - name: sure-am
         ensure: present

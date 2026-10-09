@@ -1,0 +1,149 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app sonarqube
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    controllers:
+      *app :
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: 'true'
+        initContainers:
+          init:
+            image:
+              repository: alpine/openssl
+              tag: latest
+            securityContext:
+              privileged: true
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                sysctl -w vm.max_map_count=262144
+                mkdir -p /opt/sonarqube/data /opt/sonarqube/extensions /opt/sonarqube/certs
+                openssl pkcs8 -topk8 -inform PEM -outform DER -in /var/run/secrets/postgresql/tls.key -out /opt/sonarqube/certs/tls.pk8 -nocrypt
+                chown -R 1000:1000 /opt/sonarqube/data /opt/sonarqube/extensions /opt/sonarqube/certs
+                chmod 600 /opt/sonarqube/certs/tls.pk8
+        containers:
+          app:
+            image:
+              repository: docker.io/library/sonarqube
+              # renovate: datasource=docker depName=sonarqube
+              tag: 26.9.0.129388-community
+            env:
+              SONAR_JDBC_USERNAME: *app
+              SONAR_JDBC_PASSWORD: ""
+              SONAR_JDBC_URL: "jdbc:postgresql://postgres-cluster-rw.database.svc.cluster.local:5432/sonarqube?ssl=true&sslmode=verify-ca&sslrootcert=/var/run/secrets/postgresql/ca.crt&sslcert=/var/run/secrets/postgresql/tls.crt&sslkey=/opt/sonarqube/certs/tls.pk8"
+              SONAR_SEARCH_JAVAADDITIONALOPTS: "-Dnode.store.allow_mmap=true"
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/system/status
+                    port: &port 9000
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/system/status
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/system/status
+                    port: *port
+                  initialDelaySeconds: 30
+                  periodSeconds: 15
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+            resources:
+              requests:
+                cpu: 200m
+                memory: 1.5Gi
+              limits:
+                memory: 3Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+    service:
+      app:
+        ports:
+          http:
+            port: *port
+
+    route:
+      app:
+        hostnames:
+          - 'sonar.laurivan.com'
+          - 'sonarqube.laurivan.com'
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+        annotations:
+          gethomepage.dev/enabled: 'true'
+          gethomepage.dev/name: SonarQube
+          gethomepage.dev/group: Dev Tools
+          gethomepage.dev/icon: sonarqube.svg
+          gethomepage.dev/href: https://sonar.laurivan.com
+
+    persistence:
+      data:
+        existingClaim: "${APP}"
+        advancedMounts:
+          *app :
+            init:
+              - path: /opt/sonarqube/data
+                subPath: data
+              - path: /opt/sonarqube/extensions
+                subPath: extensions
+            app:
+              - path: /opt/sonarqube/data
+                subPath: data
+              - path: /opt/sonarqube/extensions
+                subPath: extensions
+      certs:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            init:
+              - path: /opt/sonarqube/certs
+            app:
+              - path: /opt/sonarqube/certs
+      logs:
+        type: emptyDir
+        globalMounts:
+          - path: /opt/sonarqube/logs
+      temp:
+        type: emptyDir
+        globalMounts:
+          - path: /opt/sonarqube/temp
