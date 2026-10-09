@@ -27,7 +27,6 @@ spec:
             args:
               - |
                 sysctl -w vm.max_map_count=262144
-                mkdir -p /opt/sonarqube/data /opt/sonarqube/extensions /opt/sonarqube/certs
                 openssl pkcs8 -topk8 -inform PEM -outform DER -in /var/run/secrets/postgresql/tls.key -out /opt/sonarqube/certs/tls.pk8 -nocrypt
                 chown -R 1000:1000 /opt/sonarqube/data /opt/sonarqube/extensions /opt/sonarqube/certs
                 chmod 600 /opt/sonarqube/certs/tls.pk8
@@ -119,26 +118,16 @@ spec:
     persistence:
       data:
         existingClaim: "${APP}"
-        advancedMounts:
-          *app :
-            init:
-              - path: /opt/sonarqube/data
-                subPath: data
-              - path: /opt/sonarqube/extensions
-                subPath: extensions
-            app:
-              - path: /opt/sonarqube/data
-                subPath: data
-              - path: /opt/sonarqube/extensions
-                subPath: extensions
+        globalMounts:
+          - path: /opt/sonarqube/data
+      extensions:
+        type: emptyDir
+        globalMounts:
+          - path: /opt/sonarqube/extensions
       certs:
         type: emptyDir
-        advancedMounts:
-          *app :
-            init:
-              - path: /opt/sonarqube/certs
-            app:
-              - path: /opt/sonarqube/certs
+        globalMounts:
+          - path: /opt/sonarqube/certs
       logs:
         type: emptyDir
         globalMounts:
