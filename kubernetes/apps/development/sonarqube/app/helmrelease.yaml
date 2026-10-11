@@ -44,6 +44,7 @@ spec:
               SONAR_JDBC_PASSWORD: ""
               SONAR_JDBC_URL: "jdbc:postgresql://postgres-cluster-rw.database.svc.cluster.local:5432/sonarqube?ssl=true&sslmode=verify-ca&sslrootcert=/var/run/secrets/postgresql/ca.crt&sslcert=/var/run/secrets/postgresql/tls.crt&sslkey=/opt/sonarqube/certs/tls.pk8"
               SONAR_SEARCH_JAVAADDITIONALOPTS: "-Dnode.store.allow_mmap=true"
+              SONAR_CORE_SERVERBASEURL: "https://sonar.laurivan.com"
             probes:
               startup:
                 enabled: true
