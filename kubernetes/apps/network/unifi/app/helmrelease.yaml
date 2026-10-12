@@ -11,32 +11,27 @@ spec:
     name: app-template
   values:
     controllers:
-      *app :
+      *app:
         annotations:
           reloader.stakater.com/auto: "true"
-        pod:
-          securityContext:
-            fsGroup: 999
-            fsGroupChangePolicy: OnRootMismatch
         containers:
           app:
             image:
-              repository: ghcr.io/jacobalberty/unifi-docker
-              tag: v9.0.114
+              repository: ghcr.io/lemker/unifi-os-server
+              tag: v1.7.0
             env:
               TZ: Europe/Bucharest
-              RUNAS_UID0: "false"
-              UNIFI_UID: "999"
-              UNIFI_GID: "999"
-              JVM_INIT_HEAP_SIZE: "256M"
-              JVM_MAX_HEAP_SIZE: "512M"
+              UOS_SYSTEM_IP: "192.168.2.41"
+            securityContext:
+              privileged: true
             probes:
               startup:
                 enabled: true
                 custom: true
                 spec:
-                  tcpSocket:
-                    port: &port 8443
+                  httpGet:
+                    path: /api/ping
+                    port: 80
                   initialDelaySeconds: 30
                   periodSeconds: 10
                   timeoutSeconds: 5
@@ -45,24 +40,28 @@ spec:
                 enabled: true
                 custom: true
                 spec:
-                  tcpSocket:
-                    port: *port
+                  httpGet:
+                    path: /api/ping
+                    port: 80
                   periodSeconds: 30
                   timeoutSeconds: 5
                   failureThreshold: 3
               readiness: *probes
             resources:
               requests:
-                cpu: 50m
-                memory: 512Mi
+                cpu: 200m
+                memory: 1536Mi
               limits:
-                memory: 1Gi
+                memory: 4Gi
     service:
       app:
+        controller: *app
+        forceRename: *app
         ports:
           http:
-            port: *port
-            protocol: HTTPS
+            port: &port 443
+            protocol: TCP
+            appProtocol: https
       stun:
         controller: *app
         type: LoadBalancer
@@ -73,10 +72,19 @@ spec:
             port: 3478
             protocol: UDP
           discovery:
+            port: 10003
+            protocol: UDP
+          discovery-legacy:
             port: 10001
             protocol: UDP
           inform:
             port: 8080
+            protocol: TCP
+          syslog:
+            port: 5514
+            protocol: UDP
+          speedtest:
+            port: 6789
             protocol: TCP
     route:
       app:
@@ -87,7 +95,9 @@ spec:
             namespace: network
         rules:
           - backendRefs:
-              - name: *app
+              - group: gateway.envoyproxy.io
+                kind: Backend
+                name: *app
                 port: *port
             filters:
               - type: URLRewrite
@@ -97,4 +107,25 @@ spec:
       data:
         existingClaim: "{{ .Release.Name }}"
         globalMounts:
-          - path: /unifi
+          - path: /persistent
+            subPath: persistent
+          - path: /var/log
+            subPath: log
+          - path: /data
+            subPath: data
+          - path: /srv
+            subPath: srv
+          - path: /var/lib/unifi
+            subPath: unifi
+          - path: /var/lib/mongodb
+            subPath: mongodb
+          - path: /etc/rabbitmq/ssl
+            subPath: rabbitmq
+      tmpfs:
+        type: emptyDir
+        medium: Memory
+        globalMounts:
+          - path: /run
+          - path: /run/lock
+          - path: /tmp
+          - path: /var/lib/journal

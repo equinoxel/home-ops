@@ -13,6 +13,7 @@ This directory contains the networking infrastructure for the Kubernetes cluster
 | **Cloudflare DNS** | External DNS provider. Syncs DNS records to Cloudflare. |
 | **Cloudflare Tunnel** | Secure tunnel for external access without exposing ports. |
 | **Certificates** | TLS certificate management (cert-manager issuers/certs). |
+| **UniFi OS Server** | Self-hosted UniFi controller for APs, switches, and network management (`unifi.laurivan.com`). |
 
 ## Subnet Layout
 
@@ -31,6 +32,7 @@ Allocated from the `192.168.2.0/24` pool via `CiliumLoadBalancerIPPool`, announc
 
 | IP | Service |
 |----|---------|
+| `192.168.2.41` | UniFi STUN / Discovery / Inform (`3478/udp`, `8080/tcp`, `10003/udp`) |
 | `192.168.2.155` | Talos API VIP (not Cilium-managed) |
 | `192.168.2.156` | k8s-gateway (DNS) |
 | `192.168.2.157` | Envoy Internal Gateway (`*.laurivan.com`) |
