@@ -14,6 +14,11 @@ spec:
       *app:
         annotations:
           reloader.stakater.com/auto: "true"
+        pod:
+          hostAliases:
+            - ip: "127.0.0.1"
+              hostnames:
+                - "host.docker.internal"
         initContainers:
           init-dirs:
             image:
@@ -32,9 +37,21 @@ spec:
             image:
               repository: ghcr.io/lemker/unifi-os-server
               tag: v1.7.0
+            command:
+              - /bin/bash
+              - -c
+              - |
+                mkdir -p /etc/systemd/system/unifi-core.service.d
+                printf "[Service]\nType=simple\n" > /etc/systemd/system/unifi-core.service.d/override.conf
+                mkdir -p /etc/systemd/system/uos-agent.service.d
+                printf "[Service]\nType=simple\n" > /etc/systemd/system/uos-agent.service.d/override.conf
+                mkdir -p /etc/systemd/system/unifi.service.d
+                printf "[Service]\nType=simple\n" > /etc/systemd/system/unifi.service.d/override.conf
+                exec /root/uos-entrypoint.sh
             env:
               TZ: Europe/Bucharest
               UOS_SYSTEM_IP: "192.168.2.41"
+              HARDWARE_PLATFORM: "synology"
             securityContext:
               privileged: true
             probes:
@@ -48,7 +65,7 @@ spec:
                   initialDelaySeconds: 30
                   periodSeconds: 10
                   timeoutSeconds: 5
-                  failureThreshold: 30
+                  failureThreshold: 60
               liveness: &probes
                 enabled: true
                 custom: true
@@ -138,11 +155,3 @@ spec:
                 subPath: mongodb
               - path: /etc/rabbitmq/ssl
                 subPath: rabbitmq
-      tmpfs:
-        type: emptyDir
-        medium: Memory
-        globalMounts:
-          - path: /run
-          - path: /run/lock
-          - path: /tmp
-          - path: /var/lib/journal
