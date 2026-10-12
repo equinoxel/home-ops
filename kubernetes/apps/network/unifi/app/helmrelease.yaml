@@ -29,7 +29,11 @@ spec:
               - -c
               - |
                 mkdir -p /volume/persistent /volume/log /volume/data /volume/srv /volume/unifi /volume/mongodb /volume/rabbitmq
-                chmod -R 777 /volume
+                chmod 777 /volume/persistent /volume/log /volume/srv /volume/unifi /volume/mongodb /volume/rabbitmq
+                chmod 755 /volume/data
+                if [ -d /volume/data/postgresql/14/main/data ]; then
+                  chmod 0700 /volume/data/postgresql/14/main/data
+                fi
             securityContext:
               privileged: true
         containers:
@@ -41,6 +45,7 @@ spec:
               - /bin/bash
               - -c
               - |
+                sed -i '/WatchdogSec=/d' /lib/systemd/system/unifi-core.service
                 mkdir -p /etc/systemd/system/unifi-core.service.d
                 printf "[Service]\nType=simple\n" > /etc/systemd/system/unifi-core.service.d/override.conf
                 mkdir -p /etc/systemd/system/uos-agent.service.d
