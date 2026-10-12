@@ -14,6 +14,19 @@ spec:
       *app:
         annotations:
           reloader.stakater.com/auto: "true"
+        initContainers:
+          init-dirs:
+            image:
+              repository: ghcr.io/home-operations/busybox
+              tag: 1.37.0
+            command:
+              - /bin/sh
+              - -c
+              - |
+                mkdir -p /volume/persistent /volume/log /volume/data /volume/srv /volume/unifi /volume/mongodb /volume/rabbitmq
+                chmod -R 777 /volume
+            securityContext:
+              privileged: true
         containers:
           app:
             image:
@@ -106,21 +119,25 @@ spec:
     persistence:
       data:
         existingClaim: "{{ .Release.Name }}"
-        globalMounts:
-          - path: /persistent
-            subPath: persistent
-          - path: /var/log
-            subPath: log
-          - path: /data
-            subPath: data
-          - path: /srv
-            subPath: srv
-          - path: /var/lib/unifi
-            subPath: unifi
-          - path: /var/lib/mongodb
-            subPath: mongodb
-          - path: /etc/rabbitmq/ssl
-            subPath: rabbitmq
+        advancedMounts:
+          *app:
+            init-dirs:
+              - path: /volume
+            app:
+              - path: /persistent
+                subPath: persistent
+              - path: /var/log
+                subPath: log
+              - path: /data
+                subPath: data
+              - path: /srv
+                subPath: srv
+              - path: /var/lib/unifi
+                subPath: unifi
+              - path: /var/lib/mongodb
+                subPath: mongodb
+              - path: /etc/rabbitmq/ssl
+                subPath: rabbitmq
       tmpfs:
         type: emptyDir
         medium: Memory
