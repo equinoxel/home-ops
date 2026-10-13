@@ -52,6 +52,7 @@ spec:
               - |
                 [ -d /data/postgresql/14/main/data ] && chmod 0700 /data/postgresql/14/main/data
                 sed -i '/WatchdogSec=/d' /lib/systemd/system/unifi-core.service
+                rm -f /lib/systemd/system/nginx.service.d/stale-config-cleanup.conf
                 mkdir -p /etc/systemd/system/unifi-core.service.d
                 printf "[Service]\nType=simple\n" > /etc/systemd/system/unifi-core.service.d/override.conf
                 mkdir -p /etc/systemd/system/uos-agent.service.d
@@ -86,7 +87,7 @@ spec:
                     port: 80
                   periodSeconds: 30
                   timeoutSeconds: 5
-                  failureThreshold: 3
+                  failureThreshold: 10
               readiness: *probes
             resources:
               requests:
