@@ -62,6 +62,8 @@ spec:
                 printf "[Service]\nType=simple\n" > /etc/systemd/system/uos-agent.service.d/override.conf
                 mkdir -p /etc/systemd/system/unifi.service.d
                 printf "[Service]\nType=simple\n" > /etc/systemd/system/unifi.service.d/override.conf
+                sed -i 's|return 301 https://\$host\$request_uri;|include /usr/share/unifi-core/http/errors.conf;\n    include /usr/share/unifi-core/http/shared-server-defaults.conf;\n    include /usr/share/unifi-core/http/shared-post-setup-server.conf;|' /usr/share/unifi-core/http/site-local-ip.conf
+                [ -f /data/unifi-core/config/http/site-local-ip.conf ] && sed -i 's|return 301 https://\$host\$request_uri;|include /usr/share/unifi-core/http/errors.conf;\n    include /usr/share/unifi-core/http/shared-server-defaults.conf;\n    include /usr/share/unifi-core/http/shared-post-setup-server.conf;|' /data/unifi-core/config/http/site-local-ip.conf
                 exec /root/uos-entrypoint.sh
             env:
               TZ: Europe/Bucharest
