@@ -10,7 +10,7 @@ components:
   - ../../components/repos/app-template
 resources:
   - ./papra
-  - ./jellyfin
+  #- ./jellyfin
   #- ./bookorbit
   # - ./grimmory
   #- ./mealie
