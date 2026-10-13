@@ -16,6 +16,9 @@ spec:
     kind: OCIRepository
     name: app-template
   values:
+    defaultPodOptions:
+      nodeSelector:
+        node.kubernetes.io/intel: ""
     controllers:
       *app:
         annotations:
@@ -101,9 +104,9 @@ spec:
         forceRename: *app
         ports:
           http:
-            port: &port 443
+            port: &port 80
             protocol: TCP
-            appProtocol: https
+            appProtocol: http
       stun:
         controller: *app
         type: LoadBalancer
@@ -137,14 +140,11 @@ spec:
             namespace: network
         rules:
           - backendRefs:
-              - group: gateway.envoyproxy.io
-                kind: Backend
-                name: *app
+              - name: *app
                 port: *port
-            filters:
-              - type: URLRewrite
-                urlRewrite:
-                  hostname: unifi.laurivan.com
+            timeouts:
+              request: 0s
+              backendRequest: 0s
     persistence:
       data:
         existingClaim: "{{ .Release.Name }}"
