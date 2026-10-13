@@ -2,3 +2,4 @@ talosconfig
 kubernetes-ctrl-01-esxi.yaml
 kubernetes-worker-01-esxi.yaml
 kubernetes-worker-02-esxi.yaml
+kubernetes-worker-03-esxi.yaml
