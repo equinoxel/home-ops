@@ -32,7 +32,7 @@ Allocated from the `192.168.2.0/24` pool via `CiliumLoadBalancerIPPool`, announc
 
 | IP | Service |
 |----|---------|
-| `192.168.2.41` | UniFi STUN / Discovery / Inform (`3478/udp`, `8080/tcp`, `10003/udp`) |
+| `192.168.2.161` | UniFi STUN / Discovery / Inform (`3478/udp`, `8080/tcp`, `10003/udp`) |
 | `192.168.2.155` | Talos API VIP (not Cilium-managed) |
 | `192.168.2.156` | k8s-gateway (DNS) |
 | `192.168.2.157` | Envoy Internal Gateway (`*.laurivan.com`) |

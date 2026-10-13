@@ -65,7 +65,7 @@ spec:
                 exec /root/uos-entrypoint.sh
             env:
               TZ: Europe/Bucharest
-              UOS_SYSTEM_IP: "192.168.2.41"
+              UOS_SYSTEM_IP: "192.168.2.161"
               HARDWARE_PLATFORM: "synology"
             securityContext:
               privileged: true

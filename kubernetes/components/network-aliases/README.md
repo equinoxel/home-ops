@@ -22,7 +22,7 @@ Nothing here is secret, so it lives in a plain `ConfigMap` (contrast with the
 | `SVC_ENVOY_INTERNAL_ROOT_IP` | `192.168.2.159` | `laurivan.com` (apex)        | Envoy internal root gateway |
 | `SVC_GO2RTC_IP`              | `192.168.2.157` | `go2rtc-streams.laurivan.com` | go2rtc (shares .157 w/ envoy-internal, distinct ports) |
 | `SVC_VERNEMQ_IP`             | `192.168.2.154` | `mqtt.laurivan.com`          | VerneMQ MQTT |
-| `SVC_UNIFI_STUN_IP`          | `192.168.2.41`  | `unifi-stun.laurivan.com`    | UniFi STUN |
+| `SVC_UNIFI_STUN_IP`          | `192.168.2.161` | `unifi-stun.laurivan.com`    | UniFi STUN |
 
 > `192.168.2.157` is intentionally shared by the Envoy internal gateway and
 > go2rtc. Cilium LB-IPAM allows two services to share an IP when their ports do
@@ -69,7 +69,7 @@ host-record=external.laurivan.com,192.168.2.158
 host-record=laurivan.com,192.168.2.159
 host-record=go2rtc-streams.laurivan.com,192.168.2.157
 host-record=mqtt.laurivan.com,192.168.2.154
-host-record=unifi-stun.laurivan.com,192.168.2.41
+host-record=unifi-stun.laurivan.com,192.168.2.161
 ```
 
 For AdGuard Home, the equivalent "DNS rewrites" are `hostname -> IP` pairs.

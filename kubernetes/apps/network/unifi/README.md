@@ -7,7 +7,7 @@ Ubiquiti's modern self-hosted **UniFi OS Server** platform deployed in Kubernete
 - **Namespace**: `network`
 - **Image**: `ghcr.io/lemker/unifi-os-server:v1.7.0` (UniFi OS Server 5.1.42)
 - **Web UI URL**: `https://unifi.laurivan.com` (proxied via `envoy-internal`)
-- **Device Inform & STUN IP**: `192.168.2.41` (`${SVC_UNIFI_STUN_IP}`) via Cilium LoadBalancer
+- **Device Inform & STUN IP**: `192.168.2.161` (`${SVC_UNIFI_STUN_IP}`) via Cilium LoadBalancer
 - **Storage**: 10Gi PVC backed by VolSync replication
 
 ## Architecture & Container Runtime
@@ -29,12 +29,11 @@ Because systemd runs as PID 1:
 ## Networking & Ports
 
 ### 1. Ingress / Web UI (`envoy-internal`)
-- The Web UI listens on internal port `443` (HTTPS) using internal self-signed TLS certificates.
-- Envoy Gateway terminates public TLS (`*.laurivan.com`) and connects to the backend over HTTPS via an Envoy Gateway `Backend` custom resource (`insecureSkipVerify: true`).
+- Envoy Gateway terminates public TLS (`*.laurivan.com`) and routes directly to the container's HTTP port `80`, ensuring native WebSocket upgrade support.
 - Access URL: `https://unifi.laurivan.com`
 
-### 2. Device Communication (LoadBalancer `192.168.2.41`)
-Exposed via Cilium LoadBalancer IPAM at `192.168.2.41` (`${SVC_UNIFI_STUN_IP}`):
+### 2. Device Communication (LoadBalancer `192.168.2.161`)
+Exposed via Cilium LoadBalancer IPAM at `192.168.2.161` (`${SVC_UNIFI_STUN_IP}`):
 - `8080/tcp`: Device inform (APs, switches, and gateways report here)
 - `3478/udp`: STUN service
 - `10003/udp`: UniFi OS AP discovery
@@ -50,7 +49,7 @@ Health checks utilize the internal HTTP health endpoint:
 
 When adopting UniFi devices via SSH, point them to:
 ```bash
-set-inform http://192.168.2.41:8080/inform
+set-inform http://192.168.2.161:8080/inform
 # or using DNS:
 set-inform http://unifi-stun.laurivan.com:8080/inform
 ```
