@@ -6,6 +6,12 @@ metadata:
   name: &app unifi
 spec:
   interval: 1h
+  timeout: 15m
+  install:
+    disableWait: true
+  upgrade:
+    disableWait: true
+    cleanupOnFail: true
   chartRef:
     kind: OCIRepository
     name: app-template
@@ -29,8 +35,7 @@ spec:
               - -c
               - |
                 mkdir -p /volume/persistent /volume/log /volume/data /volume/srv /volume/unifi /volume/mongodb /volume/rabbitmq
-                chmod 777 /volume/persistent /volume/log /volume/srv /volume/unifi /volume/mongodb /volume/rabbitmq
-                chmod 755 /volume/data
+                chmod 777 /volume/persistent /volume/log /volume/srv /volume/unifi /volume/mongodb /volume/rabbitmq /volume/data
                 if [ -d /volume/data/postgresql/14/main/data ]; then
                   chmod 0700 /volume/data/postgresql/14/main/data
                 fi
@@ -45,6 +50,7 @@ spec:
               - /bin/bash
               - -c
               - |
+                [ -d /data/postgresql/14/main/data ] && chmod 0700 /data/postgresql/14/main/data
                 sed -i '/WatchdogSec=/d' /lib/systemd/system/unifi-core.service
                 mkdir -p /etc/systemd/system/unifi-core.service.d
                 printf "[Service]\nType=simple\n" > /etc/systemd/system/unifi-core.service.d/override.conf
@@ -70,7 +76,7 @@ spec:
                   initialDelaySeconds: 30
                   periodSeconds: 10
                   timeoutSeconds: 5
-                  failureThreshold: 60
+                  failureThreshold: 90
               liveness: &probes
                 enabled: true
                 custom: true
