@@ -37,9 +37,57 @@ spec:
               repository: ghcr.io/toeverything/affine
               tag: stable
             command:
-              - sh
+              - /bin/sh
               - -c
-              - node ./scripts/self-host-predeploy.js
+              - |
+                cat << 'EOF' > /tmp/migrate.mjs
+                import { execSync } from "node:child_process";
+                import { generateKeyPairSync } from "node:crypto";
+                import fs from "node:fs";
+                import { homedir } from "node:os";
+                import path from "node:path";
+
+                const SELF_HOST_CONFIG_DIR = `${homedir()}/.affine/config`;
+
+                function generatePrivateKey() {
+                  const key = generateKeyPairSync("ec", {
+                    namedCurve: "prime256v1",
+                  }).privateKey.export({
+                    type: "sec1",
+                    format: "pem",
+                  });
+                  return key instanceof Buffer ? key.toString("utf-8") : key;
+                }
+
+                fs.mkdirSync(SELF_HOST_CONFIG_DIR, { recursive: true });
+                const targetFilePath = path.join(SELF_HOST_CONFIG_DIR, "private.key");
+                if (!fs.existsSync(targetFilePath)) {
+                  fs.writeFileSync(targetFilePath, generatePrivateKey(), "utf-8");
+                }
+
+                try {
+                  execSync("yarn prisma migrate resolve --rolled-back 20250521083048_fix_workspace_embedding_chunk_primary_key", {
+                    encoding: "utf-8",
+                    env: process.env,
+                    stdio: "pipe",
+                  });
+                } catch (_) {}
+
+                console.log("running prisma migrations.");
+                execSync("yarn prisma migrate deploy", {
+                  encoding: "utf-8",
+                  env: process.env,
+                  stdio: "inherit",
+                });
+
+                console.log("running data migrations.");
+                process.env.SERVER_FLAVOR = "script";
+                process.argv = ["node", "/app/dist/main.js", "run"];
+                await import("/app/dist/main.js");
+                console.log("data migrations finished.");
+                process.exit(0);
+                EOF
+                node /tmp/migrate.mjs
             env:
               REDIS_SERVER_HOST: localhost
               REDIS_SERVER_PORT: 6379
