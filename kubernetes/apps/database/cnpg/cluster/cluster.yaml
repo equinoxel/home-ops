@@ -76,6 +76,12 @@ spec:
     services:
       disabledDefaultServices: ["ro", "r"]
     roles:
+      - name: affine
+        ensure: present
+        login: true
+        superuser: false
+        disablePassword: true
+
       - name: atuin
         ensure: present
         login: true
