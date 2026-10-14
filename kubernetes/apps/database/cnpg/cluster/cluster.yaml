@@ -80,7 +80,7 @@ spec:
         ensure: present
         login: true
         superuser: false
-        disablePassword: true
+        disablePassword: false
 
       - name: atuin
         ensure: present
