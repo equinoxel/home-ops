@@ -34,18 +34,28 @@ spec:
               TZ: Europe/Bucharest
               JELLYFIN_PublishedServerUrl: https://jelly.laurivan.com
             probes:
-              liveness: &probes
+              liveness:
                 enabled: true
                 custom: true
                 spec:
                   httpGet:
                     path: /health
                     port: &port 8096
-                  initialDelaySeconds: 10
+                  initialDelaySeconds: 30
+                  periodSeconds: 15
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *port
+                  initialDelaySeconds: 15
                   periodSeconds: 10
-                  timeoutSeconds: 3
+                  timeoutSeconds: 5
                   failureThreshold: 3
-              readiness: *probes
               startup:
                 enabled: true
                 custom: true
@@ -55,11 +65,11 @@ spec:
                     port: *port
                   initialDelaySeconds: 15
                   periodSeconds: 10
-                  timeoutSeconds: 3
-                  failureThreshold: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 60
             resources:
               requests:
-                cpu: 100m
+                cpu: 200m
                 memory: 1Gi
               limits:
                 memory: 4Gi
