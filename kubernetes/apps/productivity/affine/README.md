@@ -87,7 +87,18 @@ AFFiNE integrates with **Authentik** via OpenID Connect (OIDC).
 ### Authentik Setup Instructions
 
 1. Log into your Authentik Admin interface at [https://auth.laurivan.com](https://auth.laurivan.com).
-2. Go to **Applications -> Providers** and click **Create**:
+2. Go to **Customization -> Property Mappings** and verify / create a Scope Mapping for email verification:
+   * **Scope name:** `email`
+   * **Name:** `authentik affine OAuth Mapping: OpenID 'email'`
+   * **Expression:**
+     ```python
+     return {
+         "email": request.user.email,
+         "email_verified": True
+     }
+     ```
+   *(Note: AFFiNE strictly checks `email_verified: true` in the OIDC claims. Authentik's built-in default mapping returns `email_verified: False`, which causes AFFiNE to reject logins with "Email for this account is not verified").*
+3. Go to **Applications -> Providers** and configure the `AFFiNE` provider:
    * **Type:** `OAuth2/OpenID Provider`
    * **Name:** `AFFiNE`
    * **Client type:** `Confidential`
@@ -95,9 +106,9 @@ AFFiNE integrates with **Authentik** via OpenID Connect (OIDC).
    * **Client Secret:** *(Copy to Bitwarden `AFFINE_OIDC_CLIENT_SECRET`)*
    * **Redirect URIs:** `https://affine.laurivan.com/oauth/callback`
    * **Signing Key:** Select your Authentik signing certificate
-   * **Scopes:** Ensure `openid`, `profile`, and `email` are selected
+   * **Scopes:** Select `openid`, `profile`, and `authentik affine OAuth Mapping: OpenID 'email'` (ensure default email mapping is unchecked)
    * **Subject mode:** `Based on the User's Email` (or username)
-3. Go to **Applications -> Applications** and click **Create**:
+4. Go to **Applications -> Applications** and configure the `AFFiNE` application:
    * **Name:** `AFFiNE`
    * **Slug:** `affine`
    * **Provider:** Select the `AFFiNE` provider created in the previous step
