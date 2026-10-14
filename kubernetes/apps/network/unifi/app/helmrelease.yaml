@@ -127,6 +127,10 @@ spec:
           inform:
             port: 8080
             protocol: TCP
+          inform-legacy:
+            port: 8980
+            targetPort: 8080
+            protocol: TCP
           syslog:
             port: 5514
             protocol: UDP
