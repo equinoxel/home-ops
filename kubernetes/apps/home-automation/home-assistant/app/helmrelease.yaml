@@ -20,9 +20,28 @@ spec:
               [{
                 "name":"iot",
                 "namespace": "network-system",
-                "ips": ["10.0.20.70/24"],
+                "ips": ["192.168.20.70/24"],
                 "mac": "02:97:87:58:7b:10"
               }]
+        initContainers:
+          init-hacs:
+            image:
+              repository: ghcr.io/home-operations/busybox
+              tag: 1.37.0
+            command:
+              - /bin/sh
+              - -c
+              - |
+                if [ ! -d "/config/custom_components/hacs" ]; then
+                  echo "Installing HACS..."
+                  mkdir -p /config/custom_components/hacs
+                  wget -qO /tmp/hacs.zip "https://github.com/hacs/integration/releases/latest/download/hacs.zip"
+                  unzip -q -o /tmp/hacs.zip -d /config/custom_components/hacs
+                  rm -f /tmp/hacs.zip
+                  echo "HACS installation complete."
+                else
+                  echo "HACS is already installed."
+                fi
         containers:
           app:
             image:
