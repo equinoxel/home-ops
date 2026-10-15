@@ -101,6 +101,16 @@ spec:
                 memory: 1Gi
               limits:
                 memory: 2Gi
+            probes:
+              liveness:
+                enabled: true
+              readiness:
+                enabled: true
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 10
           code-server:
             image:
               repository: ghcr.io/coder/code-server
