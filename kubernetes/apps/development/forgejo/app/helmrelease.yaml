@@ -127,5 +127,5 @@ spec:
       parentRefs:
         # TODO: move to envoy-external after testing
         - name: envoy-external
-          namespace: network
+          namespace: network-system
           sectionName: ssh

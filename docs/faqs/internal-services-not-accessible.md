@@ -19,7 +19,7 @@ graph TD
         PH[Pi-hole\n192.168.2.156 → k8s-gateway]
     end
 
-    subgraph Kubernetes - network namespace
+    subgraph Kubernetes - network-system namespace
         EXT[envoy-external\nLB: 192.168.2.158]
         INT[envoy-internal\nLB: 192.168.2.157]
         EXTDNS[cloudflare-dns\nexternal-dns\n--gateway-name=envoy-external]
@@ -63,7 +63,7 @@ When this happens, `k8s-gateway` falls back to only watching `Service` resources
 
 ```bash
 # Check if k8s-gateway has HTTPRoute controller initialized
-kubectl logs -n network -l app.kubernetes.io/name=k8s-gateway | grep -E "HTTPRoute|error"
+kubectl logs -n network-system -l app.kubernetes.io/name=k8s-gateway | grep -E "HTTPRoute|error"
 
 # Test DNS resolution directly against k8s-gateway
 dig +short myservice.laurivan.com @192.168.2.156
@@ -76,14 +76,14 @@ If `dig` returns empty and logs show the HTTPRoute controller error, proceed to 
 Restart the `k8s-gateway` deployment to force a clean re-initialization:
 
 ```bash
-kubectl rollout restart deployment/k8s-gateway -n network
-kubectl rollout status deployment/k8s-gateway -n network
+kubectl rollout restart deployment/k8s-gateway -n network-system
+kubectl rollout status deployment/k8s-gateway -n network-system
 ```
 
 After rollout, confirm all controllers initialized successfully:
 
 ```bash
-kubectl logs -n network -l app.kubernetes.io/name=k8s-gateway | grep "controller initialized"
+kubectl logs -n network-system -l app.kubernetes.io/name=k8s-gateway | grep "controller initialized"
 # Expected output:
 # [INFO] plugin/k8s_gateway: GatewayAPI controller initialized
 # [INFO] plugin/k8s_gateway: HTTPRoute controller initialized
@@ -190,7 +190,7 @@ curl -sk -o /dev/null -w "%{http_code}" https://192.168.2.157 -H "Host: myservic
 
 ### How to expose a service internally (no public DNS)
 
-1. In your HelmRelease (or a standalone `HTTPRoute`), set `parentRefs` to `envoy-internal` in the `network` namespace:
+1. In your HelmRelease (or a standalone `HTTPRoute`), set `parentRefs` to `envoy-internal` in the `network-system` namespace:
 
 ```yaml
 route:
@@ -198,7 +198,7 @@ route:
     hostnames: ["myservice.${SECRET_DOMAIN}"]
     parentRefs:
       - name: envoy-internal
-        namespace: network
+        namespace: network-system
         sectionName: https
     rules:
       - backendRefs:
@@ -236,7 +236,7 @@ kubectl get httproute -n <namespace> -o yaml | grep -A5 "status:"
 dig +short <hostname>.laurivan.com @192.168.2.156
 
 # 4. Is the k8s-gateway HTTPRoute controller active?
-kubectl logs -n network -l app.kubernetes.io/name=k8s-gateway | grep -E "HTTPRoute|error|NXDOMAIN"
+kubectl logs -n network-system -l app.kubernetes.io/name=k8s-gateway | grep -E "HTTPRoute|error|NXDOMAIN"
 
 # 5. Can you reach the service on TCP?
 curl -sk -o /dev/null -w "%{http_code}" https://<hostname>.laurivan.com

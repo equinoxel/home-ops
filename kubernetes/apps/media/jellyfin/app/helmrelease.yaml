@@ -97,7 +97,7 @@ spec:
           - jelly.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
 
     persistence:
       config:

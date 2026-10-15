@@ -19,7 +19,7 @@ spec:
             k8s.v1.cni.cncf.io/networks: |
               [{
                 "name":"iot",
-                "namespace": "network",
+                "namespace": "network-system",
                 "ips": ["10.0.20.70/24"],
                 "mac": "02:97:87:58:7b:10"
               }]
@@ -92,13 +92,13 @@ spec:
         parentRefs:
           - name: envoy-internal
             # TODO: Make it external after testing so it connects to the app
-            namespace: network
+            namespace: network-system
       code: # split so it's not external, and we can ext-auth it as well
         hostnames:
           - ha-code.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
         rules:
           - backendRefs:
               - name: *app

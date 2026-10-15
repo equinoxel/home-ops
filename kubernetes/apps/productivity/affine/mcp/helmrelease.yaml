@@ -59,4 +59,4 @@ spec:
           - "affine-mcp.laurivan.com"
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system

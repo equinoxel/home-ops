@@ -15,7 +15,7 @@ spec:
     - json-exporter.laurivan.com
   parentRefs:
     - name: envoy-internal
-      namespace: network
+      namespace: network-system
   rules:
     - backendRefs:
         - name: json-exporter

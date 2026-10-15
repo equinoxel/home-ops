@@ -19,7 +19,7 @@ Add tolerations for the `node-role.kubernetes.io/control-plane` taint to the spe
 
 ### Envoy Gateway
 
-In `kubernetes/apps/network/envoy-gateway/app/envoy.yaml`, the `EnvoyProxy` resource gets tolerations and a node affinity preference:
+In `kubernetes/apps/network-system/envoy-gateway/app/envoy.yaml`, the `EnvoyProxy` resource gets tolerations and a node affinity preference:
 
 ```yaml
 envoyDeployment:
@@ -40,7 +40,7 @@ envoyDeployment:
 
 ### k8s-gateway
 
-In `kubernetes/apps/network/k8s-gateway/app/helmrelease.yaml`, the same tolerations and affinity are added as Helm values.
+In `kubernetes/apps/network-system/k8s-gateway/app/helmrelease.yaml`, the same tolerations and affinity are added as Helm values.
 
 ### Why `preferred` and not `required`?
 

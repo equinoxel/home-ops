@@ -11,7 +11,7 @@ spec:
   hostnames: ["authentik.laurivan.com", "auth.laurivan.com"]
   parentRefs:
     - name: envoy-external
-      namespace: network
+      namespace: network-system
   rules:
     - backendRefs:
         - name: authentik-server

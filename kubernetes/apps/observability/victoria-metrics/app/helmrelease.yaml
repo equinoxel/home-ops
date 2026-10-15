@@ -62,7 +62,7 @@ spec:
           - alertmanager.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
       spec:
         externalURL: https://alertmanager.laurivan.com
         image:
@@ -163,7 +163,7 @@ spec:
           - alerts.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
     vmauth:
       enabled: true
       spec:
@@ -195,7 +195,7 @@ spec:
           - metrics.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
       spec:
         # Reduced from 90d to 30d to lower compaction overhead and memory usage
         retentionPeriod: 30d

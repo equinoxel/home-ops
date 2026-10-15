@@ -21,7 +21,7 @@ graph TD
         SP[SecurityPolicy<br/>bookorbit]
     end
 
-    subgraph network namespace
+    subgraph network-system namespace
         GW[Gateway<br/>envoy-internal]
     end
 
@@ -87,7 +87,7 @@ Create a Bitwarden item named `bookorbit` with the following fields:
 | Parameter | Value |
 |-----------|-------|
 | Internal URL | `https://bookorbit.laurivan.com` |
-| Gateway | `envoy-internal` (namespace: `network`) |
+| Gateway | `envoy-internal` (namespace: `network-system`) |
 | Service port | `3000` |
 
 ### Resources

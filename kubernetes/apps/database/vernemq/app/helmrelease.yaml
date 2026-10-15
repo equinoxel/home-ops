@@ -144,7 +144,7 @@ spec:
           - '{{ .Release.Name }}.laurivan.com'
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
         rules:
           - matches:
               - path:

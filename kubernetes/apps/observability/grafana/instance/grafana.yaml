@@ -101,7 +101,7 @@ spec:
         - grafana.laurivan.com
       parentRefs:
         - name: envoy-internal
-          namespace: network
+          namespace: network-system
       rules:
         - backendRefs:
             - name: grafana-service

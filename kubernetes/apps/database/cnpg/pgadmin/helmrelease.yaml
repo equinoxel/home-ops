@@ -113,7 +113,7 @@ spec:
           - pg.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
         annotations:
           gethomepage.dev/enabled: 'true'
           gethomepage.dev/group: Infrastructure

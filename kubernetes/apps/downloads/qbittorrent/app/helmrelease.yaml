@@ -86,7 +86,7 @@ spec:
           - qb.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
         rules:
           - backendRefs:
               - identifier: app

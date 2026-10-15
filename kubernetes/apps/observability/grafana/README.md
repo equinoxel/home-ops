@@ -38,7 +38,7 @@ graph TD
         VMAUTH["vmauth-victoria-metrics<br/>:8427"]
         VMALERT["vmalertmanager<br/>:9093"]
         BITWARDEN["Bitwarden<br/>(ClusterSecretStore)"]
-        ENVOY["envoy-internal<br/>(network namespace)"]
+        ENVOY["envoy-internal<br/>(network-system namespace)"]
     end
 
     GRAFANA_POD -->|OAuth login| AUTHENTIK
@@ -144,7 +144,7 @@ OAuth credentials are stored in Bitwarden and injected via ExternalSecret:
 | **victoria-metrics** | observability | Metrics datasource (via vmauth proxy) |
 | **vmalertmanager** | observability | Alertmanager datasource |
 | **external-secrets** | security | Syncs OAuth credentials from Bitwarden |
-| **envoy-internal** | network | Gateway for `grafana.laurivan.com` HTTPRoute |
+| **envoy-internal** | network-system | Gateway for `grafana.laurivan.com` HTTPRoute |
 | **cert-manager** | cert-manager | TLS certificates for the HTTPRoute |
 
 ## Datasources

@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: certificates-import
+  namespace: &namespace network-system
+spec:
+  interval: 1h
+  path: ./kubernetes/apps/network-system/certificates/import
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  healthChecks:
+    - apiVersion: &esApi external-secrets.io/v1
+      kind: &esKind ExternalSecret
+      namespace: *namespace
+      name: laurivan-com-tls
+  healthCheckExprs:
+    - apiVersion: *esApi
+      kind: *esKind
+      current: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
+      failed: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'False')
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: certificates-export
+  namespace: &namespace network-system
+spec:
+  dependsOn:
+    - name: certificates-import
+  interval: 1h
+  path: ./kubernetes/apps/network-system/certificates/export
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  healthChecks:
+    - apiVersion: &certApi cert-manager.io/v1
+      kind: &certKind Certificate
+      namespace: *namespace
+      name: laurivan-com
+  healthCheckExprs:
+    - apiVersion: *certApi
+      kind: *certKind
+      current: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
+      failed: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'False') && status.conditions.filter(e, e.type == 'Issuing').all(e, e.status == 'False')

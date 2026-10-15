@@ -84,7 +84,7 @@ spec:
           - sh.laurivan.com
         parentRefs:
           - name: &gateway envoy-internal
-            namespace: &gatewayns network
+            namespace: &gatewayns network-system
         annotations:
           gethomepage.dev/enabled: 'true'
           gethomepage.dev/name: Atuin

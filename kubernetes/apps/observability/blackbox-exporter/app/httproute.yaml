@@ -15,7 +15,7 @@ spec:
     - blackbox-exporter.tholinka.dev
   parentRefs:
     - name: envoy-internal
-      namespace: network
+      namespace: network-system
   rules:
     - backendRefs:
         - name: blackbox-exporter

@@ -91,5 +91,5 @@ spec:
           - "s.laurivan.com"
         parentRefs:
           - name: envoy-external
-            namespace: network
+            namespace: network-system
             sectionName: https

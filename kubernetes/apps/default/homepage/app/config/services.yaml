@@ -170,7 +170,7 @@
 #         icon: unifi.svg
 #         href: https://router.internal
 #         #description: Unifi Network Application
-#         namespace: network
+#         namespace: network-system
 
 - Calendar:
     - Agenda:

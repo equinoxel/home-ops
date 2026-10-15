@@ -89,7 +89,7 @@ values. At that point, do the following to remove this component:
 
 1. **Confirm external-dns is publishing records.** Install Pi-hole / AdGuard
    Home, then enable `pihole-external-dns` (add `./pihole/ks.yaml` and
-   `./pihole-external-dns/ks.yaml` to `kubernetes/apps/network/kustomization.yaml`).
+   `./pihole-external-dns/ks.yaml` to `kubernetes/apps/network-system/kustomization.yaml`).
    Verify with `dig <hostname> @<pihole-ip>` that records resolve without any
    manual entries.
 

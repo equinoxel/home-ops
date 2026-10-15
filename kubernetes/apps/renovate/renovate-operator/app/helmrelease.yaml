@@ -27,7 +27,7 @@ spec:
       hostnames: [renovate.laurivan.com]
       parentRefs:
         - name: envoy-internal
-          namespace: network
+          namespace: network-system
     metrics:
       enabled: true
       serviceMonitor:

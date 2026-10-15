@@ -152,7 +152,7 @@ spec:
           - "affine.laurivan.com"
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
     persistence:
       storage:
         existingClaim: "{{ .Release.Name }}"

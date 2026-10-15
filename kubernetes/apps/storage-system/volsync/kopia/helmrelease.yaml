@@ -86,7 +86,7 @@ spec:
         hostnames: ["{{ .Release.Name }}-s3.laurivan.com"]
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
         rules:
           - backendRefs: [{ identifier: s3 }]
         annotations: &routeAnnotations

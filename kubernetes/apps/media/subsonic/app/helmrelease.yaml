@@ -80,7 +80,7 @@ spec:
         hostnames: ["subsonic.laurivan.com"]
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
 
     persistence:
       data:
