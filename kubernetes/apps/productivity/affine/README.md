@@ -71,15 +71,16 @@ graph LR
 
 | Service | Protocol | Hostname | Gateway | Port | Auth Mode |
 |:---|:---|:---|:---|:---|:---|
-| **AFFiNE Web UI & API** | HTTPS | `affine.laurivan.com` | envoy-internal | 443 -> 3010 | Authentik OIDC / Email login |
+| **AFFiNE Web UI & API** | HTTPS | `affine.laurivan.com` | envoy-internal | 443 -> 3010 | Authentik OIDC only (Guest read-only) |
 | **AFFiNE MCP Server** | HTTPS | `affine-mcp.laurivan.com` | envoy-internal | 443 -> 3000 | Bearer token (`AFFINE_MCP_HTTP_TOKEN`) |
 
 ---
 
-## Authentication & Authentik SSO (OIDC)
+## Authentication & Access Control
 
-AFFiNE integrates with **Authentik** via OpenID Connect (OIDC).
-
+AFFiNE is configured in **OIDC-only mode with read-only guest access**:
+* **Guest / Unauthenticated Mode:** `flags.allowGuestDemoWorkspace: false`. Visitors without an authenticated session cannot create or edit workspaces. Public shared pages remain read-only.
+* **OIDC-Only Authentication:** `auth.allowSignup: false` and `auth.allowSignupForOauth: true`. Local password and magic-link signups/logins are disabled. Only accounts authenticated via Authentik OIDC are allowed.
 * **Issuer URL:** `https://auth.laurivan.com/application/o/affine/`
 * **Redirect URI:** `https://affine.laurivan.com/oauth/callback`
 * **Scopes:** `openid profile email`
