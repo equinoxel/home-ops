@@ -9,10 +9,13 @@ spec:
   interval: 1h
   components:
     - ../../../../components/cnpg/app
+    - ../../../../components/observability
   path: ./kubernetes/apps/security/authentik/app
   postBuild:
     substitute:
       APP: *app
+      APP_NAMESPACE: *namespace
+      OBSERVABILITY_PATH: ./kubernetes/apps/security/authentik/observability
   prune: true
   sourceRef:
     kind: GitRepository
@@ -24,5 +27,3 @@ spec:
       namespace: database
     - name: openebs
       namespace: storage-system
-    - name: grafana
-      namespace: observability

@@ -8,12 +8,13 @@ metadata:
 spec:
   interval: 1h
   targetNamespace: *namespace
-  dependsOn:
-    - name: grafana
-      namespace: observability
+  components:
+    - ../../../../components/observability
   postBuild:
     substitute:
       APP: *app
+      APP_NAMESPACE: *namespace
+      OBSERVABILITY_PATH: ./kubernetes/apps/renovate/renovate-operator/observability
   path: ./kubernetes/apps/renovate/renovate-operator/app
   prune: true
   sourceRef:

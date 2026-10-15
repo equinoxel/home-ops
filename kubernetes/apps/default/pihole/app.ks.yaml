@@ -12,9 +12,12 @@ spec:
       namespace: storage-system
   components:
     - ../../../../components/volsync
+    - ../../../../components/observability
   postBuild:
     substitute:
       APP: pihole
+      APP_NAMESPACE: default
+      OBSERVABILITY_PATH: ./kubernetes/apps/default/pihole/observability
       VOLSYNC_CAPACITY: 2Gi
     substituteFrom:
       - name: cluster-secrets
