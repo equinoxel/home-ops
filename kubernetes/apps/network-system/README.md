@@ -13,7 +13,6 @@ This directory contains the networking infrastructure for the Kubernetes cluster
 | **Cloudflare DNS** | External DNS provider. Syncs DNS records to Cloudflare. |
 | **Cloudflare Tunnel** | Secure tunnel for external access without exposing ports. |
 | **Certificates** | TLS certificate management (cert-manager issuers/certs). |
-| **UniFi OS Server** | Self-hosted UniFi controller for APs, switches, and network management (`unifi.laurivan.com`). |
 
 ## Subnet Layout
 

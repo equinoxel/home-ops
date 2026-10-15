@@ -4,7 +4,7 @@ Ubiquiti's modern self-hosted **UniFi OS Server** platform deployed in Kubernete
 
 ## Overview
 
-- **Namespace**: `network-system`
+- **Namespace**: `network`
 - **Image**: `ghcr.io/lemker/unifi-os-server:v1.7.0` (UniFi OS Server 5.1.42)
 - **Web UI URL**: `https://unifi.laurivan.com` (proxied via `envoy-internal`)
 - **Device Inform & STUN IP**: `192.168.2.161` (`${SVC_UNIFI_STUN_IP}`) via Cilium LoadBalancer

@@ -24,6 +24,8 @@ spec:
     - <<: *policy
       namespace: media
     - <<: *policy
+      namespace: network
+    - <<: *policy
       namespace: network-system
     - <<: *policy
       namespace: observability
