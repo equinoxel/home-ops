@@ -117,6 +117,26 @@ AFFiNE is configured in **OIDC-only mode with read-only guest access**:
 
 ---
 
+## AI & LLM Integration (Bring Your Own Key - BYOK)
+
+AFFiNE includes Copilot capabilities (writing assistant, summarization, action items, image generation) powered by **AI BYOK**:
+
+* **Server Configuration:** `copilot.enabled: true` with `copilot.byok.enabled: true`, `allowCustomEndpoint: true`, and `allowPrivateEndpoint: true`.
+* **Connecting an LLM:**
+  1. Navigate to `https://affine.laurivan.com` and log in.
+  2. Open **Workspace Settings** (gear icon or workspace dropdown) → **Integrations** → **AI BYOK**.
+  3. Click **Add key** (or **Connect AI provider**).
+  4. Select a provider:
+     - **OpenAI** (or custom OpenAI-compatible endpoint like Ollama, LocalAI, OpenRouter, vLLM, Groq, DeepSeek).
+     - **Anthropic** (Claude).
+     - **Google Gemini**.
+     - **Fal.ai** (for image generation).
+  5. Enter your API key (and custom endpoint URL if using Ollama or another self-hosted model).
+  6. Choose storage scope: **Server key** (shared across workspace members) or **Local key** (device only).
+  7. Select desired models and capabilities, click **Test connection**, and save.
+
+---
+
 ## Secrets Management (Bitwarden)
 
 Secrets are synchronized directly from **Bitwarden Secrets Manager (BWS)** using the External Secrets Operator (`ClusterSecretStore: bitwarden`).
