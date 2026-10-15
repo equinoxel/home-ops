@@ -34,41 +34,29 @@ spec:
               - |
                 if [ ! -f "/config/configuration.yaml" ]; then
                   echo "Creating initial configuration.yaml..."
-                  cat << 'EOF' > /config/configuration.yaml
-                  # Loads default set of integrations. Do not remove.
-                  default_config:
-
-                  # Load frontend themes from the themes folder
-                  frontend:
-                    themes: !include_dir_merge_named themes
-
-                  automation: !include automations.yaml
-                  script: !include scripts.yaml
-                  scene: !include scenes.yaml
-
-                  http:
-                    use_x_forwarded_for: true
-                    trusted_proxies:
-                      - 10.42.0.0/16
-                      - 10.43.0.0/16
-                      - 192.168.20.0/24
-                      - 192.168.2.0/24
-                  EOF
-                  sed -i 's/^                  //' /config/configuration.yaml
+                  printf "%s\n" \
+                    "# Loads default set of integrations. Do not remove." \
+                    "default_config:" \
+                    "" \
+                    "# Load frontend themes from the themes folder" \
+                    "frontend:" \
+                    "  themes: !include_dir_merge_named themes" \
+                    "" \
+                    "automation: !include automations.yaml" \
+                    "script: !include scripts.yaml" \
+                    "scene: !include scenes.yaml" \
+                    "" \
+                    "http:" \
+                    "  use_x_forwarded_for: true" \
+                    "  trusted_proxies:" \
+                    "    - 10.42.0.0/16" \
+                    "    - 10.43.0.0/16" \
+                    "    - 192.168.20.0/24" \
+                    "    - 192.168.2.0/24" > /config/configuration.yaml
                   touch /config/automations.yaml /config/scripts.yaml /config/scenes.yaml
                 elif ! grep -q "trusted_proxies" "/config/configuration.yaml"; then
                   echo "Appending reverse proxy settings to configuration.yaml..."
-                  cat << 'EOF' >> /config/configuration.yaml
-
-                  http:
-                    use_x_forwarded_for: true
-                    trusted_proxies:
-                      - 10.42.0.0/16
-                      - 10.43.0.0/16
-                      - 192.168.20.0/24
-                      - 192.168.2.0/24
-                  EOF
-                  sed -i 's/^                  //' /config/configuration.yaml
+                  printf "\nhttp:\n  use_x_forwarded_for: true\n  trusted_proxies:\n    - 10.42.0.0/16\n    - 10.43.0.0/16\n    - 192.168.20.0/24\n    - 192.168.2.0/24\n" >> /config/configuration.yaml
                 fi
           init-hacs:
             image:
