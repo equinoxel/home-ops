@@ -15,6 +15,6 @@ resources:
   #- ./bookorbit
   # - ./grimmory
   #- ./mealie
-  #- ./navidrome
+  - ./navidrome
   #- ./plex
   #- ./subsonic

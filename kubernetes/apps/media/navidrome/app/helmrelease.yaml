@@ -5,14 +5,16 @@ kind: HelmRelease
 metadata:
   name: navidrome
 spec:
-  interval: 10m
+  interval: 1h
   chartRef:
     kind: OCIRepository
-    name: navidrome
+    name: app-template
 
   values:
     controllers:
       navidrome:
+        annotations:
+          reloader.stakater.com/auto: "true"
         containers:
           navidrome:
             image:
@@ -28,7 +30,7 @@ spec:
               ND_MUSICFOLDER: /music
               ND_PORT: &port 4533
               ND_SCANSCHEDULE: 30m
-              # ND_BASEURL: https://navidrome.home.mirceanton.com
+
 
             resources:
               requests:

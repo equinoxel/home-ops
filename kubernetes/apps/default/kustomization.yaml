@@ -11,4 +11,3 @@ components:
 resources:
   - ./echo/ks.yaml
   - ./pihole
-  # - ./homepage/ks.yaml

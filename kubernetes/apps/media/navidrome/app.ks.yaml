@@ -1,19 +1,20 @@
 ---
-# yaml-language-server: $schema=https://k8s-schemas.mirceanton.com/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app navidrome
+  namespace: &namespace media
 spec:
-  interval: 10m
+  interval: 1h
   prune: true
   wait: true
-  timeout: 15m
-  targetNamespace: media
+  timeout: 5m
+  targetNamespace: *namespace
 
   path: ./kubernetes/apps/media/navidrome/app
   components:
-    - ../../../../components/volsync/
+    - ../../../../components/volsync
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -26,7 +27,6 @@ spec:
       VOLSYNC_PUID: "1003"
       VOLSYNC_PGID: "1005"
 
-  #decryption: {provider: sops}
   dependsOn:
     - name: volsync
-      namespace: storage-system
+      namespace: storage-system
