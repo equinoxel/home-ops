@@ -39,9 +39,13 @@ spec:
               - |
                 mkdir -p /volume/persistent /volume/log /volume/data /volume/srv /volume/unifi /volume/mongodb /volume/rabbitmq
                 chmod 777 /volume/persistent /volume/log /volume/srv /volume/unifi /volume/mongodb /volume/rabbitmq /volume/data
-                if [ -d /volume/data/postgresql/14/main/data ]; then
+                if [ -d /volume/data/postgresql/14/main ]; then
+                  chown -R 10100:104 /volume/data/postgresql/14/main
                   chmod 0700 /volume/data/postgresql/14/main/data
                 fi
+                [ -d /volume/mongodb ] && chown -R 110:116 /volume/mongodb
+                [ -d /volume/unifi ] && chown -R 997:997 /volume/unifi
+                [ -d /volume/rabbitmq ] && chown -R 130:103 /volume/rabbitmq
             securityContext:
               privileged: true
         containers:

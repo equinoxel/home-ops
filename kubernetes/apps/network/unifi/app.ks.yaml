@@ -17,6 +17,9 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 10Gi
+      VOLSYNC_GROUP_CHANGE_POLICY: OnRootMismatch
+      VOLSYNC_PUID: "0"
+      VOLSYNC_PGID: "0"
     substituteFrom:
       - name: cluster-settings
         kind: ConfigMap
