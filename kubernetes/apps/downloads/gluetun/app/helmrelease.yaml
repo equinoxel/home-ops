@@ -55,10 +55,6 @@ spec:
                 value: ":8888"
               - name: HTTPPROXY_STEALTH
                 value: "on"
-              - name: SOCKS5_ENABLED
-                value: "on"
-              - name: SOCKS5_LISTENING_ADDRESS
-                value: ":1080"
               - name: FIREWALL_INPUT_PORTS
                 value: "8888,8000,1080"
               - name: FIREWALL_OUTBOUND_SUBNETS
@@ -99,6 +95,18 @@ spec:
                 memory: 64Mi
               limits:
                 memory: 256Mi
+          socks5:
+            dependsOn:
+              - app
+            image:
+              repository: docker.io/serjs/go-socks5-proxy
+              tag: latest
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
     persistence:
       coredns:
         type: configMap
