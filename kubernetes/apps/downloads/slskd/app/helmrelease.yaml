@@ -26,6 +26,18 @@ spec:
           securityContext:
             fsGroup: 1005
             fsGroupChangePolicy: "OnRootMismatch"
+        initContainers:
+          init-dirs:
+            image:
+              repository: alpine
+              tag: 3.20.3
+            command:
+              - sh
+              - -c
+              - mkdir -p /data/nas-media/Downloads/slskd/incomplete /data/nas-media/Downloads/slskd/complete /data/nas-media/Downloads/slskd/shared
+            securityContext:
+              runAsUser: 1003
+              runAsGroup: 1005
         containers:
           app:
             image:
@@ -98,6 +110,9 @@ spec:
         advancedMounts:
           slskd:
             app:
+              - path: /data/nas-media/Downloads/slskd
+                subPath: Downloads/slskd
+            init-dirs:
               - path: /data/nas-media/Downloads/slskd
                 subPath: Downloads/slskd
       tmp:
