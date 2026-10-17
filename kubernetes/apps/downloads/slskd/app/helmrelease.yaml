@@ -72,7 +72,7 @@ spec:
                 custom: true
                 spec:
                   httpGet:
-                    path: /api/health
+                    path: /api/v0/application
                     port: *port
                   periodSeconds: 10
                   timeoutSeconds: 5
