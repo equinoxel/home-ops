@@ -22,6 +22,15 @@ spec:
       gluetun:
         annotations:
           reloader.stakater.com/auto: "true"
+        initContainers:
+          coredns:
+            image:
+              repository: mirror.gcr.io/coredns/coredns
+              tag: 1.13.1
+            args:
+              - -conf
+              - /etc/coredns/Corefile
+            restartPolicy: Always
         containers:
           app:
             image:
@@ -34,6 +43,10 @@ spec:
                 value: wireguard
               - name: FREE_ONLY
                 value: "on"
+              - name: DOT
+                value: "off"
+              - name: DNS_ADDRESS
+                value: "127.0.0.2"
               - name: HTTPPROXY
                 value: "on"
               - name: HTTPPROXY_LOG
@@ -46,8 +59,6 @@ spec:
                 value: "8888,8000"
               - name: FIREWALL_OUTBOUND_SUBNETS
                 value: "10.42.0.0/16,10.43.0.0/16,192.168.0.0/16"
-              - name: DNS_KEEP_NAMESERVER
-                value: "on"
             envFrom:
               - secretRef:
                   name: gluetun-proxy-vpn
@@ -84,6 +95,16 @@ spec:
                 memory: 64Mi
               limits:
                 memory: 256Mi
+    persistence:
+      coredns:
+        type: configMap
+        name: gluetun-coredns
+        advancedMounts:
+          gluetun:
+            coredns:
+              - path: /etc/coredns/Corefile
+                subPath: Corefile
+                readOnly: true
     service:
       app:
         forceRename: "{{ .Release.Name }}"

@@ -18,6 +18,73 @@ spec:
           securityContext:
             fsGroup: 1005
             fsGroupChangePolicy: "OnRootMismatch"
+        initContainers:
+          coredns:
+            image:
+              repository: mirror.gcr.io/coredns/coredns
+              tag: 1.13.1
+            args:
+              - -conf
+              - /etc/coredns/Corefile
+            restartPolicy: Always
+          gluetun:
+            dependsOn:
+              - coredns
+            image:
+              repository: ghcr.io/qdm12/gluetun
+              tag: v3.40.0
+            restartPolicy: Always
+            securityContext:
+              capabilities:
+                add:
+                  - NET_ADMIN
+              allowPrivilegeEscalation: false
+            env:
+              - name: VPN_SERVICE_PROVIDER
+                value: protonvpn
+              - name: VPN_TYPE
+                value: wireguard
+              - name: FREE_ONLY
+                value: "on"
+              - name: DOT
+                value: "off"
+              - name: DNS_ADDRESS
+                value: "127.0.0.2"
+              - name: FIREWALL_INPUT_PORTS
+                value: "8080"
+              - name: FIREWALL_OUTBOUND_SUBNETS
+                value: "10.42.0.0/16,10.43.0.0/16,192.168.0.0/16"
+            envFrom:
+              - secretRef:
+                  name: qbittorrent-vpn
+            probes:
+              liveness: &gluetunProbe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /v1/publicip/ip
+                    port: 8000
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 6
+              readiness: *gluetunProbe
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /v1/publicip/ip
+                    port: 8000
+                  timeoutSeconds: 10
+                  failureThreshold: 30
+                  periodSeconds: 5
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
         containers:
           app:
             image:
@@ -64,37 +131,6 @@ spec:
               runAsGroup: 1005
               runAsNonRoot: true
               runAsUser: 1003
-          gluetun:
-            image:
-              repository: ghcr.io/qdm12/gluetun
-              tag: v3.40.0
-            securityContext:
-              capabilities:
-                add:
-                  - NET_ADMIN
-              allowPrivilegeEscalation: false
-            env:
-              - name: VPN_SERVICE_PROVIDER
-                value: protonvpn
-              - name: VPN_TYPE
-                value: wireguard
-              - name: FREE_ONLY
-                value: "on"
-              - name: FIREWALL_INPUT_PORTS
-                value: "8080"
-              - name: FIREWALL_OUTBOUND_SUBNETS
-                value: "10.42.0.0/16,10.43.0.0/16,192.168.0.0/16"
-              - name: DNS_KEEP_NAMESERVER
-                value: "on"
-            envFrom:
-              - secretRef:
-                  name: qbittorrent-vpn
-            resources:
-              requests:
-                cpu: 10m
-                memory: 64Mi
-              limits:
-                memory: 256Mi
     persistence:
       config:
         existingClaim: qbittorrent
@@ -102,6 +138,15 @@ spec:
           qbittorrent:
             app:
               - path: /config
+      coredns:
+        type: configMap
+        name: qbittorrent-coredns
+        advancedMounts:
+          qbittorrent:
+            coredns:
+              - path: /etc/coredns/Corefile
+                subPath: Corefile
+                readOnly: true
       downloads:
         type: nfs
         path: /mnt/Main/shares
