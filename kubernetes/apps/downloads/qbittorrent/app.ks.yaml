@@ -20,9 +20,14 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 2Gi
+      VOLSYNC_PUID: "1003"
+      VOLSYNC_PGID: "1005"
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
   targetNamespace: *namespace
+  timeout: 5m
+  wait: true
+

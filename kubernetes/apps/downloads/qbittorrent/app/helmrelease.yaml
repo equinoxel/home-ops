@@ -7,8 +7,8 @@ metadata:
 spec:
   chartRef:
     kind: OCIRepository
-    name: qbittorrent
-  interval: 30m
+    name: app-template
+  interval: 1h
   values:
     controllers:
       qbittorrent:
@@ -18,9 +18,6 @@ spec:
           securityContext:
             fsGroup: 1005
             fsGroupChangePolicy: "OnRootMismatch"
-            runAsGroup: 1005
-            runAsNonRoot: true
-            runAsUser: 1003
         containers:
           app:
             image:
@@ -64,6 +61,40 @@ spec:
                 drop:
                   - ALL
               readOnlyRootFilesystem: true
+              runAsGroup: 1005
+              runAsNonRoot: true
+              runAsUser: 1003
+          gluetun:
+            image:
+              repository: ghcr.io/qdm12/gluetun
+              tag: v3.40.0
+            securityContext:
+              capabilities:
+                add:
+                  - NET_ADMIN
+              allowPrivilegeEscalation: false
+            env:
+              - name: VPN_SERVICE_PROVIDER
+                value: protonvpn
+              - name: VPN_TYPE
+                value: wireguard
+              - name: FREE_ONLY
+                value: "on"
+              - name: FIREWALL_INPUT_PORTS
+                value: "8080"
+              - name: FIREWALL_OUTBOUND_SUBNETS
+                value: "10.42.0.0/16,10.43.0.0/16,192.168.0.0/16"
+              - name: DNS_KEEP_NAMESERVER
+                value: "on"
+            envFrom:
+              - secretRef:
+                  name: qbittorrent-vpn
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
     persistence:
       config:
         existingClaim: qbittorrent
@@ -75,13 +106,24 @@ spec:
         type: nfs
         path: /mnt/Main/shares
         server: 192.168.2.44
-        globalMounts:
-          - path: /data/nas-media/Downloads/qbittorrent
-            subPath: Downloads/qbittorrent
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /data/nas-media/Downloads/qbittorrent
+                subPath: Downloads/qbittorrent
       tmp:
         type: emptyDir
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /tmp
     route:
       app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: qBittorrent
+          gethomepage.dev/icon: qbittorrent.svg
         hostnames:
           - qb.laurivan.com
         parentRefs:
@@ -98,12 +140,3 @@ spec:
           http:
             port: *port
         primary: true
-      # bittorrent:
-      #   type: LoadBalancer
-      #   annotations:
-      #     lbipam.cilium.io/ips: 10.1.6.61
-      #   externalTrafficPolicy: Local
-      #   ports:
-      #     bittorrent-tcp:
-      #       port: *torrentPort
-      #       protocol: TCP
