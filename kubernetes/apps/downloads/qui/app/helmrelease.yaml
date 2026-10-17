@@ -32,6 +32,10 @@ spec:
               QUI__OIDC_ISSUER: https://auth.laurivan.com/application/o/qui/
               QUI__OIDC_REDIRECT_URL: https://qui.laurivan.com/api/auth/oidc/callback
               QUI__OIDC_DISABLE_BUILT_IN_LOGIN: true
+
+              HTTP_PROXY: http://gluetun.downloads.svc.cluster.local:8888
+              HTTPS_PROXY: http://gluetun.downloads.svc.cluster.local:8888
+              NO_PROXY: localhost,127.0.0.1,10.42.0.0/16,10.43.0.0/16,192.168.0.0/16,.cluster.local,auth.laurivan.com
             envFrom:
               - secretRef:
                   name: '{{ .Release.Name }}'
@@ -71,6 +75,11 @@ spec:
             port: *port
     route:
       app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: qui
+          gethomepage.dev/icon: qbittorrent.svg
         hostnames:
           - '{{ .Release.Name }}.laurivan.com'
         parentRefs:

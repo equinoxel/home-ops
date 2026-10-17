@@ -26,77 +26,6 @@ spec:
           securityContext:
             fsGroup: 1005
             fsGroupChangePolicy: "OnRootMismatch"
-        initContainers:
-          coredns:
-            image:
-              repository: mirror.gcr.io/coredns/coredns
-              tag: 1.13.1
-            args:
-              - -conf
-              - /etc/coredns/Corefile
-            restartPolicy: Always
-          gluetun:
-            dependsOn:
-              - coredns
-            image:
-              repository: ghcr.io/qdm12/gluetun
-              tag: v3.40.0
-            restartPolicy: Always
-            securityContext:
-              capabilities:
-                add:
-                  - NET_ADMIN
-              allowPrivilegeEscalation: false
-            env:
-              - name: VPN_SERVICE_PROVIDER
-                value: protonvpn
-              - name: VPN_TYPE
-                value: wireguard
-              - name: FREE_ONLY
-                value: "on"
-              - name: DOT
-                value: "off"
-              - name: DNS_ADDRESS
-                value: "127.0.0.2"
-              - name: VPN_PORT_FORWARDING
-                value: "on"
-              - name: VPN_PORT_FORWARDING_PROVIDER
-                value: protonvpn
-              - name: FIREWALL_INPUT_PORTS
-                value: "5030,8000"
-              - name: FIREWALL_OUTBOUND_SUBNETS
-                value: "10.42.0.0/16,10.43.0.0/16,192.168.0.0/16"
-            envFrom:
-              - secretRef:
-                  name: slskd-vpn
-            probes:
-              liveness: &gluetunProbe
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /v1/publicip/ip
-                    port: 8000
-                  periodSeconds: 30
-                  timeoutSeconds: 10
-                  failureThreshold: 6
-              readiness: *gluetunProbe
-              startup:
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /v1/publicip/ip
-                    port: 8000
-                  timeoutSeconds: 10
-                  failureThreshold: 30
-                  periodSeconds: 5
-            resources:
-              requests:
-                cpu: 10m
-                memory: 64Mi
-              limits:
-                memory: 256Mi
         containers:
           app:
             image:
@@ -111,9 +40,9 @@ spec:
               SLSKD_NO_VERSION_CHECK: "true"
               SLSKD_REMOTE_CONFIGURATION: "true"
               SLSKD_APP_DIR: /config
-              SLSKD_VPN: "true"
-              SLSKD_VPN_PORT_FORWARDING: "true"
-              SLSKD_VPN_GLUETUN_URL: http://localhost:8000
+              SLSKD_SLSK_PROXY: "true"
+              SLSKD_SLSK_PROXY_ADDRESS: gluetun.downloads.svc.cluster.local
+              SLSKD_SLSK_PROXY_PORT: 1080
               SLSKD_SHARED_DIR: /data/nas-media/Downloads/slskd/shared
               SLSKD_DOWNLOADS_DIR: /data/nas-media/Downloads/slskd/complete
               SLSKD_INCOMPLETE_DIR: /data/nas-media/Downloads/slskd/incomplete
@@ -162,15 +91,6 @@ spec:
           slskd:
             app:
               - path: /config
-      coredns:
-        type: configMap
-        name: slskd-coredns
-        advancedMounts:
-          slskd:
-            coredns:
-              - path: /etc/coredns/Corefile
-                subPath: Corefile
-                readOnly: true
       downloads:
         type: nfs
         path: /mnt/Main/shares

@@ -55,8 +55,12 @@ spec:
                 value: ":8888"
               - name: HTTPPROXY_STEALTH
                 value: "on"
+              - name: SOCKS5_ENABLED
+                value: "on"
+              - name: SOCKS5_LISTENING_ADDRESS
+                value: ":1080"
               - name: FIREWALL_INPUT_PORTS
-                value: "8888,8000"
+                value: "8888,8000,1080"
               - name: FIREWALL_OUTBOUND_SUBNETS
                 value: "10.42.0.0/16,10.43.0.0/16,192.168.0.0/16"
             envFrom:
@@ -112,5 +116,7 @@ spec:
         ports:
           http:
             port: 8888
+          socks5:
+            port: 1080
           control:
             port: 8000

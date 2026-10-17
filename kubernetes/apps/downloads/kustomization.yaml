@@ -12,10 +12,10 @@ resources:
   - ./qbittorrent
   - ./gluetun
   - ./slskd
+  - ./qui
+  - ./prowlarr
   #- ./autobrr
   #- ./flaresolverr
-  #- ./qui
   #- ./sonarr
   #- ./radarr
   #- ./seerr
-  #- ./prowlarr

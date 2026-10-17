@@ -24,11 +24,14 @@ spec:
               PROWLARR__APP__INSTANCENAME: Prowlarr
               PROWLARR__APP__THEME: dark
               PROWLARR__AUTH__METHOD: External
-              SONARR__AUTH__REQUIRED: DisabledForLocalAddresses
+              PROWLARR__AUTH__REQUIRED: DisabledForLocalAddresses
               PROWLARR__LOG__DBENABLED: 'False'
               PROWLARR__LOG__LEVEL: info
               PROWLARR__SERVER__PORT: &port 80
               PROWLARR__UPDATE__BRANCH: develop
+              HTTP_PROXY: http://gluetun.downloads.svc.cluster.local:8888
+              HTTPS_PROXY: http://gluetun.downloads.svc.cluster.local:8888
+              NO_PROXY: localhost,127.0.0.1,10.42.0.0/16,10.43.0.0/16,192.168.0.0/16,.cluster.local
             envFrom:
               - secretRef:
                   name: prowlarr-secret
@@ -74,6 +77,11 @@ spec:
 
     route:
       app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: Prowlarr
+          gethomepage.dev/icon: prowlarr.png
         hostnames:
           - '{{ .Release.Name }}.laurivan.com'
         parentRefs:
