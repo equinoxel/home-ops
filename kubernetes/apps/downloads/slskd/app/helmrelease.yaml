@@ -1,0 +1,219 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: slskd
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  interval: 1h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      slskd:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          securityContext:
+            fsGroup: 1005
+            fsGroupChangePolicy: "OnRootMismatch"
+        initContainers:
+          coredns:
+            image:
+              repository: mirror.gcr.io/coredns/coredns
+              tag: 1.13.1
+            args:
+              - -conf
+              - /etc/coredns/Corefile
+            restartPolicy: Always
+          gluetun:
+            dependsOn:
+              - coredns
+            image:
+              repository: ghcr.io/qdm12/gluetun
+              tag: v3.40.0
+            restartPolicy: Always
+            securityContext:
+              capabilities:
+                add:
+                  - NET_ADMIN
+              allowPrivilegeEscalation: false
+            env:
+              - name: VPN_SERVICE_PROVIDER
+                value: protonvpn
+              - name: VPN_TYPE
+                value: wireguard
+              - name: FREE_ONLY
+                value: "on"
+              - name: DOT
+                value: "off"
+              - name: DNS_ADDRESS
+                value: "127.0.0.2"
+              - name: VPN_PORT_FORWARDING
+                value: "on"
+              - name: VPN_PORT_FORWARDING_PROVIDER
+                value: protonvpn
+              - name: FIREWALL_INPUT_PORTS
+                value: "5030,8000"
+              - name: FIREWALL_OUTBOUND_SUBNETS
+                value: "10.42.0.0/16,10.43.0.0/16,192.168.0.0/16"
+            envFrom:
+              - secretRef:
+                  name: slskd-vpn
+            probes:
+              liveness: &gluetunProbe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /v1/publicip/ip
+                    port: 8000
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 6
+              readiness: *gluetunProbe
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /v1/publicip/ip
+                    port: 8000
+                  timeoutSeconds: 10
+                  failureThreshold: 30
+                  periodSeconds: 5
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+        containers:
+          app:
+            image:
+              repository: ghcr.io/slskd/slskd
+              tag: 0.26.1
+            nameOverride: slskd
+            env:
+              DOTNET_BUNDLE_EXTRACT_BASE_DIR: /tmp
+              SLSKD_HTTP_PORT: &port 5030
+              SLSKD_NO_AUTH: "true"
+              SLSKD_NO_HTTPS: "true"
+              SLSKD_NO_VERSION_CHECK: "true"
+              SLSKD_REMOTE_CONFIGURATION: "true"
+              SLSKD_APP_DIR: /config
+              SLSKD_VPN: "true"
+              SLSKD_VPN_PORT_FORWARDING: "true"
+              SLSKD_VPN_GLUETUN_URL: http://localhost:8000
+              SLSKD_SHARED_DIR: /data/nas-media/Downloads/slskd/shared
+              SLSKD_DOWNLOADS_DIR: /data/nas-media/Downloads/slskd/complete
+              SLSKD_INCOMPLETE_DIR: /data/nas-media/Downloads/slskd/incomplete
+              SLSKD_METRICS: "true"
+              SLSKD_METRICS_NO_AUTH: "true"
+            probes:
+              liveness:
+                enabled: true
+                spec:
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 1Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              runAsGroup: 1005
+              runAsNonRoot: true
+              runAsUser: 1003
+    persistence:
+      config:
+        existingClaim: slskd
+        advancedMounts:
+          slskd:
+            app:
+              - path: /config
+      coredns:
+        type: configMap
+        name: slskd-coredns
+        advancedMounts:
+          slskd:
+            coredns:
+              - path: /etc/coredns/Corefile
+                subPath: Corefile
+                readOnly: true
+      downloads:
+        type: nfs
+        path: /mnt/Main/shares
+        server: 192.168.2.44
+        advancedMounts:
+          slskd:
+            app:
+              - path: /data/nas-media/Downloads/slskd
+                subPath: Downloads/slskd
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          slskd:
+            app:
+              - path: /tmp
+    route:
+      app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: slskd
+          gethomepage.dev/icon: slskd.png
+        hostnames:
+          - slskd.laurivan.com
+        parentRefs:
+          - name: envoy-internal
+            namespace: network-system
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+    service:
+      app:
+        forceRename: "{{ .Release.Name }}"
+        primary: true
+        ports:
+          http:
+            port: *port
+    serviceMonitor:
+      app:
+        serviceName: slskd
+        endpoints:
+          - port: http
+            scheme: http
+            path: /metrics
+            interval: 1m

@@ -10,6 +10,8 @@ components:
   - ../../components/repos/app-template
 resources:
   - ./qbittorrent
+  - ./gluetun
+  - ./slskd
   #- ./autobrr
   #- ./flaresolverr
   #- ./qui
