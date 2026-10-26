@@ -19,3 +19,4 @@ resources:
   #- ./sonarr
   #- ./radarr
   #- ./seerr
+  #- ./synology-backup

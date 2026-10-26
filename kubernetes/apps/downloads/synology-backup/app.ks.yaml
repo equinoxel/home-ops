@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app synology-backup
+  namespace: &namespace downloads
+spec:
+  interval: 1h
+  path: ./kubernetes/apps/downloads/synology-backup/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  suspend: true # Staged in suspended state until reviewed and Bitwarden secret configured
+  postBuild:
+    substitute:
+      APP: *app
+      SYNOLOGY_NFS_SERVER: "192.168.x.x"
+      SYNOLOGY_NFS_PATH: "/volume1/backup"
+      TRUENAS_NFS_SERVER: "192.168.x.x"
+      TRUENAS_PHOTOS_NFS_PATH: "/mnt/Main/shares/photo"
+    substituteFrom:
+      - kind: Secret
+        name: synology-backup-secret
+        optional: true
