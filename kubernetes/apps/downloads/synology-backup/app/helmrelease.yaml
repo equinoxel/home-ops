@@ -32,36 +32,38 @@ spec:
                 set -eu
                 echo "=== [$(date -u '+%Y-%m-%d %H:%M:%S')] Starting Synology Backup ==="
 
-                echo "--- 1. Syncing VolSync S3 bucket: ${VOLSYNC_S3_BUCKET:-volsync-kopia} ---"
-                rclone sync ":s3:${VOLSYNC_S3_BUCKET:-volsync-kopia}" "/destination/volsync-kopia" \
-                  --s3-provider="Other" \
-                  --s3-endpoint="${AWS_S3_ENDPOINT}" \
-                  --s3-access-key-id="${AWS_ACCESS_KEY_ID}" \
-                  --s3-secret-access-key="${AWS_SECRET_ACCESS_KEY}" \
-                  --s3-force-path-style=true \
-                  --fast-list \
-                  --transfers=4 \
-                  --checkers=8 \
-                  --stats=30s \
-                  -v
+                RCLONE_S3_OPTS="--s3-provider=Other --s3-endpoint=${AWS_S3_ENDPOINT} --s3-access-key-id=${AWS_ACCESS_KEY_ID} --s3-secret-access-key=${AWS_SECRET_ACCESS_KEY} --s3-force-path-style=true --fast-list --transfers=4 --checkers=8 --stats=30s -v"
 
-                if [ -n "${DATABASE_S3_BUCKET:-}" ]; then
-                  echo "--- 2. Syncing Database S3 bucket: ${DATABASE_S3_BUCKET} ---"
-                  rclone sync ":s3:${DATABASE_S3_BUCKET}" "/destination/database" \
-                    --s3-provider="Other" \
-                    --s3-endpoint="${AWS_S3_ENDPOINT}" \
-                    --s3-access-key-id="${AWS_ACCESS_KEY_ID}" \
-                    --s3-secret-access-key="${AWS_SECRET_ACCESS_KEY}" \
-                    --s3-force-path-style=true \
-                    --fast-list \
-                    --transfers=4 \
-                    --checkers=8 \
-                    --stats=30s \
-                    -v
+                # 1. Determine list of S3 buckets to back up
+                if [ "${BACKUP_S3_BUCKETS:-auto}" = "auto" ] || [ -z "${BACKUP_S3_BUCKETS:-}" ]; then
+                  echo "--- Auto-discovering S3 buckets on RustFS ---"
+                  DISCOVERED=$(rclone lsf ":s3:" --dirs-only ${RCLONE_S3_OPTS} 2>/dev/null | tr -d '/' || true)
+                  if [ -n "${DISCOVERED}" ]; then
+                    BUCKET_LIST="${DISCOVERED}"
+                  else
+                    echo "WARN: Auto-discovery returned empty, falling back to default bucket list."
+                    BUCKET_LIST="volsync-kopia database home-assistant documents"
+                  fi
+                else
+                  BUCKET_LIST=$(echo "${BACKUP_S3_BUCKETS}" | tr ',' ' ')
                 fi
 
+                echo "=== Buckets to sync: ${BUCKET_LIST} ==="
+                for BUCKET in ${BUCKET_LIST}; do
+                  [ -z "${BUCKET}" ] && continue
+                  echo "--- Checking S3 bucket: ${BUCKET} ---"
+                  if rclone lsf ":s3:${BUCKET}" --max-depth 1 ${RCLONE_S3_OPTS} >/dev/null 2>&1; then
+                    echo "=== Syncing bucket '${BUCKET}' -> '/destination/${BUCKET}' ==="
+                    rclone sync ":s3:${BUCKET}" "/destination/${BUCKET}" ${RCLONE_S3_OPTS}
+                    echo "=== Bucket '${BUCKET}' sync completed ==="
+                  else
+                    echo "INFO: Bucket '${BUCKET}' does not exist or is not yet configured, skipping."
+                  fi
+                done
+
+                # 2. Sync TrueNAS Photos NFS share
                 if [ -d "/source/photos" ]; then
-                  echo "--- 3. Syncing TrueNAS Photos from /source/photos to /destination/photos ---"
+                  echo "=== Syncing Photos from /source/photos to /destination/photos ==="
                   rclone sync "/source/photos" "/destination/photos" \
                     --backup-dir="/destination/photos-deleted/$(date -u '+%Y-%m-%d')" \
                     --delete-excluded \
@@ -69,6 +71,7 @@ spec:
                     --checkers=8 \
                     --stats=30s \
                     -v
+                  echo "=== Photos sync completed ==="
                 else
                   echo "WARN: /source/photos directory not found or unmounted, skipping photos sync."
                 fi
@@ -105,8 +108,8 @@ spec:
           - path: /destination
       source-photos:
         type: nfs
-        server: ${TRUENAS_NFS_SERVER}
-        path: ${TRUENAS_PHOTOS_NFS_PATH}
+        server: ${SVC_TRUENAS_IP}
+        path: ${TRUENAS_PHOTOS_NFS_PATH:=/mnt/Main/shares/photo}
         globalMounts:
           - path: /source/photos
             readOnly: true

@@ -20,9 +20,10 @@ spec:
       APP: *app
       SYNOLOGY_NFS_SERVER: "192.168.x.x"
       SYNOLOGY_NFS_PATH: "/volume1/backup"
-      TRUENAS_NFS_SERVER: "192.168.x.x"
       TRUENAS_PHOTOS_NFS_PATH: "/mnt/Main/shares/photo"
     substituteFrom:
+      - name: cluster-settings
+        kind: ConfigMap
       - kind: Secret
         name: synology-backup-secret
         optional: true
