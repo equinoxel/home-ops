@@ -6,3 +6,4 @@ resources:
   - ./app.ks.yaml
   - ./config.ks.yaml
   - ./error-pages.ks.yaml
+  - ./external-routes.ks.yaml

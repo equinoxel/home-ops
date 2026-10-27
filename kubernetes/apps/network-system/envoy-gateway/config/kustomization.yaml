@@ -6,6 +6,5 @@ resources:
   - ./backendtrafficpolicy.yaml
   - ./clienttrafficpolicy.yaml
   - ./envoyproxy.yaml
-  - ./external-routes.yaml
   - ./gateway.yaml
   - ./httproute.yaml
