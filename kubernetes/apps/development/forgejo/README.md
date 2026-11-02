@@ -106,26 +106,29 @@ All secrets are stored in a single **Bitwarden item** named `forgejo` and synced
 
 ## CI/CD Runner
 
-> [!NOTE]
-> **Status:** Inactive (`replicas: 0`). Scaled down because no CI/CD pipelines are currently active.
+The CI/CD runner is deployed as a StatefulSet (`replicas: 1`) using the official Forgejo runner (`code.forgejo.org/forgejo/runner`) and a Docker-in-Docker (`docker:dind`) sidecar.
 
-### Architecture & Current State
+### Architecture
 
-1. **Custom `k8spod` Executor Deprecation**:
-   - The initial configuration utilized an unmaintained personal fork (`git.erwanleboucher.dev/eleboucher/runner`) that added a custom `k8spod:` schema to spawn Kubernetes pods per job. That registry is defunct.
-   - The official runner (`code.forgejo.org/forgejo/runner`) does not support the `k8spod:` schema; it expects standard `docker://<image>` or `host` schemas.
-2. **Talos Linux DinD Verification**:
-   - Docker-in-Docker (`docker:dind`) with privileged mode and the `overlay2` storage driver was verified fully functional on the cluster's Talos Linux nodes (kernel 6.18, cgroups v2).
-3. **Re-enabling the Runner**:
-   - To activate the runner when pipelines are needed:
-     1. Generate a new runner registration token:
-        ```bash
-        kubectl --kubeconfig kubeconfig exec -n development deploy/forgejo -c forgejo -- \
-          gitea --config /data/gitea/conf/app.ini --work-path /data actions generate-runner-token
-        ```
-     2. Update the `FORGEJO_RUNNER_TOKEN` field in Bitwarden (item: `forgejo`).
-     3. Deploy the runner with a `docker:dind` sidecar and standard Docker labels (e.g. `ubuntu-latest:docker://node:20-bookworm` or `ghcr.io/catthehacker/ubuntu:act-latest`).
-     4. Set `replicas: 1` in [`kubernetes/apps/development/forgejo/runner/helmrelease.yaml`](file:///home/laur/dev/talos/home-ops/kubernetes/apps/development/forgejo/runner/helmrelease.yaml).
+- **Runner Daemon:** Official `forgejo-runner` running rootless (`runAsUser: 1000`), polling the Forgejo instance and communicating with the DinD sidecar over `tcp://127.0.0.1:2375`.
+- **Docker-in-Docker Sidecar:** Privileged `docker:dind` container managing the container lifecycle and executing job containers using the `overlayfs` driver on Talos Linux.
+- **Shared Storage:** Ephemeral `/data` volume mounted to both runner and DinD sidecar so job workspaces are visible to the Docker daemon for bind mounts.
+
+### Runner Labels
+
+| Label | Execution Type | Container Image |
+|-------|----------------|-----------------|
+| `ubuntu-latest` | docker | `node:20-bookworm` |
+| `ubuntu-24.04` | docker | `node:20-bookworm` |
+| `default` | docker | `node:20-bookworm` |
+| `docker` | docker | `node:20-bookworm` |
+| `dind` | docker | `docker:dind` |
+
+### Runner Resources
+
+- DinD container: 100m CPU request, 256Mi memory request (4Gi memory limit)
+- Runner daemon: 5m CPU request, 64Mi memory request (512Mi memory limit)
+- Runner capacity: 2 concurrent jobs
 
 ## Dependencies
 

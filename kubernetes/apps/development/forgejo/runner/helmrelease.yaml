@@ -19,108 +19,32 @@ spec:
               enabled: true
               dir: /data/cache
             container:
-              docker_host: "-"
-              workdir_parent: shared/workdir
-            kubernetes:
-              namespace: development
-              poll_timeout: 10m
+              docker_host: tcp://127.0.0.1:2375
+              workdir_parent: /data/workdir
+              valid_volumes:
+                - '**'
             log:
               level: info
             runner:
-              capacity: 4
+              capacity: 2
               file: /data/.runner
               labels:
-                - ubuntu-latest:k8spod:/config/podspec-default.yaml
-                - ubuntu-24.04:k8spod:/config/podspec-default.yaml
-                - default:k8spod:/config/podspec-default.yaml
-                - docker:k8spod:/config/podspec-dind.yaml
+                - default:docker://node:20-bookworm
+                - ubuntu-latest:docker://node:20-bookworm
+                - ubuntu-24.04:docker://node:20-bookworm
+                - docker:docker://node:20-bookworm
+                - dind:docker://docker:dind
               timeout: 3h
-          podspec-default.yaml: |-
-            containers:
-              - env:
-                  - name: DEBIAN_FRONTEND
-                    value: noninteractive
-                image: ghcr.io/bjw-s-labs/forgejo-runner:ubuntu-24.04@sha256:4288050ddd71ac2e5f42465c474aec8b838792dec85bb284405db7c180138580
-                imagePullPolicy: IfNotPresent
-                name: main
-                resources:
-                  limits:
-                    memory: 2Gi
-                  requests:
-                    cpu: 100m
-                    memory: 256Mi
-            restartPolicy: Never
-          podspec-dind.yaml: |-
-            initContainers:
-              - name: dind
-                image: docker:29-dind
-                securityContext:
-                  privileged: true
-                restartPolicy: Always
-                env:
-                  - name: DOCKER_TLS_CERTDIR
-                    value: /certs
-                resources:
-                  requests:
-                    cpu: 100m
-                    memory: 256Mi
-                  limits:
-                    memory: 4Gi
-                volumeMounts:
-                  - name: docker-storage
-                    mountPath: /var/lib/docker
-                  - name: docker-certs
-                    mountPath: /certs
-                readinessProbe:
-                  exec:
-                    command:
-                      - sh
-                      - -c
-                      - test -f /certs/client/ca.pem && test -f /certs/client/cert.pem && test -f /certs/client/key.pem
-                  initialDelaySeconds: 2
-                  periodSeconds: 1
-            containers:
-              - env:
-                  - name: DEBIAN_FRONTEND
-                    value: noninteractive
-                  - name: DOCKER_HOST
-                    value: tcp://localhost:2376
-                  - name: DOCKER_TLS_VERIFY
-                    value: "1"
-                  - name: DOCKER_CERT_PATH
-                    value: /certs/client
-                image: ghcr.io/bjw-s-labs/forgejo-runner:ubuntu-24.04@sha256:4288050ddd71ac2e5f42465c474aec8b838792dec85bb284405db7c180138580
-                imagePullPolicy: IfNotPresent
-                name: main
-                resources:
-                  limits:
-                    memory: 2Gi
-                  requests:
-                    cpu: 100m
-                    memory: 256Mi
-                volumeMounts:
-                  - name: docker-certs
-                    mountPath: /certs
-                    readOnly: true
-            volumes:
-              - name: docker-storage
-                emptyDir: {}
-              - name: docker-certs
-                emptyDir: {}
-            restartPolicy: Never
     controllers:
       forgejo-runner:
         type: statefulset
-        replicas: 0
+        replicas: 1
         pod:
           labels:
             app.kubernetes.io/component: forgejo-runner
           securityContext:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
-            runAsGroup: 1000
-            runAsNonRoot: true
-            runAsUser: 1000
         annotations:
           reloader.stakater.com/auto: "true"
         initContainers:
@@ -137,11 +61,12 @@ spec:
                   exit 0
                 fi
                 echo "Registering runner..."
+                CLEAN_TOKEN=$(echo "${RUNNER_TOKEN}" | tr -d '[:space:]')
                 cd /data && forgejo-runner register \
                   --instance http://forgejo-http.development.svc.cluster.local:3000 \
-                  --token "${RUNNER_TOKEN}" \
+                  --token "${CLEAN_TOKEN}" \
                   --name k8s-runner \
-                  --labels "default:k8spod:/config/podspec-default.yaml,ubuntu-latest:k8spod:/config/podspec-default.yaml,ubuntu-24.04:k8spod:/config/podspec-default.yaml,docker:k8spod:/config/podspec-dind.yaml" \
+                  --labels "default:docker://node:20-bookworm,ubuntu-latest:docker://node:20-bookworm,ubuntu-24.04:docker://node:20-bookworm,docker:docker://node:20-bookworm,dind:docker://docker:dind" \
                   --config /config/runner.yaml \
                   --no-interactive
             env:
@@ -155,8 +80,44 @@ spec:
               capabilities:
                 drop:
                   - ALL
+              runAsUser: 1000
+              runAsGroup: 1000
+              runAsNonRoot: true
               readOnlyRootFilesystem: true
         containers:
+          dind:
+            image:
+              repository: docker
+              tag: dind
+            command:
+              - dockerd
+              - --tls=false
+              - --host=tcp://0.0.0.0:2375
+              - --host=unix:///var/run/docker.sock
+            env:
+              - name: DOCKER_TLS_CERTDIR
+                value: ""
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 4Gi
+            securityContext:
+              privileged: true
+              runAsUser: 0
+            probes:
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - docker
+                      - info
+                  initialDelaySeconds: 2
+                  periodSeconds: 2
+                  failureThreshold: 10
           runner:
             image:
               repository: code.forgejo.org/forgejo/runner
@@ -166,15 +127,23 @@ spec:
               - daemon
               - --config
               - /config/runner.yaml
+            env:
+              - name: DOCKER_HOST
+                value: tcp://127.0.0.1:2375
             resources:
               requests:
                 cpu: 5m
-                memory: 32Mi
+                memory: 64Mi
+              limits:
+                memory: 512Mi
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:
                 drop:
                   - ALL
+              runAsUser: 1000
+              runAsGroup: 1000
+              runAsNonRoot: true
               readOnlyRootFilesystem: true
     persistence:
       config:
@@ -190,42 +159,12 @@ spec:
             subPath: data
           - path: /tmp
             subPath: tmp
-    rbac:
-      bindings:
-        forgejo-runner:
-          type: RoleBinding
-          roleRef:
-            identifier: forgejo-runner
-          subjects:
-            - identifier: forgejo-runner
-      roles:
-        forgejo-runner:
-          type: Role
-          rules:
-            - apiGroups:
-                - ""
-              resources:
-                - pods
-              verbs:
-                - list
-                - watch
-                - create
-                - get
-                - delete
-            - apiGroups:
-                - ""
-              resources:
-                - pods/exec
-              verbs:
-                - create
-                - get
-            - apiGroups:
-                - ""
-              resources:
-                - pods/log
-              verbs:
-                - list
-                - watch
-                - get
+      dind-storage:
+        type: emptyDir
+        sizeLimit: 20Gi
+        advancedMounts:
+          forgejo-runner:
+            dind:
+              - path: /var/lib/docker
     serviceAccount:
       forgejo-runner: {}
