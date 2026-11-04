@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+#MISE description="Enable and configure Forgejo CI/CD worker"
+#MISE alias="k8s-config:forgejo-runner"
+#USAGE flag "-n --namespace <namespace>" default="development" help="Kubernetes namespace"
+#USAGE flag "--forgejo-app <app>" default="forgejo" help="Forgejo application deployment name"
+#USAGE flag "--runner-app <app>" default="forgejo-runner" help="Forgejo runner StatefulSet name"
+#USAGE flag "--replicas <count>" default="1" help="Desired runner replicas"
+#USAGE flag "--re-register" help="Force runner re-registration by clearing existing registration"
+#USAGE flag "--no-wait" help="Do not wait for runner pod rollout"
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+COMMON_LIB="${ROOT_DIR}/scripts/lib/common.sh"
+
+if [[ -f "${COMMON_LIB}" ]]; then
+    # shellcheck source=/dev/null
+    source "${COMMON_LIB}"
+else
+    log() {
+        local level="$1"; shift
+        printf "[%s] %s\n" "${level^^}" "$*"
+    }
+    check_cli() {
+        for cmd in "$@"; do
+            command -v "$cmd" &>/dev/null || { echo "Missing required command: $cmd" >&2; exit 1; }
+        done
+    }
+fi
+
+function usage() {
+    cat <<EOF
+Usage:
+  mise run k8s-config:forgejo-worker [options]
+  mise run k8s-config:forgejo-runner [options]
+
+Enable and configure the Forgejo CI/CD worker (runner) in the Kubernetes cluster.
+
+Options:
+  -n, --namespace <namespace>  Kubernetes namespace (default: development)
+      --forgejo-app <app>      Forgejo app name (default: forgejo)
+      --runner-app <app>       Forgejo runner app name (default: forgejo-runner)
+      --replicas <count>       Desired runner replicas (default: 1)
+      --re-register            Force re-registration with Forgejo
+      --no-wait                Do not wait for runner pod rollout
+  -h, --help                   Print help
+EOF
+    exit 0
+}
+
+# Default values
+NAMESPACE="${NAMESPACE:-development}"
+FORGEJO_APP="${FORGEJO_APP:-forgejo}"
+RUNNER_APP="${RUNNER_APP:-forgejo-runner}"
+REPLICAS="${REPLICAS:-1}"
+RE_REGISTER=false
+WAIT=true
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --namespace|-n)
+            NAMESPACE="$2"
+            shift 2
+            ;;
+        --forgejo-app)
+            FORGEJO_APP="$2"
+            shift 2
+            ;;
+        --runner-app)
+            RUNNER_APP="$2"
+            shift 2
+            ;;
+        --replicas)
+            REPLICAS="$2"
+            shift 2
+            ;;
+        --re-register)
+            RE_REGISTER=true
+            shift
+            ;;
+        --no-wait)
+            WAIT=false
+            shift
+            ;;
+        --help|-h)
+            usage
+            ;;
+        *)
+            log error "Unknown argument: $1"
+            ;;
+    esac
+done
+
+check_cli kubectl
+
+log info "Target configuration" "namespace=${NAMESPACE}" "forgejo=${FORGEJO_APP}" "runner=${RUNNER_APP}" "replicas=${REPLICAS}"
+
+# Verify Forgejo application pod is running
+log info "Checking Forgejo application status"
+FORGEJO_POD=$(kubectl get pod -n "${NAMESPACE}" -l app.kubernetes.io/name="${FORGEJO_APP}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+if [[ -z "${FORGEJO_POD}" ]]; then
+    log error "No running Forgejo pod found in namespace ${NAMESPACE} with label app.kubernetes.io/name=${FORGEJO_APP}"
+fi
+log info "Found Forgejo pod" "pod=${FORGEJO_POD}"
+
+# Generate / retrieve runner registration token from Forgejo
+log info "Generating runner registration token from Forgejo"
+TOKEN=$(kubectl exec -n "${NAMESPACE}" "${FORGEJO_POD}" -c "${FORGEJO_APP}" -- \
+    gitea --config /data/gitea/conf/app.ini --work-path /data actions generate-runner-token 2>/dev/null | tr -d '[:space:]' || true)
+
+if [[ -z "${TOKEN}" ]]; then
+    # Try forgejo binary name if gitea alias is not present
+    TOKEN=$(kubectl exec -n "${NAMESPACE}" "${FORGEJO_POD}" -c "${FORGEJO_APP}" -- \
+        forgejo --config /data/gitea/conf/app.ini --work-path /data actions generate-runner-token 2>/dev/null | tr -d '[:space:]' || true)
+fi
+
+if [[ -z "${TOKEN}" ]]; then
+    log error "Failed to generate runner registration token from Forgejo"
+fi
+log info "Retrieved runner token" "token=${TOKEN:0:8}..."
+
+# Synchronize runner secret in Kubernetes
+log info "Verifying runner secret in Kubernetes"
+SECRET_NAME="${RUNNER_APP}-secret"
+CURRENT_TOKEN=$(kubectl get secret -n "${NAMESPACE}" "${SECRET_NAME}" -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null | tr -d '[:space:]' || true)
+
+if [[ "${CURRENT_TOKEN}" != "${TOKEN}" ]]; then
+    log info "Updating secret with active registration token" "secret=${SECRET_NAME}"
+    kubectl create secret generic "${SECRET_NAME}" \
+        --namespace "${NAMESPACE}" \
+        --from-literal=token="${TOKEN}" \
+        --dry-run=client -o yaml | kubectl apply -f -
+else
+    log info "Secret is up to date" "secret=${SECRET_NAME}"
+fi
+
+# Check current replicas of the runner StatefulSet
+CURRENT_REPLICAS=$(kubectl get statefulset -n "${NAMESPACE}" "${RUNNER_APP}" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
+log info "Current runner replicas" "current=${CURRENT_REPLICAS}" "target=${REPLICAS}"
+
+if [[ "${CURRENT_REPLICAS}" -ne "${REPLICAS}" ]]; then
+    log info "Scaling runner StatefulSet" "statefulset=${RUNNER_APP}" "replicas=${REPLICAS}"
+    kubectl scale statefulset -n "${NAMESPACE}" "${RUNNER_APP}" --replicas="${REPLICAS}"
+fi
+
+# Handle forced re-registration
+if [[ "${RE_REGISTER}" == "true" ]]; then
+    log info "Handling forced re-registration"
+    RUNNER_POD="${RUNNER_APP}-0"
+    if kubectl get pod -n "${NAMESPACE}" "${RUNNER_POD}" &>/dev/null; then
+        log info "Removing existing runner credentials from /data/.runner"
+        kubectl exec -n "${NAMESPACE}" "${RUNNER_POD}" -c runner -- rm -f /data/.runner 2>/dev/null || true
+    fi
+    log info "Restarting runner StatefulSet"
+    kubectl rollout restart statefulset/"${RUNNER_APP}" -n "${NAMESPACE}"
+fi
+
+# Wait for rollout completion
+if [[ "${WAIT}" == "true" && "${REPLICAS}" -gt 0 ]]; then
+    log info "Waiting for runner StatefulSet rollout"
+    kubectl rollout status statefulset/"${RUNNER_APP}" -n "${NAMESPACE}" --timeout=120s
+
+    RUNNER_POD="${RUNNER_APP}-0"
+    log info "Verifying runner registration"
+    if kubectl exec -n "${NAMESPACE}" "${RUNNER_POD}" -c runner -- test -f /data/.runner &>/dev/null; then
+        RUNNER_INFO=$(kubectl exec -n "${NAMESPACE}" "${RUNNER_POD}" -c runner -- cat /data/.runner 2>/dev/null || true)
+        log info "Runner registration active"
+        echo "${RUNNER_INFO}"
+    else
+        log warn "Runner credentials file (/data/.runner) not found yet, checking container logs"
+        kubectl logs -n "${NAMESPACE}" "${RUNNER_POD}" -c runner --tail=15
+    fi
+fi
+
+log info "Forgejo worker configured and enabled successfully" "namespace=${NAMESPACE}"

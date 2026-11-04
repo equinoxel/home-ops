@@ -115,9 +115,10 @@ spec:
                     command:
                       - docker
                       - info
-                  initialDelaySeconds: 2
-                  periodSeconds: 2
-                  failureThreshold: 10
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
           runner:
             image:
               repository: code.forgejo.org/forgejo/runner
