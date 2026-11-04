@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #MISE description="Enable and configure Forgejo CI/CD worker"
 #MISE alias="k8s-config:forgejo-runner"
+#USAGE arg "[replicas]" default="1" help="Desired runner replicas"
+#USAGE flag "-r --replicas <count>" help="Desired runner replicas"
 #USAGE flag "-n --namespace <namespace>" default="development" help="Kubernetes namespace"
 #USAGE flag "--forgejo-app <app>" default="forgejo" help="Forgejo application deployment name"
 #USAGE flag "--runner-app <app>" default="forgejo-runner" help="Forgejo runner StatefulSet name"
-#USAGE flag "--replicas <count>" default="1" help="Desired runner replicas"
 #USAGE flag "--re-register" help="Force runner re-registration by clearing existing registration"
 #USAGE flag "--no-wait" help="Do not wait for runner pod rollout"
 set -Eeuo pipefail
@@ -31,16 +32,19 @@ fi
 function usage() {
     cat <<EOF
 Usage:
-  mise run k8s-config:forgejo-worker [options]
-  mise run k8s-config:forgejo-runner [options]
+  mise run k8s-config:forgejo-worker [replicas] [options]
+  mise run k8s-config:forgejo-runner [replicas] [options]
 
 Enable and configure the Forgejo CI/CD worker (runner) in the Kubernetes cluster.
 
+Arguments:
+  [replicas]                   Desired runner replicas (default: 1)
+
 Options:
+  -r, --replicas <count>       Desired runner replicas (default: 1)
   -n, --namespace <namespace>  Kubernetes namespace (default: development)
       --forgejo-app <app>      Forgejo app name (default: forgejo)
       --runner-app <app>       Forgejo runner app name (default: forgejo-runner)
-      --replicas <count>       Desired runner replicas (default: 1)
       --re-register            Force re-registration with Forgejo
       --no-wait                Do not wait for runner pod rollout
   -h, --help                   Print help
@@ -52,7 +56,7 @@ EOF
 NAMESPACE="${NAMESPACE:-development}"
 FORGEJO_APP="${FORGEJO_APP:-forgejo}"
 RUNNER_APP="${RUNNER_APP:-forgejo-runner}"
-REPLICAS="${REPLICAS:-1}"
+REPLICAS="${usage_replicas:-${REPLICAS:-1}}"
 RE_REGISTER=false
 WAIT=true
 
@@ -71,9 +75,13 @@ while [[ $# -gt 0 ]]; do
             RUNNER_APP="$2"
             shift 2
             ;;
-        --replicas)
+        --replicas|-r)
             REPLICAS="$2"
             shift 2
+            ;;
+        [0-9]*)
+            REPLICAS="$1"
+            shift
             ;;
         --re-register)
             RE_REGISTER=true
