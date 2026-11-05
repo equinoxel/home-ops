@@ -28,7 +28,7 @@ spec:
             env:
               FTLCONF_dns_listeningMode: all
               FTLCONF_dns_dnssec: 'false'
-              FTLCONF_dns_upstreams: 192.168.2.1
+              FTLCONF_dns_upstreams: '1.1.1.1;1.0.0.1'
               FTLCONF_webserver_interface_boxed: false
               FTLCONF_webserver_interface_theme: default-auto
               FTLCONF_webserver_port: &pihole-port 80
