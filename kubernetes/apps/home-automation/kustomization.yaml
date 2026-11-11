@@ -5,9 +5,8 @@ kind: Kustomization
 namespace: home-automation
 resources:
   - ./home-assistant
-  # - ./esphome/ks.yaml
-  # - ./go2rtc/ks.yaml
-  #- ./nodered
+  - ./n8n
+  - ./nodered
   # - ./piper/ks.yaml
   # - ./whisper/ks.yaml
   # - ./zigbee/ks.yaml

@@ -24,7 +24,7 @@ spec:
           app:
             image:
               repository: docker.io/nodered/node-red
-              tag: 4.0.9
+              tag: 4.1.12
             env:
               TZ: Europe/Bucharest
               NODE_RED_ENABLE_PROJECTS: "true"
@@ -67,8 +67,14 @@ spec:
         ports:
           http:
             port: *port
+            appProtocol: kubernetes.io/ws
     route:
       app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/name: Node-RED
+          gethomepage.dev/group: Home Automation
+          gethomepage.dev/icon: nodered.svg
         hostnames:
           - "nodered.laurivan.com"
         parentRefs:

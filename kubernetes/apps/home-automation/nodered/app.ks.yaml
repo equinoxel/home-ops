@@ -6,12 +6,13 @@ metadata:
   name: &app nodered
   namespace: &namespace home-automation
 spec:
+  targetNamespace: *namespace
   interval: 1h
   components:
     - ../../../../components/volsync
   dependsOn:
-    - name: volsync
-      namespace: storage-system
+    - name: storage-ready
+      namespace: flux-system
   path: ./kubernetes/apps/home-automation/nodered/app
   postBuild:
     substitute:
@@ -22,6 +23,5 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  targetNamespace: *namespace
   timeout: 5m
   wait: true
