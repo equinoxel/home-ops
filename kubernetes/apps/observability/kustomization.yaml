@@ -7,8 +7,10 @@ namespace: observability
 components:
   - ../../components/common
 resources:
+  - ./blackbox-exporter
   - ./grafana
-  # - ./kube-prometheus-stack
+  - ./monitor-core
+  ## - ./kube-prometheus-stack
   - ./prometheus-adapter
   - ./prometheus-operator-crds
   - ./keda
@@ -17,6 +19,7 @@ resources:
   - ./node-exporter
   - ./silence-operator
   - ./smartctl-exporter
+
   # - ./unpoller - enable vack when we have the unifi controller set up.
   # Disable headlamp because it's installed as a desktop app
   # - ./gitops

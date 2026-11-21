@@ -106,22 +106,29 @@ All secrets are stored in a single **Bitwarden item** named `forgejo` and synced
 
 ## CI/CD Runner
 
-The runner is deployed as a StatefulSet with a 1Gi persistent volume for registration state. It uses the Kubernetes executor to spawn ephemeral job pods.
+The CI/CD runner is deployed as a StatefulSet (`replicas: 1`) using the official Forgejo runner (`code.forgejo.org/forgejo/runner`) and a Docker-in-Docker (`docker:dind`) sidecar.
+
+### Architecture
+
+- **Runner Daemon:** Official `forgejo-runner` running rootless (`runAsUser: 1000`), polling the Forgejo instance and communicating with the DinD sidecar over `tcp://127.0.0.1:2375`.
+- **Docker-in-Docker Sidecar:** Privileged `docker:dind` container managing the container lifecycle and executing job containers using the `overlayfs` driver on Talos Linux.
+- **Shared Storage:** Ephemeral `/data` volume mounted to both runner and DinD sidecar so job workspaces are visible to the Docker daemon for bind mounts.
 
 ### Runner Labels
 
-| Label | Pod Spec | Description |
-|-------|----------|-------------|
-| `ubuntu-latest` | podspec-default | Ubuntu 24.04 container |
-| `ubuntu-24.04` | podspec-default | Ubuntu 24.04 container |
-| `default` | podspec-default | Ubuntu 24.04 container |
-| `docker` | podspec-dind | Docker-in-Docker (privileged) |
+| Label | Execution Type | Container Image |
+|-------|----------------|-----------------|
+| `ubuntu-latest` | docker | `node:20-bookworm` |
+| `ubuntu-24.04` | docker | `node:20-bookworm` |
+| `default` | docker | `node:20-bookworm` |
+| `docker` | docker | `node:20-bookworm` |
+| `dind` | docker | `docker:dind` |
 
 ### Runner Resources
 
-- Job pods: 100m CPU request, 256Mi–2Gi memory
-- DinD jobs: additional 4Gi memory limit for the Docker daemon sidecar
-- Runner capacity: 4 concurrent jobs
+- DinD container: 100m CPU request, 256Mi memory request (4Gi memory limit)
+- Runner daemon: 5m CPU request, 64Mi memory request (512Mi memory limit)
+- Runner capacity: 2 concurrent jobs
 
 ## Dependencies
 

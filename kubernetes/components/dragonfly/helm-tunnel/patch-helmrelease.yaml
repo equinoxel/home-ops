@@ -1,0 +1,133 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: not-used
+spec:
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              labelSelector: 'dragonfly.enable.custom/no-tunnel!=true'
+            patch: |-
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ignored
+              spec:
+                template:
+                  spec:
+                    volumes:
+                      - name: dragonfly-certs
+                        csi:
+                          driver: csi.cert-manager.io
+                          readOnly: true
+                          volumeAttributes:
+                            csi.cert-manager.io/issuer-name: dfguard-client-ca
+                            csi.cert-manager.io/issuer-kind: ClusterIssuer
+                            csi.cert-manager.io/key-algorithm: ECDSA
+                            csi.cert-manager.io/key-size: "384"
+                            csi.cert-manager.io/key-encoding: PKCS8
+                            csi.cert-manager.io/key-usages: client auth
+                            csi.cert-manager.io/common-name: ${DATABASE_OWNER:=${APP}}
+                            csi.cert-manager.io/dns-names: ${DATABASE_OWNER:=${APP}}
+
+                    initContainers:
+                      - name: dragonfly-tunnel
+                        restartPolicy: Always
+                        image: ghcr.io/m00nwtchr/dfguard:rolling@sha256:c4486379074041f40e485443239d787ed1fc25e097d9b1813a7f3de218ddb93d
+                        args: ["tunnel"]
+                        env:
+                          - name: DFGUARD_TUNNEL_CERT
+                            value: /var/run/secrets/dragonfly/tls.crt
+                          - name: DFGUARD_TUNNEL_KEY
+                            value: /var/run/secrets/dragonfly/tls.key
+                          - name: DFGUARD_TUNNEL_CA
+                            value: /var/run/secrets/dragonfly/ca.crt
+                          - name: DFGUARD_TUNNEL_UPSTREAM
+                            value: dfguard.database.svc.cluster.local.:6379
+                          - name: DFGUARD_TUNNEL_TCP_NODELAY
+                            value: "true"
+                        volumeMounts:
+                          - name: dragonfly-certs
+                            mountPath: /var/run/secrets/dragonfly
+                            readOnly: true
+                        securityContext:
+                          allowPrivilegeEscalation: false
+                          readOnlyRootFilesystem: true
+                          capabilities:
+                            drop:
+                              - ALL
+                          seccompProfile:
+                            type: RuntimeDefault
+                        resources:
+                          requests:
+                            cpu: 2m
+                          limits:
+                            memory: 32Mi
+
+          - target:
+              group: apps
+              version: v1
+              kind: StatefulSet
+              labelSelector: 'dragonfly.enable.custom/no-tunnel!=true'
+            patch: |-
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: ignored
+              spec:
+                template:
+                  spec:
+                    volumes:
+                      - name: dragonfly-certs
+                        csi:
+                          driver: csi.cert-manager.io
+                          readOnly: true
+                          volumeAttributes:
+                            csi.cert-manager.io/issuer-name: dfguard-client-ca
+                            csi.cert-manager.io/issuer-kind: ClusterIssuer
+                            csi.cert-manager.io/key-algorithm: ECDSA
+                            csi.cert-manager.io/key-size: "384"
+                            csi.cert-manager.io/key-encoding: PKCS8
+                            csi.cert-manager.io/key-usages: client auth
+                            csi.cert-manager.io/common-name: ${DATABASE_OWNER:=${APP}}
+                            csi.cert-manager.io/dns-names: ${DATABASE_OWNER:=${APP}}
+
+                    initContainers:
+                      - name: dragonfly-tunnel
+                        restartPolicy: Always
+                        image: ghcr.io/m00nwtchr/dfguard:rolling@sha256:c4486379074041f40e485443239d787ed1fc25e097d9b1813a7f3de218ddb93d
+                        args: ["tunnel"]
+                        env:
+                          - name: DFGUARD_TUNNEL_CERT
+                            value: /var/run/secrets/dragonfly/tls.crt
+                          - name: DFGUARD_TUNNEL_KEY
+                            value: /var/run/secrets/dragonfly/tls.key
+                          - name: DFGUARD_TUNNEL_CA
+                            value: /var/run/secrets/dragonfly/ca.crt
+                          - name: DFGUARD_TUNNEL_UPSTREAM
+                            value: dfguard.database.svc.cluster.local.:6379
+                          - name: DFGUARD_TUNNEL_TCP_NODELAY
+                            value: "true"
+                        volumeMounts:
+                          - name: dragonfly-certs
+                            mountPath: /var/run/secrets/dragonfly
+                            readOnly: true
+                        securityContext:
+                          allowPrivilegeEscalation: false
+                          readOnlyRootFilesystem: true
+                          capabilities:
+                            drop:
+                              - ALL
+                          seccompProfile:
+                            type: RuntimeDefault
+                        resources:
+                          requests:
+                            cpu: 2m
+                          limits:
+                            memory: 32Mi

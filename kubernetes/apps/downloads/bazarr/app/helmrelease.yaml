@@ -69,7 +69,7 @@ spec:
       media:
         type: nfs
         path: /mnt/Main/shares/media
-        server: 10.0.0.14
+        server: 192.168.2.44
         globalMounts:
           - path: /data/nas-media
     route:
@@ -78,7 +78,7 @@ spec:
           - bazarr.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
     service:
       app:
         ports:

@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app mariadb-operator
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  values:
+    # Use cert-manager for webhook TLS (already installed in the cluster)
+    webhook:
+      cert:
+        certManager:
+          enabled: true
+          issuerRef:
+            name: cluster-signed-issuer
+            kind: ClusterIssuer
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
+      # Longer probe intervals for homelab
+      livenessProbe:
+        periodSeconds: 30
+        failureThreshold: 5
+      readinessProbe:
+        periodSeconds: 15
+        failureThreshold: 3
+
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+
+    # Operator resources — burstable QoS
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+    # Cert-controller not needed when using cert-manager
+    certController:
+      enabled: false

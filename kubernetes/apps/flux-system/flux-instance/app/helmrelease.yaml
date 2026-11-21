@@ -24,6 +24,7 @@ spec:
         url: "https://github.com/equinoxel/home-ops.git"
         ref: "refs/heads/main"
         path: kubernetes/flux/cluster
+        interval: 30m
       commonMetadata:
         labels:
           app.kubernetes.io/name: flux
@@ -36,7 +37,7 @@ spec:
                 value: --concurrent=10
               - op: add
                 path: /spec/template/spec/containers/0/args/-
-                value: --requeue-dependency=5s
+                value: --requeue-dependency=30s
             target:
               kind: Deployment
               name: (kustomize-controller|helm-controller|source-controller)

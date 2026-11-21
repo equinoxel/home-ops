@@ -58,10 +58,10 @@ spec:
           pathType: PathPrefix
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
     cephImage:
       repository: quay.io/ceph/ceph
-      tag: v20.2.0
+      tag: v20.2.1
     cephClusterSpec:
       cephConfig:
         global: # all values must be string

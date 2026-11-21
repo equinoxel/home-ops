@@ -17,5 +17,18 @@ talosconfig
 .private/
 .task/
 .venv/
+data/
 .DS_Store
 Thumbs.db
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+
+# Envs
+scripts/*.env
+
+# Migration state (paperless-to-papra.py)
+scripts/*.state.json

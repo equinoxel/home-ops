@@ -19,15 +19,68 @@ spec:
             k8s.v1.cni.cncf.io/networks: |
               [{
                 "name":"iot",
-                "namespace": "network",
-                "ips": ["10.0.20.70/24"],
+                "namespace": "network-system",
+                "ips": ["192.168.20.70/24"],
                 "mac": "02:97:87:58:7b:10"
               }]
+        initContainers:
+          init-config:
+            image:
+              repository: ghcr.io/home-operations/busybox
+              tag: 1.37.0
+            command:
+              - /bin/sh
+              - -c
+              - |
+                if [ ! -f "/config/configuration.yaml" ]; then
+                  echo "Creating initial configuration.yaml..."
+                  printf "%s\n" \
+                    "# Loads default set of integrations. Do not remove." \
+                    "default_config:" \
+                    "" \
+                    "# Load frontend themes from the themes folder" \
+                    "frontend:" \
+                    "  themes: !include_dir_merge_named themes" \
+                    "" \
+                    "automation: !include automations.yaml" \
+                    "script: !include scripts.yaml" \
+                    "scene: !include scenes.yaml" \
+                    "" \
+                    "http:" \
+                    "  use_x_forwarded_for: true" \
+                    "  trusted_proxies:" \
+                    "    - 10.42.0.0/16" \
+                    "    - 10.43.0.0/16" \
+                    "    - 192.168.20.0/24" \
+                    "    - 192.168.2.0/24" > /config/configuration.yaml
+                  touch /config/automations.yaml /config/scripts.yaml /config/scenes.yaml
+                elif ! grep -q "trusted_proxies" "/config/configuration.yaml"; then
+                  echo "Appending reverse proxy settings to configuration.yaml..."
+                  printf "\nhttp:\n  use_x_forwarded_for: true\n  trusted_proxies:\n    - 10.42.0.0/16\n    - 10.43.0.0/16\n    - 192.168.20.0/24\n    - 192.168.2.0/24\n" >> /config/configuration.yaml
+                fi
+          init-hacs:
+            image:
+              repository: ghcr.io/home-operations/busybox
+              tag: 1.37.0
+            command:
+              - /bin/sh
+              - -c
+              - |
+                if [ ! -d "/config/custom_components/hacs" ]; then
+                  echo "Installing HACS..."
+                  mkdir -p /config/custom_components/hacs
+                  wget -qO /tmp/hacs.zip "https://github.com/hacs/integration/releases/latest/download/hacs.zip"
+                  unzip -q -o /tmp/hacs.zip -d /config/custom_components/hacs
+                  rm -f /tmp/hacs.zip
+                  echo "HACS installation complete."
+                else
+                  echo "HACS is already installed."
+                fi
         containers:
           app:
             image:
               repository: ghcr.io/home-operations/home-assistant
-              tag: 2026.4.4@sha256:589e4c1c93025d01320c14329427197c8b52d4f2e241a6bc1d6207837e07b4a7
+              tag: 2026.5.4@sha256:42d1bc5e99ed0ae8f49b72b8994e25e1a6b0f1467ba26c1b959f54ca42541ffd
             env:
               HASS_HTTP_TRUSTED_PROXY_1: 192.168.20.0/24
               HASS_HTTP_TRUSTED_PROXY_2: 10.69.0.0/16
@@ -48,10 +101,20 @@ spec:
                 memory: 1Gi
               limits:
                 memory: 2Gi
+            probes:
+              liveness:
+                enabled: true
+              readiness:
+                enabled: true
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 10
           code-server:
             image:
               repository: ghcr.io/coder/code-server
-              tag: 4.118.0@sha256:4aff9947c113487113201da811564fade1af5f23038b4d683998d024eebbac92
+              tag: 4.121.0@sha256:ea5f42d99998e2ba44297eca9b8a38a101e718ef54caaa41d649f6c6f1c8c71e
             args:
               - --auth
               - none
@@ -68,8 +131,8 @@ spec:
               limits:
                 memory: 512Mi
     defaultPodOptions:
-      nodeSelector:
-        node.kubernetes.io/ha: ""
+      # nodeSelector:
+      #   node.kubernetes.io/ha: ""
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -92,13 +155,13 @@ spec:
         parentRefs:
           - name: envoy-internal
             # TODO: Make it external after testing so it connects to the app
-            namespace: network
+            namespace: network-system
       code: # split so it's not external, and we can ext-auth it as well
         hostnames:
           - ha-code.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
         rules:
           - backendRefs:
               - name: *app
@@ -130,7 +193,6 @@ spec:
         existingClaim: home-assistant-cache
         globalMounts:
           - path: /config/.venv
-            subPath: ha-venv
       tmpfs:
         type: emptyDir
         globalMounts:

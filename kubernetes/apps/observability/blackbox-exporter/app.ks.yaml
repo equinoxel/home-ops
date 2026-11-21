@@ -10,9 +10,12 @@ spec:
   path: ./kubernetes/apps/observability/blackbox-exporter/app
   components:
     - ../../../../components/ext-auth
+    - ../../../../components/observability
   postBuild:
     substitute:
       APP: *app
+      APP_NAMESPACE: *namespace
+      OBSERVABILITY_PATH: ./kubernetes/apps/observability/blackbox-exporter/observability
   prune: true
   sourceRef:
     kind: GitRepository

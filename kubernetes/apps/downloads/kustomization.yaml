@@ -9,11 +9,14 @@ components:
   - ../../components/sops
   - ../../components/repos/app-template
 resources:
-  - ./autobrr
-  - ./flaresolverr
   - ./qbittorrent
+  - ./gluetun
+  - ./slskd
   - ./qui
-  - ./sonarr
-  - ./radarr
-  - ./seerr
   - ./prowlarr
+  #- ./autobrr
+  #- ./flaresolverr
+  #- ./sonarr
+  #- ./radarr
+  #- ./seerr
+  #- ./synology-backup

@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: laurivan-com
+spec:
+  secretName: 'laurivan-com-tls'
+  # Envoy Gateway 1.9.x only serves P-256 ECDSA leaf certs on listeners; a P-384
+  # key makes Envoy reject the secret ("only P-256 ECDSA certificates are
+  # supported"), load zero secrets, and reset every TLS handshake -> 502 on all
+  # *.laurivan.com apps. Keep this at size 256 to match what Envoy accepts.
+  # rotationPolicy: Always means cert-manager rotates the key on renewal, so the
+  # seeded Bitwarden key size must match this value (see import/externalsecret).
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  dnsNames:
+    - laurivan.com
+    - '*.laurivan.com'
+  usages:
+    - 'digital signature'

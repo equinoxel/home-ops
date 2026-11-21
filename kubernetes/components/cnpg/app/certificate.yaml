@@ -9,6 +9,14 @@ spec:
   usages:
     - client auth
   commonName: ${DATABASE_OWNER:=${APP}}
+  # PKCS#8 key encoding. cert-manager defaults to PKCS#1 for RSA
+  # (-----BEGIN RSA PRIVATE KEY-----), which rustls-based clients such as
+  # authentik cannot parse ("no keys found pem file"). PKCS#8 is also accepted
+  # by libpq/Go clients, so this is safe for all cnpg consumers.
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+    encoding: PKCS8
   issuerRef:
     name: postgres-cluster-client-ca-issuer
     kind: ClusterIssuer

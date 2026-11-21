@@ -17,7 +17,7 @@ spec:
           app:
             image:
               repository: ghcr.io/mendhak/http-https-echo
-              tag: 39
+              tag: 40
             env:
               HTTP_PORT: &port 80
               LOG_WITHOUT_NEWLINE: true
@@ -64,7 +64,7 @@ spec:
         hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
         parentRefs:
           - name: envoy-external
-            namespace: network
+            namespace: network-system
             sectionName: https
         rules:
           - backendRefs:

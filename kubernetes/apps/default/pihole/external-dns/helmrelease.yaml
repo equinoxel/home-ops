@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app pihole-external-dns
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  driftDetection:
+    ignore:
+      - paths: [/spec/replicas]
+  values:
+    fullnameOverride: *app
+    provider:
+      name: pihole
+    env:
+      - name: &name EXTERNAL_DNS_PIHOLE_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: &secret pihole-external-dns-secret
+            key: *name
+    extraArgs:
+      - --pihole-api-version=6
+      # pihole is now a Deployment named "pihole" in the default namespace,
+      # reached via its ClusterIP service (was pihole-0.pihole.network before).
+      - --pihole-server=http://pihole.default.svc.cluster.local
+      - --annotation-filter=externaldns.enable.custom/internal notin (false,no)
+      - --crd-source-apiversion=externaldns.k8s.io/v1alpha1
+      - --crd-source-kind=DNSEndpoint
+    triggerLoopOnEvent: true
+    policy: sync
+    sources:
+      - crd
+      - gateway-httproute
+      - gateway-grpcroute
+      - gateway-tlsroute
+      - gateway-tcproute
+      - gateway-udproute
+      - service
+    # Pihole only supports A/AAAA/CNAME records so there is no mechanism to track
+    # ownership. Leaving registry unset produces warning logs when external-dns
+    # tries to create TXT records, so use noop.
+    registry: noop
+    domainFilters: ["${SECRET_DOMAIN}"]
+    serviceMonitor:
+      enabled: true
+    podAnnotations:
+      secret.reloader.stakater.com/reload: *secret

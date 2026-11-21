@@ -9,5 +9,12 @@ components:
   - ../../components/sops
   - ../../components/repos/app-template
 resources:
+  - ./papra
+  - ./jellyfin
+  - ./watchstate
+  #- ./bookorbit
+  # - ./grimmory
+  #- ./mealie
   - ./navidrome
-  - ./subsonic
+  #- ./plex
+  #- ./subsonic

@@ -65,6 +65,64 @@ tasks:
     preconditions:
       - which flux helm
 
+  pvc-list:
+    desc: List files on a PVC [REMOTE=<pvc>:<path>] [NS=default]
+    summary: |
+      List files and directories at a specific path on a PVC.
+
+      REMOTE format: <pvc-name>[:<path>]
+        - If no path is given, lists the root of the PVC
+
+      Examples:
+        task kubernetes:pvc-list REMOTE=ghost-laur NS=comm
+        task kubernetes:pvc-list REMOTE=ghost-laur:/data/images NS=comm
+    cmd: '{{.SCRIPTS_DIR}}/pvc-cp.sh list {{.REMOTE}} --namespace {{.NS}}'
+    vars:
+      NS: '{{.NS | default "default"}}'
+    requires:
+      vars: [REMOTE]
+    preconditions:
+      - test -f {{.SCRIPTS_DIR}}/pvc-cp.sh
+      - which kubectl
+
+  pvc-copy:
+    desc: Copy local files to a PVC [LOCAL=<dir>] [REMOTE=<pvc>:<path>] [NS=default]
+    summary: |
+      Recursively copy files from a local directory to a path on a PVC,
+      preserving the directory structure.
+
+      Examples:
+        task kubernetes:pvc-copy LOCAL=/tmp/images REMOTE=ghost-laur:/data/images NS=comm
+        task kubernetes:pvc-copy LOCAL=./content REMOTE=forgejo:/data NS=development
+    cmd: '{{.SCRIPTS_DIR}}/pvc-cp.sh copy {{.LOCAL}} {{.REMOTE}} --namespace {{.NS}}'
+    vars:
+      NS: '{{.NS | default "default"}}'
+    requires:
+      vars: [LOCAL, REMOTE]
+    preconditions:
+      - test -f {{.SCRIPTS_DIR}}/pvc-cp.sh
+      - test -d {{.LOCAL}}
+      - which kubectl
+
+  pvc-chown:
+    desc: Change ownership recursively on a PVC path [OWNER=uid:gid] [REMOTE=<pvc>:<path>] [NS=default]
+    summary: |
+      Recursively change the owner of files at a path on a PVC.
+
+      OWNER format: <uid>[:<gid>]
+
+      Examples:
+        task kubernetes:pvc-chown OWNER=1000:1000 REMOTE=ghost-laur:/images NS=comm
+        task kubernetes:pvc-chown OWNER=1000:1000 REMOTE=ghost-laur:/ NS=comm
+    cmd: '{{.SCRIPTS_DIR}}/pvc-cp.sh chown {{.OWNER}} {{.REMOTE}} --namespace {{.NS}}'
+    vars:
+      NS: '{{.NS | default "default"}}'
+    requires:
+      vars: [OWNER, REMOTE]
+    preconditions:
+      - test -f {{.SCRIPTS_DIR}}/pvc-cp.sh
+      - which kubectl
+
   delete-daemonset:
     desc: Restart daemonset pods to fix mis-scheduled daemonsets
     cmd: kubectl describe daemonsets.apps -A | grep '^Selector:.*{{.SET}}' | awk {'print $2'} | xargs -n1 -P999 kubectl delete pods -A -l

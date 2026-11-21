@@ -78,7 +78,7 @@ spec:
           - '{{ .Release.Name }}.laurivan.com'
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
 
     persistence:
       config:
@@ -89,14 +89,14 @@ spec:
           - path: /config/MediaCover
       media:
         type: nfs
-        server: 10.0.0.14
+        server: 192.168.2.44
         path: /mnt/Main/shares/video
         globalMounts:
           - path: /media
       downloads:
         type: nfs
         path: /mnt/Main/shares/Downloads/qbittorrent
-        server: 10.0.0.14
+        server: 192.168.2.44
         globalMounts:
           - path: /qbittorrent
       tmp:

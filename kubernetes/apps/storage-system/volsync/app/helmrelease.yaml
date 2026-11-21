@@ -13,26 +13,11 @@ spec:
   dependsOn:
     - name: snapshot-controller
       namespace: storage-system
-  postRenderers:
-    - kustomize:
-        patches:
-          - # The chart's metrics.disableAuth only adds --ignore-paths=/metrics to
-            # kube-rbac-proxy but does NOT disable --metrics-secure on the manager.
-            # The manager defaults to HTTPS on :8080, but kube-rbac-proxy forwards
-            # HTTP to it, causing "Client sent an HTTP request to an HTTPS server".
-            # This patch adds --metrics-secure=false so the manager serves HTTP.
-            target:
-              kind: Deployment
-              name: volsync
-            patch: |
-              - op: add
-                path: /spec/template/spec/containers/1/args/-
-                value: --metrics-secure=false
   values:
     fullnameOverride: volsync # Required for volsync-perfectra1n fork
     image: &image
       repository: ghcr.io/perfectra1n/volsync
-      tag: v0.17.10@sha256:19cf5464d70251fec98735f28eb4e5b035d37762fbd50fa7f0946eadc8df1987
+      tag: v0.17.11@sha256:79674d3c48685e21cadaac8e0afd14268130a0a51a10c41a9dd65096c1434a0f
     kopia: *image
     rclone: *image
     restic: *image

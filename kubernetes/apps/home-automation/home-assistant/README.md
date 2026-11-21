@@ -32,7 +32,7 @@ network. The annotation value is a JSON array of network attachment requests:
 ```json
 [{
   "name": "iot",
-  "namespace": "network",
+  "namespace": "network-system",
   "ips": ["10.0.50.70/24"],
   "mac": "3e:59:e4:f7:43:08"
 }]
@@ -41,7 +41,7 @@ network. The annotation value is a JSON array of network attachment requests:
 | Field | Value | Purpose |
 |-------|-------|---------|
 | `name` | `iot` | References a `NetworkAttachmentDefinition` CR in the cluster |
-| `namespace` | `network` | Namespace where the NAD is defined |
+| `namespace` | `network-system` | Namespace where the NAD is defined |
 | `ips` | `10.0.50.70/24` | Static IP assigned to the secondary interface |
 | `mac` | `3e:59:e4:f7:43:08` | Fixed MAC address for stable DHCP/firewall rules |
 

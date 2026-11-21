@@ -8,13 +8,14 @@ metadata:
 spec:
   retentionPolicy: 30d
   configuration:
+    # SSE (AES256) disabled: RustFS SSE-S3 requires a configured KMS backend,
+    # which isn't set up. Backups remain bzip2-compressed but not encrypted at
+    # rest. Re-add `encryption: AES256` here if/when RustFS KMS is configured.
     wal:
       compression: bzip2
       maxParallel: 8
-      encryption: AES256
     data:
       compression: bzip2
-      encryption: AES256
     destinationPath: s3://${S3_POSTGRES_BUCKET}/
     endpointURL: ${S3_POSTGRES_STORAGE}
     s3Credentials:

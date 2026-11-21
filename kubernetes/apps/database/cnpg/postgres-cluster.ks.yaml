@@ -22,19 +22,16 @@ spec:
   postBuild:
     substitute:
       APP: cluster
-      CNPG_IMAGE: ghcr.io/cloudnative-pg/postgresql:18.3-standard-trixie@sha256:e4f9958296aac318d23c12e5f97369b47a925ee6f26eef4e2064affceb2ddf36
+      CNPG_IMAGE: ghcr.io/cloudnative-pg/postgresql:18.4-standard-trixie@sha256:58c9a9e29a23b814f8f335ce178727d83bc40d96ed7fe8977192d2d8cdcb3927
       # Changed from 2 to 1: single worker node, resource constrained
       CNPG_REPLICAS: "1"
       CNPG_SIZE: 5Gi
       # Changed from 1Gi: hugepages not available on blade nodes
       CNPG_LIMITS_MEMORY_HUGEPAGES: "0"
-      # Changed from 2Gi: reduce memory footprint for homelab
-      CNPG_LIMITS_MEMORY: 512Mi
-      # Changed from 500m: reduce CPU request for homelab
-      CNPG_REQUESTS_CPU: 100m
-      # Original values
-      #CNPG_LIMITS_MEMORY_HUGEPAGES: 1Gi
-      #CNPG_LIMITS_MEMORY: 2Gi
+      # Restored to 2Gi: 512Mi was repeatedly OOMKilled by Authentik/Paperless/Immich workloads
+      CNPG_LIMITS_MEMORY: 2Gi
+      CNPG_REQUESTS_MEMORY: 1Gi
+      CNPG_REQUESTS_CPU: 250m
     substituteFrom:
       - kind: Secret
         name: cnpg-objectstore-substitute

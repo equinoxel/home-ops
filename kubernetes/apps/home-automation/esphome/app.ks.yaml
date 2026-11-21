@@ -19,7 +19,7 @@ spec:
     namespace: flux-system
   dependsOn:
     - name: multus-networks
-      namespace: network
+      namespace: network-system
     - name: storage-ready
       namespace: flux-system
   postBuild:

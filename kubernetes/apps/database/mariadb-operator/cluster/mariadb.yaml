@@ -1,0 +1,61 @@
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: MariaDB
+metadata:
+  name: mariadb
+spec:
+  rootPasswordSecretKeyRef:
+    name: mariadb-root
+    key: password
+    # Let the operator generate the root password secret. Previously `false`,
+    # which required a pre-existing `mariadb-root` secret that nothing created,
+    # so the operator failed with "Secret mariadb-root not found".
+    generate: true
+
+  image: docker.io/library/mariadb:11.8
+
+  port: 3306
+
+  tls:
+    enabled: false
+
+  storage:
+    size: 5Gi
+    storageClassName: openebs-hostpath
+
+  # Single instance for homelab
+  replicas: 1
+
+  # Give more time for initialization on slow storage
+  livenessProbe:
+    initialDelaySeconds: 180
+    periodSeconds: 15
+    failureThreshold: 10
+  readinessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    failureThreshold: 10
+
+  # Burstable QoS
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+  myCnf: |
+    [mariadb]
+    bind-address=*
+    default_storage_engine=InnoDB
+    innodb_buffer_pool_size=128M
+    max_allowed_packet=256M
+    character-set-server=utf8mb4
+    collation-server=utf8mb4_unicode_ci
+
+  # NOTE: removed stale `nodeSelector: kubernetes.io/hostname: esxi-2cu-8g-05`
+  # — that node does not exist in this cluster (nodes: ctrl-01-esxi,
+  # worker-01-esxi, worker-02-esxi), which would leave the pod unschedulable.
+
+  metrics:
+    enabled: true

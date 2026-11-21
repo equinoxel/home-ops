@@ -2,7 +2,7 @@
 
 ## Overview
 
-Victoria Metrics is the primary metrics storage and monitoring stack for this cluster. It is deployed via the [victoria-metrics-k8s-stack](https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-k8s-stack) Helm chart (v0.78.0), which bundles multiple components into a single deployment.
+Victoria Metrics is the primary metrics storage and monitoring stack for this cluster. It is deployed via the [victoria-metrics-k8s-stack](https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-k8s-stack) Helm chart, which bundles multiple components into a single deployment.
 
 Victoria Metrics provides a Prometheus-compatible time-series database with better performance and lower resource usage than Prometheus itself.
 
@@ -12,31 +12,35 @@ Victoria Metrics provides a Prometheus-compatible time-series database with bett
 graph TD
     subgraph Sources
         SM[ServiceMonitors / PodMonitors]
+        SC[ScrapeConfigs<br/>NAS node-exporter, smartctl]
     end
 
     subgraph Victoria Metrics Stack
         VMA[VMAgent<br/>collector]
-        VMS[VMSingle<br/>storage & query<br/>200Gi / 400d retention]
+        VMS[VMSingle<br/>storage & query<br/>50Gi / 90d retention]
         VMAL[VMAlert<br/>rule evaluation]
         VMAM[VMAlertmanager<br/>notifications]
         VMAUTH[VMAuth<br/>unified query proxy]
+        VMOP[VM Operator<br/>manages CRDs]
     end
 
     subgraph Notifications
-        PO[Pushover]
-        HB[Healthchecks.io<br/>heartbeat]
+        HB[Healthchecks.io<br/>Watchdog heartbeat]
     end
 
     subgraph Visualization
         GF[Grafana]
+    end
+
+    subgraph Logs
         VL[Victoria Logs]
     end
 
     SM --> VMA
+    SC --> VMA
     VMA --> VMS
     VMS --> VMAL
     VMAL --> VMAM
-    VMAM --> PO
     VMAM --> HB
     VMS --> VMAUTH
     VL --> VMAUTH
@@ -57,44 +61,22 @@ graph TD
 ### VMAuth Routing
 
 VMAuth acts as a unified query endpoint that routes requests:
-- `/api/v1/query.*` and `/api/v1/label/.*` → VMSingle (metrics)
+- `/api/v1/query.*`, `/api/v1/label/.*`, `/api/v1/series.*` → VMSingle (metrics)
 - `/select/logsql/.*` → Victoria Logs (logs)
 
-This allows Grafana to use a single datasource for both metrics and logs.
+This allows Grafana to use a single datasource URL for both metrics and logs.
 
 ## Configuration
 
 ### Helm Chart
 
-- **Chart:** `victoria-metrics-k8s-stack` v0.78.0
-- **Source:** `oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack`
+- **Chart:** `victoria-metrics-k8s-stack`
+- **Source:** OCI repository (see `ocirepository.yaml`)
 - **Image registry:** `quay.io`
 
 ### Storage
 
-- **VMSingle:** 200Gi on `ceph-block`, retention 400 days
-- **VMAlertmanager:** emptyDir (ephemeral, no persistent storage)
-
-> **Note:** VMAlertmanager uses emptyDir instead of a PVC due to openebs-hostpath subPath permission issues. Alertmanager state (silences, notification log) is lost on pod restart. This is acceptable because:
-> - Silences can be recreated manually
-> - The notification log only prevents duplicate notifications within `repeat_interval`
-> - Alert rules and routing config are stored in the HelmRelease (gitops)
-
-#### Restoring VMAlertmanager State After Restart
-
-Alertmanager state consists of two things:
-
-1. **Silences** — If you had active silences before a restart, recreate them:
-   ```bash
-   # List what was silenced (check git history or Alertmanager UI before restart)
-   # Create a new silence via the UI at https://alertmanager.laurivan.com/#/silences/new
-   # Or via amtool:
-   kubectl exec -n observability vmalertmanager-victoria-metrics-0 -c alertmanager -- \
-     amtool silence add --alertmanager.url=http://localhost:9093 \
-     alertname="MyAlert" --comment="Reason" --duration="2h"
-   ```
-
-2. **Notification log** — This tracks which notifications were already sent to avoid duplicates. After a restart, you may receive duplicate notifications for currently-firing alerts (one extra round). No action needed — it self-heals after one `repeat_interval` cycle (12h).
+- **VMSingle:** 50Gi on `openebs-hostpath`, retention 90 days
 
 ### Scrape Targets
 
@@ -108,11 +90,13 @@ In addition to in-cluster ServiceMonitors/PodMonitors, external targets are scra
 ### Alerting
 
 Alerts are routed via VMAlertmanager:
-- **Pushover** — primary notification channel for all firing alerts
-- **Heartbeat** — Watchdog alert sent to healthchecks.io every 5 minutes
-- **Blackhole** — suppresses `InfoInhibitor` alerts
 
-Inhibition rules suppress warning-level alerts when a critical alert with the same name and namespace is firing.
+| Receiver | Purpose |
+|----------|---------|
+| **heartbeat** | Watchdog alert sent to healthchecks.io every 5 minutes (uptime monitoring) |
+| **blackhole** | Suppresses `InfoInhibitor` alerts |
+
+The default route sends unmatched alerts to the `heartbeat` receiver. Inhibition rules suppress warning-level alerts when a critical alert with the same name and namespace is firing.
 
 ### Custom Alert Rules
 
@@ -126,16 +110,17 @@ Inhibition rules suppress warning-level alerts when a critical alert with the sa
 ### Grafana Dashboards
 
 Dashboards are provisioned via GrafanaDashboard CRDs using the Grafana Operator:
-- Kubernetes API Server, CoreDNS, Global, Namespaces, Nodes, Pods, Volumes, PVC
+- Kubernetes: API Server, CoreDNS, Global, Namespaces, Nodes, Pods, Volumes, PVC
 - etcd Storage
 - Node Exporter Full
+- Prometheus
 
 ### Ext-Auth (Authentik)
 
-Three SecurityPolicies protect the web UIs via authentik:
-- `vmsingle-victoria-metrics` (metrics UI)
-- `vmalert-victoria-metrics` (alerts UI)
-- `vmalertmanager-victoria-metrics` (alertmanager UI)
+Three SecurityPolicies protect the web UIs via Authentik SSO:
+- `vmsingle-victoria-metrics` → metrics UI
+- `vmalert-victoria-metrics` → alerts UI
+- `vmalertmanager-victoria-metrics` → alertmanager UI
 
 ## Secrets
 
@@ -143,16 +128,44 @@ Secrets are managed via ExternalSecrets pulling from the `bitwarden` ClusterSecr
 
 ### `vmalertmanager` Secret
 
-Created from Bitwarden items `pushover` and `alertmanager`.
+Created from the Bitwarden item `alertmanager`.
 
-| Key | Description | Default/Example |
-|-----|-------------|-----------------|
-| `ALERTMANAGER_PUSHOVER_TOKEN` | Pushover application API token for alertmanager notifications | `axxxxxxxxxxxxxxxxxxxxxxxxxxxxx` (30-char alphanumeric) |
-| `PUSHOVER_USER_KEY` | Pushover user/group key to receive notifications | `uxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` (30-char alphanumeric) |
-| `HEALTHCHECKS_IO_HEARTBEAT_URL` | Healthchecks.io ping URL for Watchdog heartbeat | `https://hc-ping.com/<uuid>` |
+| Key | Description |
+|-----|-------------|
+| `HEALTHCHECKS_IO_HEARTBEAT_URL` | Healthchecks.io ping URL for Watchdog heartbeat (`https://hc-ping.com/<uuid>`) |
 
 ## Dependencies
 
-- `storage-ready` (flux-system) — ensures Ceph storage and VolSync CRDs are available
-- Prometheus Operator CRDs — for ServiceMonitor, PodMonitor, ScrapeConfig resources
-- Grafana Operator — for dashboard provisioning
+```mermaid
+graph LR
+    VM[victoria-metrics] -->|dependsOn| SR[storage-ready<br/>flux-system]
+    VM -->|secrets from| BW[Bitwarden<br/>ClusterSecretStore]
+    VM -->|dashboards via| GO[Grafana Operator]
+    VM -->|auth via| AK[Authentik<br/>security namespace]
+    VM -->|storage| OE[OpenEBS<br/>openebs-hostpath]
+```
+
+| Dependency | Namespace | Purpose |
+|------------|-----------|---------|
+| **storage-ready** | flux-system | Ensures storage CRDs and VolSync are available |
+| **openebs** | storage-system | Provides `openebs-hostpath` StorageClass for VMSingle PVC |
+| **Prometheus Operator CRDs** | — | ServiceMonitor, PodMonitor, ScrapeConfig resources |
+| **Grafana Operator** | observability | Dashboard provisioning via GrafanaDashboard CRs |
+| **Authentik** | security | SSO protection for web UIs |
+| **Bitwarden** | security | Secrets for alertmanager webhook URLs |
+
+## Directory Structure
+
+```
+victoria-metrics/
+├── app/
+│   ├── helmrelease.yaml       # Main stack deployment
+│   ├── ocirepository.yaml     # Chart source
+│   ├── externalsecret.yaml    # Alertmanager secrets from Bitwarden
+│   ├── grafanadashboard.yaml  # Operator dashboards
+│   ├── scrapeconfig.yaml      # External scrape targets (NAS)
+│   └── kustomization.yaml
+├── app.ks.yaml                # Flux Kustomization (with ext-auth components)
+├── kustomization.yaml
+└── README.md
+```

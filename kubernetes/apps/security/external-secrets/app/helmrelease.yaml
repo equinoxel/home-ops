@@ -13,19 +13,39 @@ spec:
     installCRDs: true
     replicaCount: 1
     leaderElect: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
     image:
       repository: ghcr.io/external-secrets/external-secrets
     webhook:
       image:
         repository: ghcr.io/external-secrets/external-secrets
+      resources:
+        requests:
+          cpu: 10m
+          memory: 128Mi
+        limits:
+          memory: 128Mi
     certController:
       image:
         repository: ghcr.io/external-secrets/external-secrets
+      resources:
+        requests:
+          cpu: 10m
+          memory: 128Mi
+        limits:
+          memory: 128Mi
     serviceMonitor:
       enabled: true
       interval: 1m
     grafanaDashboard:
-      enabled: true
+      # Dashboard CR lives in observability/monitor-core (url-sourced) to keep
+      # external-secrets decoupled from the grafana-operator.
+      enabled: false
     grafana:
       enabled: true
     reportsController:
@@ -36,3 +56,9 @@ spec:
       enabled: true
       podAnnotations:
         secret.reloader.stakater.com/reload: 'bitwarden,bitwarden-tls-certs'
+      resources:
+        requests:
+          cpu: 10m
+          memory: 256Mi
+        limits:
+          memory: 256Mi

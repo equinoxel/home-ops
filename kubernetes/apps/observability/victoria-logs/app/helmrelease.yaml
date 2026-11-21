@@ -32,7 +32,7 @@ spec:
           - logs.laurivan.com
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
         extraRules:
           - filters:
               - type: RequestRedirect

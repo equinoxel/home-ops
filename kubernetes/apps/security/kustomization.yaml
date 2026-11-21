@@ -10,3 +10,4 @@ components:
 resources:
   - ./external-secrets
   - ./authentik
+  - ./cert-manager

@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app affine
+  namespace: &namespace productivity
+spec:
+  interval: 1h
+  components:
+    - ../../../../components/cnpg/app-template
+    - ../../../../components/dragonfly/app-template-tunnel
+    - ../../../../components/volsync
+  dependsOn:
+    - name: dragonfly-cluster
+      namespace: database
+    - name: postgres-cluster
+      namespace: database
+    - name: volsync
+      namespace: storage-system
+  path: ./kubernetes/apps/productivity/affine/app
+  postBuild:
+    substitute:
+      APP: *app
+      VOLSYNC_CAPACITY: 5Gi
+      DATABASE_EXTENSIONS: |
+        [
+          { name: vector },
+          { name: vchord }
+        ]
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  timeout: 5m
+  wait: true

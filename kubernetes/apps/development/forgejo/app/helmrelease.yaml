@@ -10,6 +10,7 @@ spec:
     name: forgejo
   interval: 30m
   values:
+    replicaCount: 1
     gitea:
       admin:
         username: ""
@@ -17,7 +18,7 @@ spec:
         cache:
           ENABLED: true
           ADAPTER: redis
-          HOST: redis://forgejo-dragonfly:6379?pool_size=100&idle_timeout=180s
+          HOST: redis://localhost:6379?pool_size=100&idle_timeout=180s
         cron.archive_cleanup:
           ENABLED: true
           RUN_AT_START: true
@@ -27,7 +28,23 @@ spec:
           ISSUE_INDEXER_TYPE: bleve
           REPO_INDEXER_ENABLED: true
         lfs:
-          PATH: /data/git/lfs
+          STORAGE_TYPE: minio
+          SERVE_DIRECT: false
+          MINIO_ENDPOINT: 192.168.2.44:30292
+          MINIO_BUCKET: gitea
+          MINIO_LOCATION: us-east-1
+          MINIO_USE_SSL: false
+          MINIO_INSECURE_SKIP_VERIFY: true
+          MINIO_BASE_PATH: lfs/
+        storage.lfs:
+          STORAGE_TYPE: minio
+          SERVE_DIRECT: false
+          MINIO_ENDPOINT: 192.168.2.44:30292
+          MINIO_BUCKET: gitea
+          MINIO_LOCATION: us-east-1
+          MINIO_USE_SSL: false
+          MINIO_INSECURE_SKIP_VERIFY: true
+          MINIO_BASE_PATH: lfs/
         mailer:
           ENABLED: false
         openid:
@@ -35,7 +52,7 @@ spec:
           ENABLE_OPENID_SIGNUP: false
         queue:
           TYPE: redis
-          CONN_STR: redis://forgejo-dragonfly:6379?pool_size=100&idle_timeout=180s
+          CONN_STR: redis://localhost:6379?pool_size=100&idle_timeout=180s
         repository:
           DEFAULT_REPO_UNITS: repo.code,repo.releases,repo.issues,repo.pulls,repo.actions
           DISABLED_REPO_UNITS: repo.ext_wiki,repo.ext_issues
@@ -55,6 +72,8 @@ spec:
           REVERSE_PROXY_TRUSTED_PROXIES: 10.42.0.0/16
         server:
           APP_DATA_PATH: /data/gitea
+          LFS_START_SERVER: true
+          LFS_HTTP_AUTH_EXPIRY: 180m
           ROOT_URL: https://giti.laurivan.com
           SSH_DOMAIN: giti.laurivan.com
           SSH_PORT: &sshPort 22
@@ -72,7 +91,7 @@ spec:
           REQUIRE_SIGNIN_VIEW: false
         session:
           PROVIDER: redis
-          PROVIDER_CONFIG: redis://forgejo-dragonfly:6379?pool_size=100&idle_timeout=180s
+          PROVIDER_CONFIG: redis://localhost:6379?pool_size=100&idle_timeout=180s
           SESSION_LIFE_TIME: "1209600"
         webhook:
           ALLOWED_HOST_LIST: "*"
@@ -84,6 +103,28 @@ spec:
           groupClaimName: groups
           provider: openidConnect
           scopes: openid email profile groups
+    deployment:
+      env:
+        - name: FORGEJO__LFS__MINIO_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-s3-secret
+              key: AWS_ACCESS_KEY_ID
+        - name: FORGEJO__LFS__MINIO_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-s3-secret
+              key: AWS_SECRET_ACCESS_KEY
+        - name: FORGEJO__STORAGE_0X2E_LFS__MINIO_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-s3-secret
+              key: AWS_ACCESS_KEY_ID
+        - name: FORGEJO__STORAGE_0X2E_LFS__MINIO_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-s3-secret
+              key: AWS_SECRET_ACCESS_KEY
     extraContainerVolumeMounts:
       - name: signing-key
         mountPath: /data/signing
@@ -108,7 +149,13 @@ spec:
       rootless: true
       registry: codeberg.org
       repository: forgejo/forgejo
-      tag: 15.0.0-rootless
+      tag: 15.0.2-rootless
+    resources:
+      requests:
+        cpu: 50m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
     persistence:
       create: false
       claimName: forgejo
@@ -119,6 +166,6 @@ spec:
       enabled: true
       parentRefs:
         # TODO: move to envoy-external after testing
-        - name: envoy-internal
-          namespace: network
+        - name: envoy-external
+          namespace: network-system
           sectionName: ssh

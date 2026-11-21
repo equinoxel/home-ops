@@ -26,9 +26,36 @@ spec:
       envFrom:
         - secretRef:
             name: &secret authentik-secret
+      # verify-ca: encrypt + verify the server cert against the CA, skip hostname
+      # verification (postgres reached via a stable in-cluster service DNS name).
+      # SSL* values are BARE FILE PATHS (per authentik docs: "Path to the ...
+      # file"). Do NOT use the file:// prefix here — authentik's config loader
+      # treats file://<x> as "read file <x> and use its contents as the value",
+      # which would pass the PEM *content* where libpq expects a path.
       env:
+        # Reuse Postgres connections across requests instead of opening a new
+        # one every request. With conn_max_age=0 (the default) every request
+        # pays a fresh TLS handshake (sslmode=verify-ca) to postgres, which
+        # dominates request latency — a no-op health endpoint measured ~1s.
+        # authentik 2026.8.x runs cache/sessions/task-broker/channels on
+        # Postgres, so connection churn hits the whole login path.
+        - name: AUTHENTIK_POSTGRESQL__CONN_MAX_AGE
+          value: '300'
+        - name: AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS
+          value: 'true'
+        # Django views/middleware run sync under ASGI, and asgiref routes
+        # thread-sensitive sync work onto a SINGLE thread per gunicorn worker
+        # (ThreadPoolExecutor(max_workers=1)). So effective request parallelism
+        # equals the worker count, not web.threads. With 2 workers the server
+        # serialized at ~2 concurrent requests (profiled with py-spy: event loop
+        # stuck in asgiref sync_to_async waiting on the single sync thread doing
+        # psycopg calls). Raise workers so logins (many sequential sub-requests)
+        # don't queue. Keep memory limit ahead of worker count (each worker is a
+        # full python process ~300Mi).
+        - name: AUTHENTIK_WEB__WORKERS
+          value: '4'
         - name: AUTHENTIK_POSTGRESQL__SSLMODE
-          value: verify-full
+          value: verify-ca
         - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
           value: /var/run/secrets/postgresql/ca.crt
         - name: AUTHENTIK_POSTGRESQL__SSLCERT
@@ -52,32 +79,79 @@ spec:
         port: 587
         use_tls: true
     server:
-      autoscaling: &autoscaling
+      autoscaling:
         enabled: true
         minReplicas: 1
-        maxReplicas: 5
+        # Allow a 2nd server replica. Each gunicorn worker serializes sync
+        # Django work onto one thread (asgiref), so a 2nd pod adds another set
+        # of parallel sync lanes across nodes (soft pod anti-affinity spreads
+        # them). Workers have ample headroom for the 250m/512Mi request.
+        maxReplicas: 2
         targetCPUUtilizationPercentage: 60
-        behavior:
+        behavior: &autoscalingBehavior
           scaleUp:
             stabilizationWindowSeconds: 300
           scaleDown:
             stabilizationWindowSeconds: 300
       resources:
         requests:
-          cpu: 300m
-        limits:
+          # 50m was far below actual usage (~230m under light load), starving
+          # the pod of CPU share under node contention. 4 web workers need
+          # headroom; each worker is a full python process (~300Mi), so raise
+          # the memory limit above the previous 878Mi/1Gi ceiling to avoid OOM.
+          cpu: 250m
           memory: 1Gi
+        limits:
+          memory: 2.5Gi
       metrics:
         enabled: true
         serviceMonitor:
           enabled: true
+      # The server health endpoint (/-/health/live/) runs through the same sync
+      # Django path as normal requests, so under load it can spike well past the
+      # chart's default 3s probe timeout (a no-op call already measured ~1s). The
+      # default liveness probe (timeoutSeconds 3, failureThreshold 3, period 10)
+      # then kills the pod on ~30s of transient latency, which shows up as
+      # "Liveness probe failed: context deadline exceeded" restarts. Loosen the
+      # timeouts (mirroring the worker block) so a slow beat doesn't restart a
+      # pod that is still serving. Liveness is what drives the restart; startup
+      # and readiness get matching headroom so boot 500s / slow readiness don't
+      # flap the pod out of the Service either.
+      startupProbe:
+        timeoutSeconds: 20
+        failureThreshold: 60
+        periodSeconds: 10
+      livenessProbe:
+        timeoutSeconds: 20
+        failureThreshold: 6
+        periodSeconds: 30
+      readinessProbe:
+        timeoutSeconds: 20
+        failureThreshold: 6
+        periodSeconds: 30
     worker:
-      autoscaling: *autoscaling
+      # Task processor — not affected by the web sync-serialization issue, keep
+      # pinned to a single replica.
+      autoscaling:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 1
+        targetCPUUtilizationPercentage: 60
+        behavior: *autoscalingBehavior
       resources:
         requests:
-          cpu: 300m
+          cpu: 100m
+          memory: 512Mi
         limits:
-          memory: 1Gi
+          memory: 1.5Gi
+      startupProbe:
+        timeoutSeconds: 20
+        failureThreshold: 30
+        periodSeconds: 20
+      livenessProbe:
+        timeoutSeconds: 20
+        failureThreshold: 6
+        periodSeconds: 60
     prometheus:
       rules:
         enabled: true

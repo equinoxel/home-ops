@@ -34,7 +34,7 @@ flowchart TD
             DF[Dragonfly<br/>Redis Cache]
         end
 
-        subgraph network namespace
+        subgraph network-system namespace
             GW[Envoy Gateway]
         end
 

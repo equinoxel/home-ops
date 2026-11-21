@@ -7,7 +7,7 @@ spec:
   hostnames: ["rook.laurivan.com"]
   parentRefs:
     - name: envoy-internal
-      namespace: network
+      namespace: network-system
       sectionName: https
   rules:
     - backendRefs:

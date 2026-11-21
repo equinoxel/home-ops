@@ -9,6 +9,14 @@ spec:
   chartRef:
     kind: OCIRepository
     name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
   driftDetection:
     ignore:
       - paths: [/spec/replicas]
@@ -21,7 +29,7 @@ spec:
           app:
             image:
               repository: ghcr.io/autobrr/qui
-              tag: v1.17.0@sha256:fb3832e68f66b056e1b049d16c40732661e7b73999bc642d4b11469a3ebbabd3
+              tag: v1.19.0@sha256:baa07db5326f75f8c2246703603cbe2132476c8ad0ab31c976a960cb4c4731f5
             env:
               QUI__HOST: 0.0.0.0
               QUI__PORT: &port 80
@@ -32,6 +40,10 @@ spec:
               QUI__OIDC_ISSUER: https://auth.laurivan.com/application/o/qui/
               QUI__OIDC_REDIRECT_URL: https://qui.laurivan.com/api/auth/oidc/callback
               QUI__OIDC_DISABLE_BUILT_IN_LOGIN: true
+
+              HTTP_PROXY: http://gluetun.downloads.svc.cluster.local:8888
+              HTTPS_PROXY: http://gluetun.downloads.svc.cluster.local:8888
+              NO_PROXY: localhost,127.0.0.1,10.42.0.0/16,10.43.0.0/16,192.168.0.0/16,.cluster.local,auth.laurivan.com
             envFrom:
               - secretRef:
                   name: '{{ .Release.Name }}'
@@ -71,17 +83,22 @@ spec:
             port: *port
     route:
       app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: qui
+          gethomepage.dev/icon: qbittorrent.svg
         hostnames:
           - '{{ .Release.Name }}.laurivan.com'
         parentRefs:
           - name: envoy-internal
-            namespace: network
+            namespace: network-system
     persistence:
       config:
         existingClaim: '{{ .Release.Name }}'
       media:
         type: nfs
-        server: 10.0.0.14
+        server: 192.168.2.44
         path: /mnt/Main/shares
         globalMounts:
           - path: /media

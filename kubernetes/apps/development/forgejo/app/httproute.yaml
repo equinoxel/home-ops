@@ -8,9 +8,9 @@ spec:
   hostnames:
     - giti.laurivan.com
   parentRefs:
-    # TODO: move toe envoy-external after testing
-    - name: envoy-internal
-      namespace: network
+    - name: envoy-external
+      namespace: network-system
+      sectionName: https
   rules:
     - backendRefs:
         - name: forgejo-anubis

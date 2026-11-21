@@ -1,0 +1,115 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app synology-backup
+spec:
+  interval: 1h
+  timeout: 15m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    controllers:
+      *app :
+        type: cronjob
+        cronjob:
+          schedule: "0 4 * * *"
+          concurrencyPolicy: Forbid
+          successfulJobsHistoryLimit: 3
+          failedJobsHistoryLimit: 3
+          backoffLimit: 2
+        containers:
+          app:
+            image:
+              repository: docker.io/rclone/rclone
+              tag: 1.75.2
+            command:
+              - /bin/sh
+              - -c
+              - |
+                set -eu
+                echo "=== [$(date -u '+%Y-%m-%d %H:%M:%S')] Starting Synology Backup ==="
+
+                RCLONE_S3_OPTS="--s3-provider=Other --s3-endpoint=${AWS_S3_ENDPOINT} --s3-access-key-id=${AWS_ACCESS_KEY_ID} --s3-secret-access-key=${AWS_SECRET_ACCESS_KEY} --s3-force-path-style=true --fast-list --transfers=4 --checkers=8 --stats=30s -v"
+
+                # 1. Determine list of S3 buckets to back up
+                if [ "${BACKUP_S3_BUCKETS:-auto}" = "auto" ] || [ -z "${BACKUP_S3_BUCKETS:-}" ]; then
+                  echo "--- Auto-discovering S3 buckets on RustFS ---"
+                  DISCOVERED=$(rclone lsf ":s3:" --dirs-only ${RCLONE_S3_OPTS} 2>/dev/null | tr -d '/' || true)
+                  if [ -n "${DISCOVERED}" ]; then
+                    BUCKET_LIST="${DISCOVERED}"
+                  else
+                    echo "WARN: Auto-discovery returned empty, falling back to default bucket list."
+                    BUCKET_LIST="volsync-kopia database home-assistant documents"
+                  fi
+                else
+                  BUCKET_LIST=$(echo "${BACKUP_S3_BUCKETS}" | tr ',' ' ')
+                fi
+
+                echo "=== Buckets to sync: ${BUCKET_LIST} ==="
+                for BUCKET in ${BUCKET_LIST}; do
+                  [ -z "${BUCKET}" ] && continue
+                  echo "--- Checking S3 bucket: ${BUCKET} ---"
+                  if rclone lsf ":s3:${BUCKET}" --max-depth 1 ${RCLONE_S3_OPTS} >/dev/null 2>&1; then
+                    echo "=== Syncing bucket '${BUCKET}' -> '/destination/${BUCKET}' ==="
+                    rclone sync ":s3:${BUCKET}" "/destination/${BUCKET}" ${RCLONE_S3_OPTS}
+                    echo "=== Bucket '${BUCKET}' sync completed ==="
+                  else
+                    echo "INFO: Bucket '${BUCKET}' does not exist or is not yet configured, skipping."
+                  fi
+                done
+
+                # 2. Sync TrueNAS Photos NFS share
+                if [ -d "/source/photos" ]; then
+                  echo "=== Syncing Photos from /source/photos to /destination/photos ==="
+                  rclone sync "/source/photos" "/destination/photos" \
+                    --backup-dir="/destination/photos-deleted/$(date -u '+%Y-%m-%d')" \
+                    --delete-excluded \
+                    --transfers=4 \
+                    --checkers=8 \
+                    --stats=30s \
+                    -v
+                  echo "=== Photos sync completed ==="
+                else
+                  echo "WARN: /source/photos directory not found or unmounted, skipping photos sync."
+                fi
+
+                echo "=== [$(date -u '+%Y-%m-%d %H:%M:%S')] Synology Backup Completed Successfully ==="
+            envFrom:
+              - secretRef:
+                  name: synology-backup-secret
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ['ALL'] }
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+    persistence:
+      destination:
+        type: nfs
+        server: ${SYNOLOGY_NFS_SERVER}
+        path: ${SYNOLOGY_NFS_PATH}
+        globalMounts:
+          - path: /destination
+      source-photos:
+        type: nfs
+        server: ${SVC_TRUENAS_IP}
+        path: ${TRUENAS_PHOTOS_NFS_PATH:=/mnt/Main/shares/photo}
+        globalMounts:
+          - path: /source/photos
+            readOnly: true

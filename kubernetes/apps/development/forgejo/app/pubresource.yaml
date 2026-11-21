@@ -13,5 +13,5 @@ spec:
   ssl: false
   targets:
     # TODO: Move to envoy-external after testing
-    - hostname: envoy-internal.network.svc.cluster.local
+    - hostname: envoy-internal.network-system.svc.cluster.local
       port: 22

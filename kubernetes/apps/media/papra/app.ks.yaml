@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app papra
+  namespace: &namespace media
+spec:
+  interval: 1h
+  components:
+    - ../../../../components/volsync
+  dependsOn:
+    - name: volsync
+      namespace: storage-system
+  path: ./kubernetes/apps/media/papra/app
+  postBuild:
+    substitute:
+      APP: *app
+      # Documents live in S3 (RustFS); the PVC only holds the SQLite database,
+      # so a few Gi is plenty. Raise if the DB grows.
+      VOLSYNC_CAPACITY: 5Gi
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  timeout: 5m
+  wait: true

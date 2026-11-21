@@ -7,6 +7,12 @@ metadata:
   namespace: &namespace observability
 spec:
   interval: 1h
+  # The collector's HelmRelease creates a VMPodScrape (podMonitor.vm: true),
+  # whose CRD is provided by the victoria-metrics-operator bundled in the
+  # victoria-metrics app. Depend on it so the CRD exists before install.
+  dependsOn:
+    - name: victoria-metrics
+      namespace: observability
   path: ./kubernetes/apps/observability/victoria-logs/collector
   prune: true
   sourceRef:

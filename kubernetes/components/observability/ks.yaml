@@ -1,0 +1,34 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# Reusable observability wiring. Emits a *separate* Flux Kustomization so an
+# app's Grafana dashboards (and any other Grafana CRs) are decoupled from the
+# app workload: only this Kustomization carries `dependsOn: grafana`, so the
+# app itself reconciles even while Grafana is unavailable or unhealthy (e.g. a
+# cold rebuild, or a stuck GrafanaDashboard). GrafanaDashboards have no bearing
+# on the running workload, so gating them separately is safe.
+#
+# Usage: add this component to an app's Kustomization `spec.components`, then
+# set the required substitutions in that app's `postBuild.substitute`:
+#   APP:                the app name (also names this Kustomization <APP>-observability)
+#   APP_NAMESPACE:      namespace the Grafana CRs are applied into (the app ns)
+#   OBSERVABILITY_PATH: repo-relative path to the folder holding the Grafana CRs
+#                       (e.g. ./kubernetes/apps/database/vernemq/observability)
+# The app must also drop its own `dependsOn: grafana` (it now lives here).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ${APP}-observability
+  namespace: flux-system
+spec:
+  interval: 1h
+  path: ${OBSERVABILITY_PATH}
+  prune: true
+  dependsOn:
+    - name: grafana
+      namespace: observability
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: ${APP_NAMESPACE}
+  wait: true

@@ -89,7 +89,7 @@ failed to add route '{0.0.0.0} via 10.0.30.1 dev net1': network is unreachable
 
 **Cause:** The `iot` NetworkAttachmentDefinition has a gateway (`10.0.30.1`) that doesn't match the assigned subnet (`10.0.20.0/24`). The gateway must be reachable from the pod's IP.
 
-**Resolution:** Fix the gateway in `kubernetes/apps/network/multus/networks/iot.yaml` to match the subnet:
+**Resolution:** Fix the gateway in `kubernetes/apps/network-system/multus/networks/iot.yaml` to match the subnet:
 ```json
 "routes": [
   { "dst": "0.0.0.0/0", "gw": "10.0.20.1" }

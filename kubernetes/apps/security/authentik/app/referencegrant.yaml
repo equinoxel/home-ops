@@ -14,6 +14,8 @@ spec:
     - <<: *policy
       namespace: default
     - <<: *policy
+      namespace: development
+    - <<: *policy
       namespace: downloads
     - <<: *policy
       namespace: flux-system
@@ -23,6 +25,8 @@ spec:
       namespace: media
     - <<: *policy
       namespace: network
+    - <<: *policy
+      namespace: network-system
     - <<: *policy
       namespace: observability
     - <<: *policy

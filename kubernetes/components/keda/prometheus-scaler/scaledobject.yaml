@@ -17,7 +17,11 @@ spec:
   triggers:
     - type: prometheus
       metadata:
-        serverAddress: http://prometheus-operated.observability.svc.cluster.local.:9090
+        # VictoriaMetrics single-node PromQL-compatible query API. Previously
+        # pointed at prometheus-operated:9090, which doesn't exist in this
+        # cluster (VM stack, not kube-prometheus-stack). Overridable via
+        # SCALER_PROM_ADDRESS.
+        serverAddress: ${SCALER_PROM_ADDRESS:=http://vmsingle-victoria-metrics.observability.svc.cluster.local.:8428}
         query: ${SCALER_QUERY}
         threshold: '${SCALER_THRESHOLD:="1"}'
         ignoreNullValues: '${SCALER_IGNORE_NULL:="0"}'

@@ -172,7 +172,7 @@ kubectl logs -n <namespace> -l volsync.backube/replicationsource=<app>
 
 Common causes:
 - **Kopia cache corruption** — The new empty cache is fine; Kopia rebuilds it. But if the repository itself is corrupted, check the NFS share.
-- **NFS connectivity** — Verify the NFS server is reachable from the node: `kubectl run nfs-test --rm -it --image=busybox -- ping -c3 10.0.0.14`.
+- **NFS connectivity** — Verify the NFS server is reachable from the node: `kubectl run nfs-test --rm -it --image=busybox -- ping -c3 192.168.2.14`.
 
 ### Problem recurs after node drain or maintenance
 

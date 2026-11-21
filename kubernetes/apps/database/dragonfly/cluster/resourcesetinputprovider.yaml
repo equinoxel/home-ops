@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/fluxcd.controlplane.io/resourcesetinputprovider_v1.json
+# Baseline ACL input so the dragonfly-acls ResourceSet always renders the
+# dragonfly-acls secret, even before any consumer app registers its own RSIP
+# (via components/dragonfly/manual). Without at least one input, the Permute
+# strategy produces no secret and the dragonfly cluster + dfguard pods can't
+# mount `dragonfly-acls` and never start.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: dragonfly-default
+  annotations:
+    fluxcd.controlplane.io/reconcile: enabled
+    fluxcd.controlplane.io/reconcileEvery: 5m
+  labels:
+    dragonflydb.io/acl: "true"
+spec:
+  type: Static
+  defaultValues:
+    users:
+      - default
+---
+# yaml-language-server: $schema=https://schemas.tholinka.dev/generators.external-secrets.io/clustergenerator_v1alpha1.json
+# Password generator referenced by the dragonfly-acls ResourceSet template
+# (dataFrom -> generatorRef ClusterGenerator "pw") to produce each ACL user's
+# password. It was referenced but never defined, so the rendered ExternalSecret
+# could not sync and the dragonfly-acls secret was never created.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: ClusterGenerator
+metadata:
+  name: pw
+spec:
+  kind: Password
+  generator:
+    passwordSpec:
+      length: 42
+      digits: 5
+      symbols: 0
+      noUpper: false
+      allowRepeat: true
