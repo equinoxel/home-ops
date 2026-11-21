@@ -50,8 +50,8 @@ spec:
         initContainers:
           register-runner:
             image:
-              repository: code.forgejo.org/forgejo/runner
-              tag: 6.2.2
+              repository: git.erwanleboucher.dev/eleboucher/runner
+              tag: latest@sha256:ac15b5ac34ec2021f33a37d4b104eb138951444eeda903be4315178d9f068ea1
             command:
               - sh
               - -c
@@ -121,8 +121,8 @@ spec:
                   failureThreshold: 3
           runner:
             image:
-              repository: code.forgejo.org/forgejo/runner
-              tag: 6.2.2
+              repository: git.erwanleboucher.dev/eleboucher/runner
+              tag: latest@sha256:ac15b5ac34ec2021f33a37d4b104eb138951444eeda903be4315178d9f068ea1
             command:
               - /bin/forgejo-runner
               - daemon
