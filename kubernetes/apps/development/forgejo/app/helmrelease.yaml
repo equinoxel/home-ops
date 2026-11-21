@@ -28,7 +28,17 @@ spec:
           ISSUE_INDEXER_TYPE: bleve
           REPO_INDEXER_ENABLED: true
         lfs:
-          PATH: /data/git/lfs
+          STORAGE_TYPE: minio
+          SERVE_DIRECT: false
+        storage.lfs:
+          STORAGE_TYPE: minio
+          SERVE_DIRECT: false
+          MINIO_ENDPOINT: 192.168.2.44:30292
+          MINIO_BUCKET: gitea
+          MINIO_LOCATION: us-east-1
+          MINIO_USE_SSL: false
+          MINIO_INSECURE_SKIP_VERIFY: true
+          MINIO_BASE_PATH: lfs/
         mailer:
           ENABLED: false
         openid:
@@ -85,6 +95,18 @@ spec:
           groupClaimName: groups
           provider: openidConnect
           scopes: openid email profile groups
+    deployment:
+      env:
+        - name: FORGEJO__STORAGE_0X2E_LFS__MINIO_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-s3-secret
+              key: AWS_ACCESS_KEY_ID
+        - name: FORGEJO__STORAGE_0X2E_LFS__MINIO_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-s3-secret
+              key: AWS_SECRET_ACCESS_KEY
     extraContainerVolumeMounts:
       - name: signing-key
         mountPath: /data/signing
