@@ -131,8 +131,9 @@ spec:
               limits:
                 memory: 512Mi
     defaultPodOptions:
-      # nodeSelector:
-      #   node.kubernetes.io/ha: ""
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

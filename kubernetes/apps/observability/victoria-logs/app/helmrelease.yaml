@@ -19,7 +19,7 @@ spec:
         enabled: true
         storageClassName: openebs-hostpath
         size: 50Gi
-      retentionPeriod: 90d
+      retentionPeriod: 14d
       route:
         enabled: true
         annotations:
