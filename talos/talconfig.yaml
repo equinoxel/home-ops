@@ -47,7 +47,7 @@ nodes:
   # WORKERS
   #
   - hostname: "worker-01-esxi"
-    ipAddress: "192.168.2.7"
+    ipAddress: "192.168.2.70"
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
@@ -58,7 +58,7 @@ nodes:
           hardwareAddr: "84:97:87:58:ab:00"
         dhcp: false
         addresses:
-          - "192.168.2.7/24"
+          - "192.168.2.70/24"
         routes:
           - gateway: "192.168.2.1"
             network: 0.0.0.0/0
@@ -66,8 +66,9 @@ nodes:
     patches:
       - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/fast-disk.yaml"
+      - "@./patches/worker/storage.yaml"
   - hostname: "worker-02-esxi"
-    ipAddress: "192.168.2.16"
+    ipAddress: "192.168.2.72"
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
@@ -78,7 +79,7 @@ nodes:
           hardwareAddr: "84:97:87:58:ab:01"
         dhcp: false
         addresses:
-          - "192.168.2.16/24"
+          - "192.168.2.72/24"
         routes:
           - gateway: "192.168.2.1"
             network: 0.0.0.0/0
@@ -86,6 +87,7 @@ nodes:
     patches:
       - "@./patches/intel/machine-install.yaml"
       - "@./patches/worker/fast-disk.yaml"
+      - "@./patches/worker/storage.yaml"
   - hostname: "worker-03-esxi"
     ipAddress: "192.168.2.58"
     installDisk: "/dev/sda"

@@ -1,0 +1,14 @@
+machine:
+  disks:
+    - device: /dev/sdb
+      partitions:
+        - mountpoint: /var/mnt/local-hostpath
+  kubelet:
+    extraMounts:
+      - destination: /var/mnt/local-hostpath
+        type: bind
+        source: /var/mnt/local-hostpath
+        options:
+          - bind
+          - rshared
+          - rw
