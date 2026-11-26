@@ -15,6 +15,7 @@ spec:
     cleanupCachePVC: true
     cleanupTempPVC: true
     copyMethod: '${VOLSYNC_COPYMETHOD:=Direct}'
+    destinationPVC: '${APP}'
     enableFileDeletion: true
     moverSecurityContext:
       runAsUser: ${VOLSYNC_PUID:=1000}
