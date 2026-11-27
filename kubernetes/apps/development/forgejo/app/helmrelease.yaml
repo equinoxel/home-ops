@@ -29,10 +29,9 @@ spec:
           HOST: postgres-cluster-rw.database.svc:5432
           NAME: forgejo
           USER: forgejo
-          SSL_MODE: verify-full
+          SSL_MODE: require
           SSLCERT: /var/run/secrets/postgresql/tls.crt
           SSLKEY: /var/run/secrets/postgresql/tls.key
-          SSLROOTCERT: /var/run/secrets/postgresql/ca.crt
         indexer:
           ISSUE_INDEXER_TYPE: bleve
           REPO_INDEXER_ENABLED: true
