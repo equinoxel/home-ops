@@ -11,8 +11,11 @@ spec:
   components:
     - ../../../../components/anubis
     - ../../../../components/dragonfly/app-template-tunnel
+    - ../../../../components/cnpg/app
   dependsOn:
     - name: dragonfly-cluster
+      namespace: database
+    - name: postgres-cluster
       namespace: database
   interval: 1h
   path: "./kubernetes/apps/development/forgejo/app"

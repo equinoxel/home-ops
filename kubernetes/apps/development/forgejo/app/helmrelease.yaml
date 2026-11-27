@@ -24,6 +24,15 @@ spec:
           RUN_AT_START: true
           SCHEDULE: "@every 1h"
           OLDER_THAN: 2h
+        database:
+          DB_TYPE: postgres
+          HOST: postgres-cluster-rw.database.svc:5432
+          NAME: forgejo
+          USER: forgejo
+          SSL_MODE: verify-full
+          SSLCERT: /var/run/secrets/postgresql/tls.crt
+          SSLKEY: /var/run/secrets/postgresql/tls.key
+          SSLROOTCERT: /var/run/secrets/postgresql/ca.crt
         indexer:
           ISSUE_INDEXER_TYPE: bleve
           REPO_INDEXER_ENABLED: true
@@ -129,9 +138,15 @@ spec:
       - name: signing-key
         mountPath: /data/signing
         readOnly: true
+      - name: postgres-certs
+        mountPath: /var/run/secrets/postgresql
+        readOnly: true
     extraInitVolumeMounts:
       - name: signing-key
         mountPath: /data/signing
+        readOnly: true
+      - name: postgres-certs
+        mountPath: /var/run/secrets/postgresql
         readOnly: true
     extraVolumes:
       - name: signing-key
@@ -143,6 +158,10 @@ spec:
             - key: signing_public_key
               path: ed25519.pub
           defaultMode: 0400
+      - name: postgres-certs
+        secret:
+          secretName: postgres-forgejo-cert
+          defaultMode: 0440
     httpRoute:
       enabled: false
     image:
