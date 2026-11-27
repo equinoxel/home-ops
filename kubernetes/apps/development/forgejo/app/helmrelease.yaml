@@ -160,7 +160,7 @@ spec:
       - name: postgres-certs
         secret:
           secretName: postgres-forgejo-cert
-          defaultMode: 0440
+          defaultMode: 0444
     httpRoute:
       enabled: false
     image:
