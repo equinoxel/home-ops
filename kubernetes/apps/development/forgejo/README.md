@@ -16,7 +16,7 @@ graph LR
             Anubis["Anubis<br/>(bot protection)"]
             Forgejo["Forgejo<br/>(chart default image)"]
             Dragonfly["Dragonfly<br/>(Redis-compatible cache)"]
-            PVC["PVC: forgejo<br/>(10Gi, OpenEBS hostpath)"]
+            PVC["PVC: forgejo-nfs<br/>(1Ti, TrueNAS NFS)"]
         end
 
         subgraph "Forgejo Runner"
@@ -100,7 +100,7 @@ All secrets are stored in a single **Bitwarden item** named `forgejo` and synced
 
 ## Storage
 
-- **PVC**: `forgejo` (10Gi, OpenEBS hostpath)
+- **PVC**: `forgejo-nfs` (1Ti, TrueNAS NFS at `/mnt/Main/data/git`)
 - **Backup**: VolSync (configured via component)
 - **Contents**: Git repositories, LFS objects, app data
 

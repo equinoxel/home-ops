@@ -11,7 +11,6 @@ spec:
   components:
     - ../../../../components/anubis
     - ../../../../components/dragonfly/app-template-tunnel
-    - ../../../../components/volsync
   dependsOn:
     - name: dragonfly-cluster
       namespace: database
@@ -22,7 +21,6 @@ spec:
       APP: forgejo
       APP_UID: "1000"
       APP_GID: "1000"
-      VOLSYNC_CAPACITY: 175Gi
       ANUBIS_TARGET: http://forgejo-http.development.svc.cluster.local:3000
       ANUBIS_MEM_LIMIT: 384Mi
   prune: true

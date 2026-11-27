@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/persistentvolume-v1.json
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: forgejo-nfs
+spec:
+  capacity:
+    storage: 1Ti
+  accessModes: [ReadWriteMany]
+  storageClassName: nfs-forgejo
+  nfs:
+    path: /mnt/Main/data/git
+    server: 192.168.2.44
+  mountOptions:
+    - nfsvers=4.2
+    - nconnect=16
+    - hard
+    - noatime
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/persistentvolumeclaim-v1.json
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: forgejo-nfs
+spec:
+  storageClassName: nfs-forgejo
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 1Ti

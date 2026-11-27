@@ -158,7 +158,7 @@ spec:
         memory: 2Gi
     persistence:
       create: false
-      claimName: forgejo
+      claimName: forgejo-nfs
     service:
       ssh:
         port: *sshPort
